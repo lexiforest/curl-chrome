@@ -294,6 +294,7 @@ static const struct LongShort aliases[]= {
   {"EK", "http2-pseudo-headers-order", ARG_STRING},
   {"EL", "http2-no-server-push",     ARG_BOOL},
   {"EM", "tls-permute-extensions",     ARG_BOOL},
+  {"EN", "http2-skip-max-concurrent-streams",     ARG_BOOL},
   {"f",  "fail",                     ARG_BOOL},
   {"fa", "fail-early",               ARG_BOOL},
   {"fb", "styled-output",            ARG_BOOL},
@@ -1980,6 +1981,10 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
           /* --tls-permute-extensions */
           config->ssl_permute_extensions = toggle;
           break;
+      case 'N':
+        /* --http2-skip-max-concurrent-streams */
+        config->http2_skip_max_concurrent_streams = toggle;
+        break;
       default: /* unknown flag */
         return PARAM_OPTION_UNKNOWN;
       }

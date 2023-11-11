@@ -1903,6 +1903,7 @@ struct UserDefined {
 #endif
 #ifdef USE_HTTP2
   BIT(http2_no_server_push);    /* Disable HTTP2 server push */
+  BIT(http2_skip_max_concurrent_streams);    /* Skip HTTP2 max concurrent streams setting */
 #endif
 };
 

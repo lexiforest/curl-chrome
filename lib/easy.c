@@ -452,6 +452,12 @@ CURLcode curl_easy_impersonate(struct Curl_easy *data, const char *target,
       return ret;
   }
 
+  if(opts->http2_skip_max_concurrent_streams) {
+    ret = curl_easy_setopt(data, CURLOPT_HTTP2_SKIP_MAX_CONCURRENT_STREAMS, 1L);
+    if(ret)
+      return ret;
+  }
+
   /* Always enable all supported compressions. */
   ret = curl_easy_setopt(data, CURLOPT_ACCEPT_ENCODING, "");
   if(ret)

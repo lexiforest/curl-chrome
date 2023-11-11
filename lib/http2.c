@@ -109,9 +109,11 @@ static int populate_settings(nghttp2_settings_entry *iv,
     i++;
   }
 
-  iv[i].settings_id = NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS;
-  iv[i].value = Curl_multi_max_concurrent_streams(data->multi);
-  i++;
+  if(!data->set.http2_skip_max_concurrent_streams) {
+    iv[i].settings_id = NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS;
+    iv[i].value = Curl_multi_max_concurrent_streams(data->multi);
+    i++;
+  }
 
   iv[i].settings_id = NGHTTP2_SETTINGS_INITIAL_WINDOW_SIZE;
   iv[i].value = 0x600000;

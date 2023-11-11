@@ -166,6 +166,7 @@ struct OperationConfig {
   char *request_target;
   char *http2_pseudo_headers_order;
   bool http2_no_server_push;
+  bool http2_skip_max_concurrent_streams;
   long httpversion;
   bool http09_allowed;
   bool nobuffer;

@@ -2251,6 +2251,12 @@ typedef enum {
    */
   CURLOPT(CURLOPT_SSL_PERMUTE_EXTENSIONS, CURLOPTTYPE_LONG, 330),
 
+  /*
+   * curl-impersonate:
+   * Skip HTTP2 max_concurrent_streams in the HTTP2 SETTINGS.
+   */
+  CURLOPT(CURLOPT_HTTP2_SKIP_MAX_CONCURRENT_STREAMS, CURLOPTTYPE_LONG, 331),
+
   CURLOPT_LASTENTRY /* the last unused */
 } CURLoption;
 

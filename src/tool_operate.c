@@ -1502,6 +1502,10 @@ static CURLcode single_transfer(struct GlobalConfig *global,
             my_setopt(curl, CURLOPT_HTTP2_NO_SERVER_PUSH,
                       config->http2_no_server_push ? 1L : 0L);
 
+          if(config->http2_skip_max_concurrent_streams)
+            my_setopt(curl, CURLOPT_HTTP2_SKIP_MAX_CONCURRENT_STREAMS,
+                      config->http2_skip_max_concurrent_streams ? 1L : 0L);
+
         } /* (proto_http) */
 
         if(proto_ftp)

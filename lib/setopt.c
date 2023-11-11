@@ -3008,6 +3008,9 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
   case CURLOPT_HTTP2_NO_SERVER_PUSH:
     data->set.http2_no_server_push = (0 != va_arg(param, long)) ? TRUE : FALSE;
     break;
+  case CURLOPT_HTTP2_SKIP_MAX_CONCURRENT_STREAMS:
+    data->set.http2_skip_max_concurrent_streams = (0 != va_arg(param, long)) ? TRUE : FALSE;
+    break;
 #ifdef USE_UNIX_SOCKETS
   case CURLOPT_UNIX_SOCKET_PATH:
     data->set.abstract_unix_socket = FALSE;
