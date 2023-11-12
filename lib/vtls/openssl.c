@@ -88,6 +88,13 @@
 #include <brotli/decode.h>
 #endif
 
+#ifdef USE_ECH
+# ifndef OPENSSL_IS_BORINGSSL
+#  include <openssl/ech.h>
+# endif
+# include "curl_base64.h"
+#endif /* USE_ECH */
+
 #if (OPENSSL_VERSION_NUMBER >= 0x0090808fL) && !defined(OPENSSL_NO_OCSP)
 #include <openssl/ocsp.h>
 #endif
@@ -4102,6 +4109,21 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
   }
 #endif
 
+#ifdef USE_ECH
+  if(data->set.tls_ech != CURLECH_DISABLE) {
+    unsigned char *ech_config = NULL;
+    size_t ech_config_len = 0;
+    int trying_ech_now = 0;
+    if(data->set.tls_ech == CURLECH_GREASE) {
+# ifdef OPENSSL_IS_BORINGSSL
+      SSL_set_enable_ech_grease(backend->handle, 1);
+# else
+      SSL_set_options(backend->handle, SSL_OP_ECH_GREASE);
+# endif
+    }
+  }
+#endif
+
   SSL_set_app_data(backend->handle, cf);
 
   if(ssl_config->primary.sessionid) {
@@ -4292,6 +4314,60 @@ static CURLcode ossl_connect_step2(struct Curl_cfilter *cf,
     infof(data, "SSL connection using %s / %s",
           SSL_get_version(backend->handle),
           SSL_get_cipher(backend->handle));
+
+#ifdef USE_ECH
+# ifndef OPENSSL_IS_BORINGSSL
+    if(data->set.tls_ech != CURLECH_DISABLE) {
+      char *inner = NULL, *outer = NULL;
+      const char *status = NULL;
+      int rv;
+
+      rv = SSL_ech_get_status(backend->handle, &inner, &outer);
+      switch(rv) {
+      case SSL_ECH_STATUS_SUCCESS:
+        status = "Succeeded";
+        break;
+      case SSL_ECH_STATUS_GREASE_ECH:
+        status = "sent GREASE, got retry-configs";
+        break;
+      case SSL_ECH_STATUS_GREASE:
+        status = "sent GREASE";
+        break;
+      case SSL_ECH_STATUS_NOT_TRIED:
+        status = "not attempted";
+        break;
+      case SSL_ECH_STATUS_NOT_CONFIGURED:
+        status = "not configured";
+        break;
+      case SSL_ECH_STATUS_BACKEND:
+        status = "backend (unexpected)";
+        break;
+      case SSL_ECH_STATUS_FAILED:
+        status = "failed";
+        break;
+      case SSL_ECH_STATUS_BAD_CALL:
+        status = "bad call (unexpected)";
+        break;
+      case SSL_ECH_STATUS_BAD_NAME:
+        status = "bad name (unexpected)";
+        break;
+      default:
+        status = "unexpected status";
+        infof(data, "ECH: unexpected status %d",rv);
+      }
+      infof(data, "ECH: result: status is %s, inner is %s, outer is %s",
+             (status?status:"NULL"),
+             (inner?inner:"NULL"),
+             (outer?outer:"NULL"));
+      OPENSSL_free(inner);
+      OPENSSL_free(outer);
+      if(rv != SSL_ECH_STATUS_SUCCESS && data->set.tls_ech == CURLECH_HARD) {
+        infof(data, "ECH: ech-hard failed");
+        return CURLE_SSL_CONNECT_ERROR;
+      }
+   }
+# endif  /* BORING */
+#endif  /* USE_ECH */
 
 #ifdef HAS_ALPN
     /* Sets data and len to negotiated protocol, len is 0 if no protocol was

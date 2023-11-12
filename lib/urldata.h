@@ -53,6 +53,15 @@
 #define PORT_GOPHER 70
 #define PORT_MQTT 1883
 
+#ifdef USE_ECH
+/* CURLECH_ defines are for the tls_ech option */
+# define CURLECH_DISABLE    0
+# define CURLECH_GREASE     1
+# define CURLECH_ENABLE     2
+# define CURLECH_HARD       3
+# define CURLECH_CLA_CFG    4
+#endif
+
 #ifdef USE_WEBSOCKETS
 /* CURLPROTO_GOPHERS (29) is the highest publicly used protocol bit number,
  * the rest are internal information. If we use higher bits we only do this on
@@ -1584,6 +1593,8 @@ enum dupstring {
   STRING_SSL_SIG_HASH_ALGS,
   STRING_SSL_CERT_COMPRESSION,
   STRING_HTTP2_PSEUDO_HEADERS_ORDER,
+  STRING_ECH_CONFIG,            /* CURLOPT_ECH_CONFIG */
+  STRING_ECH_PUBLIC,            /* CURLOPT_ECH_PUBLIC */
 
   /* -- end of null-terminated strings -- */
 
@@ -1904,6 +1915,9 @@ struct UserDefined {
 #ifdef USE_HTTP2
   BIT(http2_no_server_push);    /* Disable HTTP2 server push */
   BIT(http2_skip_max_concurrent_streams);    /* Skip HTTP2 max concurrent streams setting */
+#endif
+#ifdef USE_ECH
+  int tls_ech;      /* TLS ECH configuration  */
 #endif
 };
 

@@ -295,6 +295,9 @@ static const struct LongShort aliases[]= {
   {"EL", "http2-no-server-push",     ARG_BOOL},
   {"EM", "tls-permute-extensions",     ARG_BOOL},
   {"EN", "http2-skip-max-concurrent-streams",     ARG_BOOL},
+#ifdef USE_ECH
+  {"ER", "ech",                      ARG_STRING},
+#endif
   {"f",  "fail",                     ARG_BOOL},
   {"fa", "fail-early",               ARG_BOOL},
   {"fb", "styled-output",            ARG_BOOL},
@@ -1985,6 +1988,18 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
         /* --http2-skip-max-concurrent-streams */
         config->http2_skip_max_concurrent_streams = toggle;
         break;
+#ifdef USE_ECH
+      case 'R':
+        if(strlen(nextarg) != 6 || !strncasecompare("GREASE", nextarg, 6)) {
+          warnf(global, "Only GREASE is supported for --ech.");
+          return PARAM_BAD_USE; /*  */
+        }
+        else {
+          /* Simple case: just a string, with a keyword */
+          GetStr(&config->ech, nextarg);
+        }
+        break;
+#endif
       default: /* unknown flag */
         return PARAM_OPTION_UNKNOWN;
       }

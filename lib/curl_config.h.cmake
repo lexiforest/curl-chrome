@@ -783,3 +783,6 @@ ${SIZEOF_TIME_T_CODE}
 
 /* Define to 1 to enable websocket support. */
 #cmakedefine USE_WEBSOCKETS 1
+
+/* if ECH support is available */
+#cmakedefine USE_ECH 1

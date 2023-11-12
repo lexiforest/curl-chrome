@@ -640,6 +640,7 @@ typedef enum {
   CURLE_PROXY,                   /* 97 - proxy handshake error */
   CURLE_SSL_CLIENTCERT,          /* 98 - client-side certificate required */
   CURLE_UNRECOVERABLE_POLL,      /* 99 - poll/select returned fatal error */
+  CURLE_ECH_REQUIRED      ,      /* 100 - ECH tried but failed */
   CURL_LAST /* never use! */
 } CURLcode;
 
@@ -2256,6 +2257,9 @@ typedef enum {
    * Skip HTTP2 max_concurrent_streams in the HTTP2 SETTINGS.
    */
   CURLOPT(CURLOPT_HTTP2_SKIP_MAX_CONCURRENT_STREAMS, CURLOPTTYPE_LONG, 331),
+
+  /* set ECH configuration, XXX, the official one is 324  */
+  CURLOPT(CURLOPT_ECH, CURLOPTTYPE_STRINGPOINT, 332),
 
   CURLOPT_LASTENTRY /* the last unused */
 } CURLoption;

@@ -319,6 +319,11 @@ curl_easy_strerror(CURLcode error)
   case CURLE_UNRECOVERABLE_POLL:
     return "Unrecoverable error in select/poll";
 
+#ifdef USE_ECH
+  case CURLE_ECH_REQUIRED:
+    return "ECH attempted but failed";
+#endif
+
     /* error codes not used by current libcurl */
   case CURLE_OBSOLETE20:
   case CURLE_OBSOLETE24:
