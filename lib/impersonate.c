@@ -291,7 +291,7 @@ const struct impersonate_opts impersonations[] = {
       .http2_no_server_push = true
   },
   {
-      .target = "chrome117",
+      .target = "chrome119",
       .httpversion = CURL_HTTP_VERSION_2_0,
       .ssl_version = CURL_SSLVERSION_TLSv1_2 | CURL_SSLVERSION_MAX_DEFAULT,
       .ciphers =
@@ -317,11 +317,11 @@ const struct impersonate_opts impersonations[] = {
       .tls_session_ticket = true,
       .cert_compression = "brotli",
       .http_headers = {
-              "sec-ch-ua: \"Google Chrome\";v=\"117\", \"Not;A=Brand\";v=\"8\", \"Chromium\";v=\"117\"",
+              "sec-ch-ua: \"Google Chrome\";v=\"119\", \"Chromium\";v=\"119\", \"Not?A_Brand\";v=\"24\"",
               "sec-ch-ua-mobile: ?0",
               "sec-ch-ua-platform: \"Windows\"",
               "Upgrade-Insecure-Requests: 1",
-              "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36",
+              "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
               "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
               "Sec-Fetch-Site: none",
               "Sec-Fetch-Mode: navigate",
@@ -331,7 +331,8 @@ const struct impersonate_opts impersonations[] = {
               "Accept-Language: en-US,en;q=0.9"
       },
       .http2_no_server_push = true,
-      .http2_skip_max_concurrent_streams = true
+      .http2_skip_max_concurrent_streams = true,
+      .ech = "GREASE"
   },
   {
     .target = "chrome99_android",

@@ -33,6 +33,7 @@ struct impersonate_opts {
   bool http2_no_server_push;
   bool tls_permute_extensions;
   bool http2_skip_max_concurrent_streams;
+  const char *ech;
   /* Other TLS options will come here in the future once they are
    * configurable through curl_easy_setopt() */
 };

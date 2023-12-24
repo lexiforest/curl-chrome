@@ -3001,6 +3001,7 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
   case CURLOPT_SSL_PERMUTE_EXTENSIONS:
     data->set.ssl_permute_extensions = (0 != va_arg(param, long)) ? TRUE : FALSE;
     break;
+#ifdef USE_HTTP2
   case CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER:
     result = Curl_setstropt(&data->set.str[STRING_HTTP2_PSEUDO_HEADERS_ORDER],
                             va_arg(param, char *));
@@ -3011,6 +3012,7 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
   case CURLOPT_HTTP2_SKIP_MAX_CONCURRENT_STREAMS:
     data->set.http2_skip_max_concurrent_streams = (0 != va_arg(param, long)) ? TRUE : FALSE;
     break;
+#endif
 #ifdef USE_UNIX_SOCKETS
   case CURLOPT_UNIX_SOCKET_PATH:
     data->set.abstract_unix_socket = FALSE;

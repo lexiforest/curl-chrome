@@ -458,6 +458,12 @@ CURLcode curl_easy_impersonate(struct Curl_easy *data, const char *target,
       return ret;
   }
 
+  if(opts->ech) {
+    ret = curl_easy_setopt(data, CURLOPT_ECH, opts->ech);
+    if(ret)
+      return ret;
+  }
+
   /* Always enable all supported compressions. */
   ret = curl_easy_setopt(data, CURLOPT_ACCEPT_ENCODING, "");
   if(ret)
