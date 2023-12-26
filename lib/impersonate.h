@@ -31,6 +31,7 @@ struct impersonate_opts {
   const char *http_headers[IMPERSONATE_MAX_HEADERS];
   const char *http2_pseudo_headers_order;
   const char *http2_settings;
+  int http2_window_update;
   bool tls_permute_extensions;
   const char *ech;
   /* Other TLS options will come here in the future once they are

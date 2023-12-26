@@ -1916,6 +1916,7 @@ struct UserDefined {
 #ifdef USE_ECH
   int tls_ech;      /* TLS ECH configuration  */
 #endif
+  int http2_window_update;
 };
 
 struct Names {

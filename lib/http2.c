@@ -535,8 +535,14 @@ static CURLcode cf_h2_ctx_init(struct Curl_cfilter *cf,
     }
   }
 
-  rc = nghttp2_session_set_local_window_size(ctx->h2, NGHTTP2_FLAG_NONE, 0,
-                                             HTTP2_HUGE_WINDOW_SIZE);
+  // curl-impersonate:
+  // Directly changing the initial window update using users' settings.
+  int current_window_size = nghttp2_session_get_local_window_size(ctx->h2);
+
+  rc = nghttp2_session_set_local_window_size(
+      ctx->h2, NGHTTP2_FLAG_NONE, 0,
+      current_window_size + data->set.http2_window_update);
+
   if(rc) {
     failf(data, "nghttp2_session_set_local_window_size() failed: %s(%d)",
           nghttp2_strerror(rc), rc);

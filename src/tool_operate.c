@@ -1503,6 +1503,12 @@ static CURLcode single_transfer(struct GlobalConfig *global,
                           CURLOPT_HTTP2_SETTINGS,
                           config->http2_settings);
 
+          if(config->http2_window_update)
+            my_setopt(curl,
+                      CURLOPT_HTTP2_WINDOW_UPDATE,
+                      config->http2_window_update);
+
+
         } /* (proto_http) */
 
         if(proto_ftp)

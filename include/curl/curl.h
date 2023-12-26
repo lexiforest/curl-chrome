@@ -2252,6 +2252,12 @@ typedef enum {
    */
   CURLOPT(CURLOPT_SSL_PERMUTE_EXTENSIONS, CURLOPTTYPE_LONG, 330),
 
+  /*
+   * curl-impersonate:
+   * HTTP2 initial window update
+   */
+  CURLOPT(CURLOPT_HTTP2_WINDOW_UPDATE, CURLOPTTYPE_LONG, 331),
+
   /* set ECH configuration, XXX, the official one is 324  */
   CURLOPT(CURLOPT_ECH, CURLOPTTYPE_STRINGPOINT, 332),
 

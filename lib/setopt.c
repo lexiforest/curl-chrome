@@ -3010,6 +3010,12 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
     result = Curl_setstropt(&data->set.str[STRING_HTTP2_SETTINGS],
                             va_arg(param, char *));
     break;
+  case CURLOPT_HTTP2_WINDOW_UPDATE:
+    arg = va_arg(param, long);
+    if(arg < -1)
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    data->set.http2_window_update = arg;
+    break;
 #endif
 #ifdef USE_UNIX_SOCKETS
   case CURLOPT_UNIX_SOCKET_PATH:

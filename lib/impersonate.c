@@ -44,7 +44,8 @@ const struct impersonate_opts impersonations[] = {
       "Accept-Encoding: gzip, deflate, br",
       "Accept-Language: en-US,en;q=0.9"
     },
-    .http2_settings = "1:65536;3:1000;4:6291456;6:262144"
+    .http2_settings = "1:65536;3:1000;4:6291456;6:262144",
+    .http2_window_update = 15663105
   },
   {
     .target = "chrome100",
@@ -85,7 +86,8 @@ const struct impersonate_opts impersonations[] = {
       "Accept-Encoding: gzip, deflate, br",
       "Accept-Language: en-US,en;q=0.9"
     },
-    .http2_settings = "1:65536;3:1000;4:6291456;6:262144"
+    .http2_settings = "1:65536;3:1000;4:6291456;6:262144",
+    .http2_window_update = 15663105
   },
   {
     .target = "chrome101",
@@ -126,7 +128,8 @@ const struct impersonate_opts impersonations[] = {
       "Accept-Encoding: gzip, deflate, br",
       "Accept-Language: en-US,en;q=0.9"
     },
-    .http2_settings = "1:65536;3:1000;4:6291456;6:262144"
+    .http2_settings = "1:65536;3:1000;4:6291456;6:262144",
+    .http2_window_update = 15663105
   },
   {
     .target = "chrome104",
@@ -167,7 +170,8 @@ const struct impersonate_opts impersonations[] = {
       "Accept-Encoding: gzip, deflate, br",
       "Accept-Language: en-US,en;q=0.9"
     },
-    .http2_settings = "1:65536;3:1000;4:6291456;6:262144"
+    .http2_settings = "1:65536;3:1000;4:6291456;6:262144",
+    .http2_window_update = 15663105
   },
   {
     .target = "chrome107",
@@ -208,7 +212,8 @@ const struct impersonate_opts impersonations[] = {
       "Accept-Encoding: gzip, deflate, br",
       "Accept-Language: en-US,en;q=0.9"
     },
-    .http2_settings = "1:65536;2:0;3:1000;4:6291456;6:262144"
+    .http2_settings = "1:65536;2:0;3:1000;4:6291456;6:262144",
+    .http2_window_update = 15663105
   },
   {
       .target = "chrome110",
@@ -250,7 +255,8 @@ const struct impersonate_opts impersonations[] = {
               "Accept-Encoding: gzip, deflate, br",
               "Accept-Language: en-US,en;q=0.9"
       },
-      .http2_settings = "1:65536;2:0;3:1000;4:6291456;6:262144"
+      .http2_settings = "1:65536;2:0;3:1000;4:6291456;6:262144",
+      .http2_window_update = 15663105
   },
   {
       .target = "chrome116",
@@ -292,7 +298,8 @@ const struct impersonate_opts impersonations[] = {
               "Accept-Encoding: gzip, deflate, br",
               "Accept-Language: en-US,en;q=0.9"
       },
-      .http2_settings = "1:65536;2:0;3:1000;4:6291456;6:262144"
+      .http2_settings = "1:65536;2:0;3:1000;4:6291456;6:262144",
+      .http2_window_update = 15663105
   },
   {
       .target = "chrome119",
@@ -335,6 +342,7 @@ const struct impersonate_opts impersonations[] = {
               "Accept-Language: en-US,en;q=0.9"
       },
       .http2_settings = "1:65536;2:0;4:6291456;6:262144",
+      .http2_window_update = 15663105,
       .ech = "GREASE"
   },
   {
@@ -378,6 +386,7 @@ const struct impersonate_opts impersonations[] = {
               "Accept-Language: en-US,en;q=0.9"
       },
       .http2_settings = "1:65536;2:0;4:6291456;6:262144",
+      .http2_window_update = 15663105,
       .ech = "GREASE"
   },
   {
@@ -419,7 +428,8 @@ const struct impersonate_opts impersonations[] = {
       "Accept-Encoding: gzip, deflate, br",
       "Accept-Language: en-US,en;q=0.9"
     },
-    .http2_settings = "1:65536;3:1000;4:6291456;6:262144"
+    .http2_settings = "1:65536;3:1000;4:6291456;6:262144",
+    .http2_window_update = 15663105
   },
   {
     .target = "edge99",
@@ -460,7 +470,8 @@ const struct impersonate_opts impersonations[] = {
       "Accept-Encoding: gzip, deflate, br",
       "Accept-Language: en-US,en;q=0.9"
     },
-    .http2_settings = "1:65536;3:1000;4:6291456;6:262144"
+    .http2_settings = "1:65536;3:1000;4:6291456;6:262144",
+    .http2_window_update = 15663105
   },
   {
     .target = "edge101",
@@ -501,7 +512,8 @@ const struct impersonate_opts impersonations[] = {
       "Accept-Encoding: gzip, deflate, br",
       "Accept-Language: en-US,en;q=0.9"
     },
-    .http2_settings = "1:65536;3:1000;4:6291456;6:262144"
+    .http2_settings = "1:65536;3:1000;4:6291456;6:262144",
+    .http2_window_update = 15663105
   },
   {
     .target = "safari15_3",
@@ -558,6 +570,7 @@ const struct impersonate_opts impersonations[] = {
         "Accept-Encoding: gzip, deflate, br"
     },
     .http2_settings = "4:4194304;3:100",
+    .http2_window_update = 10485760,
     .http2_pseudo_headers_order = "mspa"
   },
   {
@@ -610,6 +623,7 @@ const struct impersonate_opts impersonations[] = {
         "Accept-Encoding: gzip, deflate, br"
     },
     .http2_settings = "4:4194304;3:100",
+    .http2_window_update = 10485760,
     .http2_pseudo_headers_order = "mspa"
   },
   {
@@ -656,12 +670,16 @@ const struct impersonate_opts impersonations[] = {
     .tls_session_ticket = false,
     .cert_compression = "zlib",
     .http_headers = {
-        "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.5 Safari/605.1.15",
         "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language: en-GB,en-US;q=0.9,en;q=0.8",
-        "Accept-Encoding: gzip, deflate, br"
+        "Sec-Fetch-Site: none",
+        "Accept-Encoding: gzip, deflate, br",
+        "Sec-Fetch-Mode: navigate",
+        "User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1",
+        "Accept-Language: en-US,en;q=0.9",
+        "Sec-Fetch-Dest: document"
     },
     .http2_settings = "2:0;4:2097152;3:100",
+    .http2_window_update = 10485760,
     .http2_pseudo_headers_order = "mspa"
   },
   {

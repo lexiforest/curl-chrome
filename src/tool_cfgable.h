@@ -166,6 +166,7 @@ struct OperationConfig {
   char *request_target;
   char *http2_pseudo_headers_order;
   char *http2_settings;
+  long http2_window_update;
   long httpversion;
   bool http09_allowed;
   bool nobuffer;

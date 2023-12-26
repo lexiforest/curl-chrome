@@ -452,6 +452,12 @@ CURLcode curl_easy_impersonate(struct Curl_easy *data, const char *target,
       return ret;
   }
 
+  if(opts->http2_window_update) {
+    ret = curl_easy_setopt(data, CURLOPT_HTTP2_WINDOW_UPDATE, opts->http2_window_update);
+    if(ret)
+      return ret;
+  }
+
   if(opts->ech) {
     ret = curl_easy_setopt(data, CURLOPT_ECH, opts->ech);
     if(ret)
