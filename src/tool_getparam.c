@@ -292,9 +292,8 @@ static const struct LongShort aliases[]= {
   {"EI", "cert-compression",         ARG_STRING},
   {"EJ", "tls-session-ticket",       ARG_BOOL},
   {"EK", "http2-pseudo-headers-order", ARG_STRING},
-  {"EL", "http2-no-server-push",     ARG_BOOL},
-  {"EM", "tls-permute-extensions",     ARG_BOOL},
-  {"EN", "http2-skip-max-concurrent-streams",     ARG_BOOL},
+  {"EL", "http2-settings",           ARG_STRING},
+  {"EM", "tls-permute-extensions",   ARG_BOOL},
 #ifdef USE_ECH
   {"ER", "ech",                      ARG_STRING},
 #endif
@@ -1977,17 +1976,14 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
         break;
 
       case 'L':
-        /* --http2-no-server-push */
-        config->http2_no_server_push = toggle;
+        /* --http2-settings */
+        GetStr(&config->http2_settings, nextarg);
         break;
+
       case 'M':
           /* --tls-permute-extensions */
           config->ssl_permute_extensions = toggle;
           break;
-      case 'N':
-        /* --http2-skip-max-concurrent-streams */
-        config->http2_skip_max_concurrent_streams = toggle;
-        break;
 #ifdef USE_ECH
       case 'R':
         if(strlen(nextarg) != 6 || !strncasecompare("GREASE", nextarg, 6)) {

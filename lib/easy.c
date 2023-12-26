@@ -446,14 +446,8 @@ CURLcode curl_easy_impersonate(struct Curl_easy *data, const char *target,
       return ret;
   }
 
-  if(opts->http2_no_server_push) {
-    ret = curl_easy_setopt(data, CURLOPT_HTTP2_NO_SERVER_PUSH, 1L);
-    if(ret)
-      return ret;
-  }
-
-  if(opts->http2_skip_max_concurrent_streams) {
-    ret = curl_easy_setopt(data, CURLOPT_HTTP2_SKIP_MAX_CONCURRENT_STREAMS, 1L);
+  if(opts->http2_settings) {
+    ret = curl_easy_setopt(data, CURLOPT_HTTP2_SETTINGS, opts->http2_settings);
     if(ret)
       return ret;
   }

@@ -3006,11 +3006,9 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
     result = Curl_setstropt(&data->set.str[STRING_HTTP2_PSEUDO_HEADERS_ORDER],
                             va_arg(param, char *));
     break;
-  case CURLOPT_HTTP2_NO_SERVER_PUSH:
-    data->set.http2_no_server_push = (0 != va_arg(param, long)) ? TRUE : FALSE;
-    break;
-  case CURLOPT_HTTP2_SKIP_MAX_CONCURRENT_STREAMS:
-    data->set.http2_skip_max_concurrent_streams = (0 != va_arg(param, long)) ? TRUE : FALSE;
+  case CURLOPT_HTTP2_SETTINGS:
+    result = Curl_setstropt(&data->set.str[STRING_HTTP2_SETTINGS],
+                            va_arg(param, char *));
     break;
 #endif
 #ifdef USE_UNIX_SOCKETS

@@ -1593,6 +1593,7 @@ enum dupstring {
   STRING_SSL_SIG_HASH_ALGS,
   STRING_SSL_CERT_COMPRESSION,
   STRING_HTTP2_PSEUDO_HEADERS_ORDER,
+  STRING_HTTP2_SETTINGS,
   STRING_ECH_CONFIG,            /* CURLOPT_ECH_CONFIG */
   STRING_ECH_PUBLIC,            /* CURLOPT_ECH_PUBLIC */
 
@@ -1911,10 +1912,6 @@ struct UserDefined {
   BIT(http09_allowed); /* allow HTTP/0.9 responses */
 #ifdef USE_WEBSOCKETS
   BIT(ws_raw_mode);
-#endif
-#ifdef USE_HTTP2
-  BIT(http2_no_server_push);    /* Disable HTTP2 server push */
-  BIT(http2_skip_max_concurrent_streams);    /* Skip HTTP2 max concurrent streams setting */
 #endif
 #ifdef USE_ECH
   int tls_ech;      /* TLS ECH configuration  */

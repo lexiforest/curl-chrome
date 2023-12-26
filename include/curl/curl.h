@@ -2242,21 +2242,15 @@ typedef enum {
 
   /*
    * curl-impersonate:
-   * Disable HTTP2 server push in the HTTP2 SETTINGS.
+   * HTTP2 settings frame keys and values, format: 1:v;2:v;3:v
    */
-  CURLOPT(CURLOPT_HTTP2_NO_SERVER_PUSH, CURLOPTTYPE_LONG, 329),
+  CURLOPT(CURLOPT_HTTP2_SETTINGS, CURLOPTTYPE_STRINGPOINT, 329),
 
   /* 
    * curl-impersonate: Whether to enable Boringssl permute extensions
    * See https://commondatastorage.googleapis.com/chromium-boringssl-docs/ssl.h.html#SSL_set_permute_extensions.
    */
   CURLOPT(CURLOPT_SSL_PERMUTE_EXTENSIONS, CURLOPTTYPE_LONG, 330),
-
-  /*
-   * curl-impersonate:
-   * Skip HTTP2 max_concurrent_streams in the HTTP2 SETTINGS.
-   */
-  CURLOPT(CURLOPT_HTTP2_SKIP_MAX_CONCURRENT_STREAMS, CURLOPTTYPE_LONG, 331),
 
   /* set ECH configuration, XXX, the official one is 324  */
   CURLOPT(CURLOPT_ECH, CURLOPTTYPE_STRINGPOINT, 332),

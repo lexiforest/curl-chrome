@@ -93,36 +93,61 @@
 #define H2_SETTINGS_IV_LEN  8
 #define H2_BINSETTINGS_LEN 80
 
+
 static int populate_settings(nghttp2_settings_entry *iv,
                              struct Curl_easy *data)
 {
+  // curl-impersonate:
+  // Setting http2 settings frame based on user instruction.
+  // https://httpwg.org/specs/rfc7540.html#SETTINGS
+  // Format example: 1:65536;2:0;4:6291456;6:262144
+
+  // TODO check if the http2 settings is valid
   int i = 0;
+  char *delimiter = ";";
 
-  /* curl-impersonate: Align HTTP/2 settings to Chrome's */
-  iv[i].settings_id = NGHTTP2_SETTINGS_HEADER_TABLE_SIZE;
-  iv[i].value = 0x10000;
-  i++;
+  char *setting = strtok(data->set.str[STRING_HTTP2_SETTINGS], delimiter);
 
-  if(data->set.http2_no_server_push) {
-    iv[i].settings_id = NGHTTP2_SETTINGS_ENABLE_PUSH;
-    iv[i].value = 0;
-    i++;
-  }
 
-  if(!data->set.http2_skip_max_concurrent_streams) {
-    iv[i].settings_id = NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS;
-    iv[i].value = Curl_multi_max_concurrent_streams(data->multi);
-    i++;
-  }
+  // loop through the string to extract all other tokens
+  while(setting != NULL) {
+    // deal with each setting
+    switch(setting[0]) {
+      case '1':
+        iv[i].settings_id = NGHTTP2_SETTINGS_HEADER_TABLE_SIZE;
+        iv[i].value = atoi(setting + 2);
+        i++;
+        break;
+      case '2':
+        iv[i].settings_id = NGHTTP2_SETTINGS_ENABLE_PUSH;
+        iv[i].value = atoi(setting + 2);
+        i++;
+        break;
+      case '3':
+        // FIXME We also need to notify curl_multi about this setting
+        iv[i].settings_id = NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS;
+        iv[i].value = atoi(setting + 2);
+        i++;
+        break;
+      case '4':
+        iv[i].settings_id = NGHTTP2_SETTINGS_INITIAL_WINDOW_SIZE;
+        iv[i].value = atoi(setting + 2);
+        i++;
+        break;
+      case '5':
+        iv[i].settings_id = NGHTTP2_SETTINGS_MAX_FRAME_SIZE;
+        iv[i].value = atoi(setting + 2);
+        i++;
+        break;
+      case '6':
+        iv[i].settings_id = NGHTTP2_SETTINGS_MAX_HEADER_LIST_SIZE;
+        iv[i].value = atoi(setting + 2);
+        i++;
+        break;
+    }
+    setting = strtok(NULL, delimiter);
+   }
 
-  iv[i].settings_id = NGHTTP2_SETTINGS_INITIAL_WINDOW_SIZE;
-  iv[i].value = 0x600000;
-  i++;
-
-  iv[i].settings_id = NGHTTP2_SETTINGS_MAX_HEADER_LIST_SIZE;
-  iv[i].value = 0x40000;
-  i++;
-  
   // curl-impersonate:
   // Up until Chrome 98, there was a randomly chosen setting number in the
   // HTTP2 SETTINGS frame. This might be something similar to TLS GREASE.
