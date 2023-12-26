@@ -106,8 +106,13 @@ static int populate_settings(nghttp2_settings_entry *iv,
   int i = 0;
   char *delimiter = ";";
 
-  char *setting = strtok(data->set.str[STRING_HTTP2_SETTINGS], delimiter);
+  // Use chrome's settings as default
+  char *http2_settings = "1:65536;2:0;4:6291456;6:262144";
+  if(data->set.str[STRING_HTTP2_SETTINGS]) {
+    http2_settings = data->set.str[STRING_HTTP2_SETTINGS];
+  }
 
+  char *setting = strtok(http2_settings, delimiter);
 
   // loop through the string to extract all other tokens
   while(setting != NULL) {
@@ -539,9 +544,15 @@ static CURLcode cf_h2_ctx_init(struct Curl_cfilter *cf,
   // Directly changing the initial window update using users' settings.
   int current_window_size = nghttp2_session_get_local_window_size(ctx->h2);
 
+  // Use chrome's value as default
+  int window_update = 15663105;
+  if(data->set.http2_window_update) {
+    window_update = data->set.http2_window_update;
+  }
+
   rc = nghttp2_session_set_local_window_size(
       ctx->h2, NGHTTP2_FLAG_NONE, 0,
-      current_window_size + data->set.http2_window_update);
+      current_window_size + window_update);
 
   if(rc) {
     failf(data, "nghttp2_session_set_local_window_size() failed: %s(%d)",
