@@ -112,7 +112,10 @@ static int populate_settings(nghttp2_settings_entry *iv,
     http2_settings = data->set.str[STRING_HTTP2_SETTINGS];
   }
 
-  char *setting = strtok(http2_settings, delimiter);
+  // printf("USING settings %s\n", http2_settings);
+
+  char *tmp = strdup(http2_settings);
+  char *setting = strtok(tmp, delimiter);
 
   // loop through the string to extract all other tokens
   while(setting != NULL) {
@@ -151,7 +154,8 @@ static int populate_settings(nghttp2_settings_entry *iv,
         break;
     }
     setting = strtok(NULL, delimiter);
-   }
+  }
+  free(tmp);
 
   // curl-impersonate:
   // Up until Chrome 98, there was a randomly chosen setting number in the
@@ -549,6 +553,8 @@ static CURLcode cf_h2_ctx_init(struct Curl_cfilter *cf,
   if(data->set.http2_window_update) {
     window_update = data->set.http2_window_update;
   }
+
+  // printf("Using window update %d\n", window_update);
 
   rc = nghttp2_session_set_local_window_size(
       ctx->h2, NGHTTP2_FLAG_NONE, 0,
