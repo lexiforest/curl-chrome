@@ -14,6 +14,7 @@ allocator
 alnum
 ALPN
 Altera
+AltSvc
 ALTSVC
 amiga
 AmigaOS
@@ -77,6 +78,7 @@ buildconf
 Caddy
 calloc
 CAPA
+capath
 CCC
 CDN
 CentOS
@@ -138,6 +140,7 @@ cURL
 CURLcode
 CURLE
 CURLH
+CURLINFO
 curlimages
 curlrc
 curltest
@@ -150,11 +153,16 @@ cyassl
 Cygwin
 daniel
 datatracker
+dbg
+Debian
+DEBUGBUILD
 decrypt
 deepcode
 DELE
 DER
 deselectable
+Deserialized
+deserialization
 destructor
 detections
 dev
@@ -186,6 +194,7 @@ EBCDIC
 ECC
 ECDHE
 ECH
+ECONNREFUSED
 eCOS
 EFnet
 EGD
@@ -216,6 +225,7 @@ Falkeborn
 Fandrich
 Fastly
 fcpp
+Fedora
 Feltzing
 ffi
 filesize
@@ -243,6 +253,7 @@ gcc
 GCM
 gdb
 Genode
+Gentoo
 Gergely
 getaddrinfo
 getenv
@@ -256,6 +267,7 @@ ggcov
 Ghedini
 Gisle
 Glesys
+globbed
 globbing
 gmail
 GnuTLS
@@ -301,9 +313,9 @@ hsts
 HTC
 html
 http
+HTTPAUTH
 httpd
 HTTPD
-HTTPAUTH
 httpget
 HttpGet
 HTTPS
@@ -322,6 +334,7 @@ ifdef
 ifdefed
 Ifdefs
 ifdefs
+IIS
 ILE
 Illumos
 IMAP
@@ -332,10 +345,15 @@ impacket
 init
 initializer
 inlined
+interop
 interoperable
 interoperates
 IoT
 ipadOS
+IPFS
+IPNS
+ipld
+trustless
 IPCXN
 IPv
 IPv4
@@ -361,6 +379,7 @@ keepalive
 Keil
 kerberos
 Keychain
+keychain
 KiB
 kickstart
 Kirei
@@ -497,6 +516,7 @@ NEC
 Necko
 NetBSD
 netrc
+netstat
 Netware
 NFS
 nghttp
@@ -555,6 +575,7 @@ permafailing
 PINGs
 pipelining
 PKCS
+pkcs
 PKGBUILD
 PKI
 pluggable
@@ -588,6 +609,7 @@ PTR
 ptr
 punycode
 PWD
+pwd
 py
 pycurl
 pytest
@@ -605,6 +627,7 @@ RBS
 ReactOS
 README
 realloc
+Realtime
 rebase
 RECV
 recv
@@ -621,9 +644,11 @@ Relatedly
 repo
 reprioritized
 resending
+resends
 RETR
 retransmit
 retrigger
+RHEL
 RICS
 Rikard
 rmdir
@@ -777,6 +802,7 @@ toolset
 toplevel
 TPF
 TrackMemory
+transcode
 Tru
 Tse
 Tsujikawa
@@ -785,6 +811,7 @@ tvOS
 txt
 typedef
 typedefed
+Ubuntu
 ucLinux
 UDP
 UI
@@ -793,9 +820,12 @@ UIDL
 Ultrix
 Unary
 unassign
+UNC
 uncompress
+unencoded
 unencrypted
 unescape
+Unglobbed
 UNICOS
 unix
 UnixSockets
@@ -821,6 +851,7 @@ USD
 userdata
 Userinfo
 userinfo
+USERPROFILE
 UTF
 UX
 valgrind
@@ -833,6 +864,9 @@ Viktor
 VM
 VMS
 VMware
+vnd
+VRF
+VRFY
 VSE
 vsprintf
 vt
@@ -844,6 +878,7 @@ watchOS
 WAV
 WB
 web page
+WebDAV
 WebOS
 WebSocket
 WEBSOCKET
@@ -863,10 +898,12 @@ winssl
 Wireshark
 wolfSSH
 wolfSSL
+ws
 WS
 WSS
 www
 Xbox
+XDG
 xdigit
 Xilinx
 XP

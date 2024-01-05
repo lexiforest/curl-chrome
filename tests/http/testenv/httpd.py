@@ -47,7 +47,8 @@ class Httpd:
         'authn_core', 'authn_file',
         'authz_user', 'authz_core', 'authz_host',
         'auth_basic', 'auth_digest',
-        'env', 'filter', 'headers', 'mime',
+        'alias', 'env', 'filter', 'headers', 'mime',
+        'socache_shmcb',
         'rewrite', 'http2', 'ssl', 'proxy', 'proxy_http', 'proxy_connect',
         'mpm_event',
     ]
@@ -70,9 +71,11 @@ class Httpd:
         self._logs_dir = os.path.join(self._apache_dir, 'logs')
         self._error_log = os.path.join(self._logs_dir, 'error_log')
         self._tmp_dir = os.path.join(self._apache_dir, 'tmp')
-        self._passwords = os.path.join(self._conf_dir, 'passwords')
+        self._basic_passwords = os.path.join(self._conf_dir, 'basic.passwords')
+        self._digest_passwords = os.path.join(self._conf_dir, 'digest.passwords')
         self._mods_dir = None
-        self._proxy_auth = proxy_auth
+        self._auth_digest = True
+        self._proxy_auth_basic = proxy_auth
         self._extra_configs = {}
         assert env.apxs
         p = subprocess.run(args=[env.apxs, '-q', 'libexecdir'],
@@ -108,7 +111,7 @@ class Httpd:
         self._extra_configs = {}
 
     def set_proxy_auth(self, active: bool):
-        self._proxy_auth = active
+        self._proxy_auth_basic = active
 
     def _run(self, args, intext=''):
         env = {}
@@ -219,9 +222,15 @@ class Httpd:
                 'server': f'{domain2}',
             }
             fd.write(JSONEncoder().encode(data))
-        if self._proxy_auth:
-            with open(self._passwords, 'w') as fd:
+        if self._proxy_auth_basic:
+            with open(self._basic_passwords, 'w') as fd:
                 fd.write('proxy:$apr1$FQfeInbs$WQZbODJlVg60j0ogEIlTW/\n')
+        if self._auth_digest:
+            with open(self._digest_passwords, 'w') as fd:
+                fd.write('test:restricted area:57123e269fd73d71ae0656594e938e2f\n')
+            self._mkpath(os.path.join(self.docs_dir, 'restricted/digest'))
+            with open(os.path.join(self.docs_dir, 'restricted/digest/data.json'), 'w') as fd:
+                fd.write('{"area":"digest"}\n')
         with open(self._conf_file, 'w') as fd:
             for m in self.MODULES:
                 if os.path.exists(os.path.join(self._mods_dir, f'mod_{m}.so')):
@@ -234,14 +243,16 @@ class Httpd:
                 f'PidFile httpd.pid',
                 f'ErrorLog {self._error_log}',
                 f'LogLevel {self._get_log_level()}',
+                f'StartServers 4',
                 f'H2MinWorkers 16',
-                f'H2MaxWorkers 128',
+                f'H2MaxWorkers 256',
                 f'H2Direct on',
                 f'Listen {self.env.http_port}',
                 f'Listen {self.env.https_port}',
                 f'Listen {self.env.proxy_port}',
                 f'Listen {self.env.proxys_port}',
                 f'TypesConfig "{self._conf_dir}/mime.types',
+                f'SSLSessionCache "shmcb:ssl_gcache_data(32000)"',
             ]
             if 'base' in self._extra_configs:
                 conf.extend(self._extra_configs['base'])
@@ -252,7 +263,7 @@ class Httpd:
                 f'    DocumentRoot "{self._docs_dir}"',
                 f'    Protocols h2c http/1.1',
             ])
-            conf.extend(self._curltest_conf())
+            conf.extend(self._curltest_conf(domain1))
             conf.extend([
                 f'</VirtualHost>',
                 f'',
@@ -267,7 +278,7 @@ class Httpd:
                 f'    SSLCertificateKeyFile {creds1.pkey_file}',
                 f'    DocumentRoot "{self._docs_dir}"',
             ])
-            conf.extend(self._curltest_conf())
+            conf.extend(self._curltest_conf(domain1))
             if domain1 in self._extra_configs:
                 conf.extend(self._extra_configs[domain1])
             conf.extend([
@@ -283,7 +294,7 @@ class Httpd:
                 f'    SSLCertificateKeyFile {creds2.pkey_file}',
                 f'    DocumentRoot "{self._docs_dir}/two"',
             ])
-            conf.extend(self._curltest_conf())
+            conf.extend(self._curltest_conf(domain2))
             if domain2 in self._extra_configs:
                 conf.extend(self._extra_configs[domain2])
             conf.extend([
@@ -295,6 +306,7 @@ class Httpd:
                 f'    ServerName {proxy_domain}',
                 f'    Protocols h2c http/1.1',
                 f'    ProxyRequests On',
+                f'    H2ProxyRequests On',
                 f'    ProxyVia On',
                 f'    AllowCONNECT {self.env.http_port} {self.env.https_port}',
             ])
@@ -311,6 +323,7 @@ class Httpd:
                 f'    SSLCertificateFile {proxy_creds.cert_file}',
                 f'    SSLCertificateKeyFile {proxy_creds.pkey_file}',
                 f'    ProxyRequests On',
+                f'    H2ProxyRequests On',
                 f'    ProxyVia On',
                 f'    AllowCONNECT {self.env.http_port} {self.env.https_port}',
             ])
@@ -329,13 +342,13 @@ class Httpd:
             ]))
 
     def _get_proxy_conf(self):
-        if self._proxy_auth:
+        if self._proxy_auth_basic:
             return [
                 f'    <Proxy "*">',
                 f'      AuthType Basic',
                 f'      AuthName "Restricted Proxy"',
                 f'      AuthBasicProvider file',
-                f'      AuthUserFile "{self._passwords}"',
+                f'      AuthUserFile "{self._basic_passwords}"',
                 f'      Require user proxy',
                 f'    </Proxy>',
             ]
@@ -355,9 +368,14 @@ class Httpd:
             return 'debug'
         return 'info'
 
-    def _curltest_conf(self) -> List[str]:
+    def _curltest_conf(self, servername) -> List[str]:
+        lines = []
         if Httpd.MOD_CURLTEST is not None:
-            return [
+            lines.extend([
+                f'    Redirect 301 /curltest/echo301 /curltest/echo',
+                f'    Redirect 302 /curltest/echo302 /curltest/echo',
+                f'    Redirect 303 /curltest/echo303 /curltest/echo',
+                f'    Redirect 307 /curltest/echo307 /curltest/echo',
                 f'    <Location /curltest/echo>',
                 f'      SetHandler curltest-echo',
                 f'    </Location>',
@@ -367,8 +385,24 @@ class Httpd:
                 f'    <Location /curltest/tweak>',
                 f'      SetHandler curltest-tweak',
                 f'    </Location>',
-            ]
-        return []
+                f'    Redirect 302 /tweak /curltest/tweak',
+                f'    <Location /curltest/1_1>',
+                f'      SetHandler curltest-1_1-required',
+                f'    </Location>',
+            ])
+        if self._auth_digest:
+            lines.extend([
+                f'    <Directory {self.docs_dir}/restricted/digest>',
+                f'      AuthType Digest',
+                f'      AuthName "restricted area"',
+                f'      AuthDigestDomain "https://{servername}"',
+                f'      AuthBasicProvider file',
+                f'      AuthUserFile "{self._digest_passwords}"',
+                f'      Require valid-user',
+                f'    </Directory>',
+
+            ])
+        return lines
 
     def _init_curltest(self):
         if Httpd.MOD_CURLTEST is not None:

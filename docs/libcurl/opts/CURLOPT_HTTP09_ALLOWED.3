@@ -46,12 +46,15 @@ responses.
 HTTP
 .SH EXAMPLE
 .nf
-CURL *curl = curl_easy_init();
-if(curl) {
-  CURLcode ret;
-  curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/");
-  curl_easy_setopt(curl, CURLOPT_HTTP09_ALLOWED, 1L);
-  ret = curl_easy_perform(curl);
+int main(void)
+{
+  CURL *curl = curl_easy_init();
+  if(curl) {
+    CURLcode ret;
+    curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/");
+    curl_easy_setopt(curl, CURLOPT_HTTP09_ALLOWED, 1L);
+    ret = curl_easy_perform(curl);
+  }
 }
 .fi
 .SH AVAILABILITY
@@ -59,4 +62,5 @@ Option added in 7.64.0, present along with HTTP.
 .SH RETURN VALUE
 Returns CURLE_OK if HTTP is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR CURLOPT_SSLVERSION "(3), " CURLOPT_HTTP_VERSION "(3), "
+.BR CURLOPT_HTTP_VERSION (3),
+.BR CURLOPT_SSLVERSION (3)

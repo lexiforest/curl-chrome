@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: curl
 
-name: Linux
+name: Linux wolfSSL
 
 on:
   push:
@@ -44,6 +44,9 @@ concurrency:
 
 permissions: {}
 
+env:
+  MAKEFLAGS: -j 3
+
 jobs:
   autotools:
     name: ${{ matrix.build.name }}
@@ -70,7 +73,7 @@ jobs:
       name: 'install prereqs and impacket'
 
     - run: |
-        WOLFSSL_VER=5.6.0
+        WOLFSSL_VER=5.6.3
         curl -LOsSf --retry 6 --retry-connrefused --max-time 999 https://github.com/wolfSSL/wolfssl/archive/v$WOLFSSL_VER-stable.tar.gz
         tar -xzf v$WOLFSSL_VER-stable.tar.gz
         cd wolfssl-$WOLFSSL_VER-stable
@@ -79,7 +82,7 @@ jobs:
         make install
       name: 'install wolfssl'
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - run: autoreconf -fi
       name: 'autoreconf'

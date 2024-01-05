@@ -37,7 +37,10 @@ its important components (like OpenSSL version).
 We recommend using \fIcurl_version_info(3)\fP instead!
 .SH EXAMPLE
 .nf
-printf("libcurl version %s\\n", curl_version());
+int main(void)
+{
+  printf("libcurl version %s\\n", curl_version());
+}
 .fi
 
 .SH AVAILABILITY
@@ -46,4 +49,4 @@ Always
 A pointer to a null-terminated string. The string resides in a statically
 allocated buffer and must not be freed by the caller.
 .SH "SEE ALSO"
-.BR curl_version_info "(3)"
+.BR curl_version_info (3)

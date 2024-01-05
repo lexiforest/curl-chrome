@@ -40,14 +40,17 @@ instead of overwrite it. This is only useful when uploading to an FTP site.
 FTP
 .SH EXAMPLE
 .nf
-CURL *curl = curl_easy_init();
-if(curl) {
+int main(void)
+{
+  CURL *curl = curl_easy_init();
+  if(curl) {
 
-  curl_easy_setopt(curl, CURLOPT_URL, "ftp://example.com/dir/to/newfile");
-  curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
-  curl_easy_setopt(curl, CURLOPT_APPEND, 1L);
+    curl_easy_setopt(curl, CURLOPT_URL, "ftp://example.com/dir/to/newfile");
+    curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
+    curl_easy_setopt(curl, CURLOPT_APPEND, 1L);
 
-  curl_easy_perform(curl);
+    curl_easy_perform(curl);
+  }
 }
 .fi
 .SH AVAILABILITY
@@ -55,5 +58,6 @@ This option was known as CURLOPT_FTPAPPEND up to 7.16.4
 .SH RETURN VALUE
 Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR CURLOPT_DIRLISTONLY "(3), " CURLOPT_RESUME_FROM "(3), "
-.BR CURLOPT_UPLOAD "(3), "
+.BR CURLOPT_DIRLISTONLY (3),
+.BR CURLOPT_RESUME_FROM (3),
+.BR CURLOPT_UPLOAD (3)

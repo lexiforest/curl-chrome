@@ -8,35 +8,35 @@ Get the main page from a web-server:
 
 Get a README file from an FTP server:
 
-    curl ftp://ftp.funet.fi/README
+    curl ftp://ftp.example.com/README
 
 Get a web page from a server using port 8000:
 
-    curl http://www.weirdserver.com:8000/
+    curl http://www.example.com:8000/
 
 Get a directory listing of an FTP site:
 
-    curl ftp://ftp.funet.fi
+    curl ftp://ftp.example.com/
 
 Get the all terms matching curl from a dictionary:
 
-    curl dict://dict.org/m:curl
+    curl dict://dict.example.com/m:curl
 
 Get the definition of curl from a dictionary:
 
-    curl dict://dict.org/d:curl
+    curl dict://dict.example.com/d:curl
 
 Fetch two documents at once:
 
-    curl ftp://ftp.funet.fi/ http://www.weirdserver.com:8000/
+    curl ftp://ftp.example.com/ http://www.example.com:8000/
 
 Get a file off an FTPS server:
 
-    curl ftps://files.are.secure.com/secrets.txt
+    curl ftps://files.are.example.com/secrets.txt
 
 or use the more appropriate FTPS way to get the same file:
 
-    curl --ftp-ssl ftp://files.are.secure.com/secrets.txt
+    curl --ftp-ssl ftp://files.are.example.com/secrets.txt
 
 Get a file from an SSH server using SFTP:
 
@@ -83,11 +83,11 @@ Fetch two files and store them with their remote names:
 
 To ftp files using name and password, include them in the URL like:
 
-    curl ftp://name:passwd@machine.domain:port/full/path/to/file
+    curl ftp://name:passwd@ftp.server.example:port/full/path/to/file
 
 or specify them with the `-u` flag like
 
-    curl -u name:passwd ftp://machine.domain:port/full/path/to/file
+    curl -u name:passwd ftp://ftp.server.example:port/full/path/to/file
 
 ### FTPS
 
@@ -113,11 +113,11 @@ matching public key file must be specified using the `--pubkey` option.
 Curl also supports user and password in HTTP URLs, thus you can pick a file
 like:
 
-    curl http://name:passwd@machine.domain/full/path/to/file
+    curl http://name:passwd@http.server.example/full/path/to/file
 
 or specify user and password separately like in
 
-    curl -u name:passwd http://machine.domain/full/path/to/file
+    curl -u name:passwd http://http.server.example/full/path/to/file
 
 HTTP offers many different methods of authentication and curl supports
 several: Basic, Digest, NTLM and Negotiate (SPNEGO). Without telling which
@@ -144,21 +144,21 @@ servers.
 
 Get an ftp file using an HTTP proxy named my-proxy that uses port 888:
 
-    curl -x my-proxy:888 ftp://ftp.leachsite.com/README
+    curl -x my-proxy:888 ftp://ftp.example.com/README
 
 Get a file from an HTTP server that requires user and password, using the
 same proxy as above:
 
-    curl -u user:passwd -x my-proxy:888 http://www.get.this/
+    curl -u user:passwd -x my-proxy:888 http://www.example.com/
 
 Some proxies require special authentication. Specify by using -U as above:
 
-    curl -U user:passwd -x my-proxy:888 http://www.get.this/
+    curl -U user:passwd -x my-proxy:888 http://www.example.com/
 
 A comma-separated list of hosts and domains which do not use the proxy can be
 specified as:
 
-    curl --noproxy localhost,get.this -x my-proxy:888 http://www.get.this/
+    curl --noproxy example.com -x my-proxy:888 http://www.example.com/
 
 If the proxy is specified with `--proxy1.0` instead of `--proxy` or `-x`, then
 curl will use HTTP/1.0 instead of HTTP/1.1 for any `CONNECT` attempts.
@@ -174,9 +174,9 @@ curl supports the `-u`, `-Q` and `--ftp-account` options that can be used to
 set up transfers through many FTP proxies. For example, a file can be uploaded
 to a remote FTP server using a Blue Coat FTP proxy with the options:
 
-    curl -u "username@ftp.server Proxy-Username:Remote-Pass"
+    curl -u "username@ftp.server.example Proxy-Username:Remote-Pass"
       --ftp-account Proxy-Password --upload-file local-file
-      ftp://my-ftp.proxy.server:21/remote/upload/path/
+      ftp://my-ftp.proxy.example:21/remote/upload/path/
 
 See the manual for your FTP proxy to determine the form it expects to set up
 transfers, and curl's `-v` option to see exactly what curl is sending.
@@ -186,7 +186,7 @@ transfers, and curl's `-v` option to see exactly what curl is sending.
 Get a key file and add it with `apt-key` (when on a system that uses `apt` for
 package management):
 
-    curl -L https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+    curl -L https://apt.example.org/llvm-snapshot.gpg.key | sudo apt-key add -
 
 The '|' pipes the output to STDIN. `-` tells `apt-key` that the key file
 should be read from STDIN.
@@ -199,18 +199,18 @@ one or more sub-parts of a specified document. Curl supports this with the
 
 Get the first 100 bytes of a document:
 
-    curl -r 0-99 http://www.get.this/
+    curl -r 0-99 http://www.example.com/
 
 Get the last 500 bytes of a document:
 
-    curl -r -500 http://www.get.this/
+    curl -r -500 http://www.example.com/
 
 Curl also supports simple ranges for FTP files as well. Then you can only
 specify start and stop position.
 
 Get the first 100 bytes of a document using FTP:
 
-    curl -r 0-99 ftp://www.get.this/README
+    curl -r 0-99 ftp://www.example.com/README
 
 ## Uploading
 
@@ -218,26 +218,26 @@ Get the first 100 bytes of a document using FTP:
 
 Upload all data on stdin to a specified server:
 
-    curl -T - ftp://ftp.upload.com/myfile
+    curl -T - ftp://ftp.example.com/myfile
 
 Upload data from a specified file, login with user and password:
 
-    curl -T uploadfile -u user:passwd ftp://ftp.upload.com/myfile
+    curl -T uploadfile -u user:passwd ftp://ftp.example.com/myfile
 
 Upload a local file to the remote site, and use the local file name at the
 remote site too:
 
-    curl -T uploadfile -u user:passwd ftp://ftp.upload.com/
+    curl -T uploadfile -u user:passwd ftp://ftp.example.com/
 
 Upload a local file to get appended to the remote file:
 
-    curl -T localfile -a ftp://ftp.upload.com/remotefile
+    curl -T localfile -a ftp://ftp.example.com/remotefile
 
 Curl also supports ftp upload through a proxy, but only if the proxy is
 configured to allow that kind of tunneling. If it does, you can run curl in a
 fashion similar to:
 
-    curl --proxytunnel -x proxy:port -T localfile ftp.upload.com
+    curl --proxytunnel -x proxy:port -T localfile ftp.example.com
 
 ### SMB / SMBS
 
@@ -248,7 +248,7 @@ fashion similar to:
 
 Upload all data on stdin to a specified HTTP site:
 
-    curl -T - http://www.upload.com/myfile
+    curl -T - http://www.example.com/myfile
 
 Note that the HTTP server must have been configured to accept PUT before this
 can be done successfully.
@@ -263,7 +263,7 @@ fetching. Curl will output lots of info and what it sends and receives in
 order to let the user see all client-server interaction (but it will not show you
 the actual data).
 
-    curl -v ftp://ftp.upload.com/
+    curl -v ftp://ftp.example.com/
 
 To get even more details and information on what curl does, try using the
 `--trace` or `--trace-ascii` options with a given file name to log to, like
@@ -300,11 +300,11 @@ The post data must be urlencoded.
 
 Post a simple `name` and `phone` guestbook.
 
-    curl -d "name=Rafael%20Sagula&phone=3320780" http://www.where.com/guest.cgi
+    curl -d "name=Rafael%20Sagula&phone=3320780" http://www.example.com/guest.cgi
 
 Or automatically [URL encode the data](https://everything.curl.dev/http/post/url-encode).
 
-    curl --data-urlencode "name=Rafael Sagula&phone=3320780" http://www.where.com/guest.cgi
+    curl --data-urlencode "name=Rafael Sagula&phone=3320780" http://www.example.com/guest.cgi
 
 How to post a form with curl, lesson #1:
 
@@ -323,23 +323,22 @@ of the letter's ASCII code.
 
 Example:
 
-(page located at `http://www.formpost.com/getthis/`)
+(say if `http://example.com` had the following html)
 
 ```html
 <form action="post.cgi" method="post">
-<input name=user size=10>
-<input name=pass type=password size=10>
-<input name=id type=hidden value="blablabla">
-<input name=ding value="submit">
+  <input name=user size=10>
+  <input name=pass type=password size=10>
+  <input name=id type=hidden value="blablabla">
+  <input name=ding value="submit">
 </form>
 ```
 
 We want to enter user `foobar` with password `12345`.
 
-To post to this, you enter a curl command line like:
+To post to this, you would enter a curl command line like:
 
-    curl -d "user=foobar&pass=12345&id=blablabla&ding=submit"
-      http://www.formpost.com/getthis/post.cgi
+    curl -d "user=foobar&pass=12345&id=blablabla&ding=submit" http://example.com/post.cgi
 
 While `-d` uses the application/x-www-form-urlencoded mime-type, generally
 understood by CGI's and similar, curl also supports the more capable
@@ -353,7 +352,7 @@ example, the field name `coolfiles` is used to send three files, with
 different content types using the following syntax:
 
     curl -F "coolfiles=@fil1.gif;type=image/gif,fil2.txt,fil3.html"
-      http://www.post.com/postit.cgi
+      http://www.example.com/postit.cgi
 
 If the content-type is not specified, curl will try to guess from the file
 extension (it only knows a few), or use the previously specified type (from an
@@ -370,7 +369,7 @@ the names of the input fields. In our example, the input field names are
 
     curl -F "file=@cooltext.txt" -F "yourname=Daniel"
       -F "filedescription=Cool text file with cool text inside"
-      http://www.post.com/postit.cgi
+      http://www.example.com/postit.cgi
 
 To send two files in one post you can do it in two ways:
 
@@ -396,7 +395,7 @@ used on the command line. It is especially useful to fool or trick stupid
 servers or CGI scripts that rely on that information being available or
 contain certain data.
 
-    curl -e www.coolsite.com http://www.showme.com/
+    curl -e www.exomaple.org http://www.example.com/
 
 ## User Agent
 
@@ -407,7 +406,7 @@ accept certain browsers.
 
 Example:
 
-    curl -A 'Mozilla/3.0 (Win95; I)' http://www.nationsbank.com/
+    curl -A 'Mozilla/3.0 (Win95; I)' http://www.bank.example.com/
 
 Other common strings:
 
@@ -448,7 +447,7 @@ path beginning with `/foo`.
 
 Example, get a page that wants my name passed in a cookie:
 
-    curl -b "name=Daniel" www.sillypage.com
+    curl -b "name=Daniel" www.example.com
 
 Curl also has the ability to use previously received cookies in following
 sessions. If you get cookies from a server and store them in a file in a
@@ -525,12 +524,12 @@ for a specified time.
 To have curl abort the download if the speed is slower than 3000 bytes per
 second for 1 minute, run:
 
-    curl -Y 3000 -y 60 www.far-away-site.com
+    curl -Y 3000 -y 60 www.far-away.example.com
 
 This can be used in combination with the overall time limit, so that the above
 operation must be completed in whole within 30 minutes:
 
-    curl -m 1800 -Y 3000 -y 60 www.far-away-site.com
+    curl -m 1800 -Y 3000 -y 60 www.far-away.example.com
 
 Forcing curl not to transfer data faster than a given rate is also possible,
 which might be useful if you are using a limited bandwidth connection and you
@@ -539,15 +538,15 @@ do not want your transfer to use all of it (sometimes referred to as
 
 Make curl transfer data no faster than 10 kilobytes per second:
 
-    curl --limit-rate 10K www.far-away-site.com
+    curl --limit-rate 10K www.far-away.example.com
 
 or
 
-    curl --limit-rate 10240 www.far-away-site.com
+    curl --limit-rate 10240 www.far-away.example.com
 
 Or prevent curl from uploading data faster than 1 megabyte per second:
 
-    curl -T upload --limit-rate 1M ftp://uploadshereplease.com
+    curl -T upload --limit-rate 1M ftp://uploads.example.com
 
 When using the `--limit-rate` option, the transfer rate is regulated on a
 per-second basis, which will cause the total transfer speed to become lower
@@ -584,20 +583,20 @@ up to the first characters of each line are ignored.
 Prevent curl from reading the default file by using -q as the first command
 line parameter, like:
 
-    curl -q www.thatsite.com
+    curl -q www.example.org
 
 Force curl to get and display a local help page in case it is invoked without
 URL by making a config file similar to:
 
     # default url to get
-    url = "http://help.with.curl.com/curlhelp.html"
+    url = "http://help.with.curl.example.com/curlhelp.html"
 
 You can specify another config file to be read by using the `-K`/`--config`
 flag. If you set config file name to `-` it will read the config from stdin,
 which can be handy if you want to hide options from being visible in process
 tables etc:
 
-    echo "user = user:passwd" | curl -K - http://that.secret.site.com
+    echo "user = user:passwd" | curl -K - http://that.secret.example.com
 
 ## Extra Headers
 
@@ -608,7 +607,7 @@ flag.
 Example, send the header `X-you-and-me: yes` to the server when getting a
 page:
 
-    curl -H "X-you-and-me: yes" www.love.com
+    curl -H "X-you-and-me: yes" love.example.com
 
 This can also be useful in case you want curl to send a different text in a
 header than it normally does. The `-H` header you specify then replaces the
@@ -616,7 +615,7 @@ header curl would normally send. If you replace an internal header with an
 empty one, you prevent that header from being sent. To prevent the `Host:`
 header from being used:
 
-    curl -H "Host:" www.server.com
+    curl -H "Host:" server.example.com
 
 ## FTP and Path Names
 
@@ -624,12 +623,12 @@ Do note that when getting files with a `ftp://` URL, the given path is
 relative to the directory you enter. To get the file `README` from your home
 directory at your ftp site, do:
 
-    curl ftp://user:passwd@my.site.com/README
+    curl ftp://user:passwd@my.example.com/README
 
 If you want the README file from the root directory of that same site, you
 need to specify the absolute file name:
 
-    curl ftp://user:passwd@my.site.com//README
+    curl ftp://user:passwd@my.example.com//README
 
 (I.e with an extra slash in front of the file name.)
 
@@ -652,7 +651,7 @@ to open another port and await another connection performed by the
 client. This is good if the client is behind a firewall that does not allow
 incoming connections.
 
-    curl ftp.download.com
+    curl ftp.example.com
 
 If the server, for example, is behind a firewall that does not allow
 connections on ports other than 21 (or if it just does not support the `PASV`
@@ -664,16 +663,16 @@ The `-P` flag to curl supports a few different options. Your machine may have
 several IP-addresses and/or network interfaces and curl allows you to select
 which of them to use. Default address can also be used:
 
-    curl -P - ftp.download.com
+    curl -P - ftp.example.com
 
 Download with `PORT` but use the IP address of our `le0` interface (this does
 not work on Windows):
 
-    curl -P le0 ftp.download.com
+    curl -P le0 ftp.example.com
 
 Download with `PORT` but use 192.168.0.10 as our IP address to use:
 
-    curl -P 192.168.0.10 ftp.download.com
+    curl -P 192.168.0.10 ftp.example.com
 
 ## Network Interface
 
@@ -693,7 +692,7 @@ using the HTTPS protocol.
 
 Example:
 
-    curl https://www.secure-site.com
+    curl https://secure.example.com
 
 curl is also capable of using client certificates to get/post files from sites
 that require valid certificates. The only drawback is that the certificate
@@ -706,7 +705,7 @@ formatted certificates to PEM formatted ones.
 Example on how to automatically retrieve a document using a certificate with a
 personal password:
 
-    curl -E /path/to/cert.pem:password https://secure.site.com/
+    curl -E /path/to/cert.pem:password https://secure.example.com/
 
 If you neglect to specify the password on the command line, you will be
 prompted for the correct password before any data can be received.
@@ -715,7 +714,7 @@ Many older HTTPS servers have problems with specific SSL or TLS versions,
 which newer versions of OpenSSL etc use, therefore it is sometimes useful to
 specify what TLS version curl should use.:
 
-    curl --tlv1.0 https://secure.site.com/
+    curl --tlv1.0 https://secure.example.com/
 
 Otherwise, curl will attempt to use a sensible TLS default version.
 
@@ -726,15 +725,15 @@ resume on HTTP(S) downloads as well as FTP uploads and downloads.
 
 Continue downloading a document:
 
-    curl -C - -o file ftp://ftp.server.com/path/file
+    curl -C - -o file ftp://ftp.example.com/path/file
 
 Continue uploading a document:
 
-    curl -C - -T file ftp://ftp.server.com/path/file
+    curl -C - -T file ftp://ftp.example.com/path/file
 
 Continue downloading a document from a web server
 
-    curl -C - -o file http://www.server.com/
+    curl -C - -o file http://www.example.com/
 
 ## Time Conditions
 
@@ -745,17 +744,17 @@ them with the `-z`/`--time-cond` flag.
 For example, you can easily make a download that only gets performed if the
 remote file is newer than a local copy. It would be made like:
 
-    curl -z local.html http://remote.server.com/remote.html
+    curl -z local.html http://remote.example.com/remote.html
 
 Or you can download a file only if the local file is newer than the remote
 one. Do this by prepending the date string with a `-`, as in:
 
-    curl -z -local.html http://remote.server.com/remote.html
+    curl -z -local.html http://remote.example.com/remote.html
 
 You can specify a plain text date as condition. Tell curl to only download the
 file if it was updated since January 12, 2012:
 
-    curl -z "Jan 12 2012" http://remote.server.com/remote.html
+    curl -z "Jan 12 2012" http://remote.example.com/remote.html
 
 curl accepts a wide range of date formats. You always make the date check the
 other way around by prepending it with a dash (`-`).
@@ -796,20 +795,20 @@ such place might be: [RFC 2255, The LDAP URL
 Format](https://curl.se/rfc/rfc2255.txt)
 
 To show you an example, this is how to get all people from an LDAP server that
-has a certain sub-domain in their email address:
+has a certain subdomain in their email address:
 
-    curl -B "ldap://ldap.frontec.se/o=frontec??sub?mail=*sth.frontec.se"
+    curl -B "ldap://ldap.example.com/o=frontec??sub?mail=*sth.example.com"
 
 You also can use authentication when accessing LDAP catalog:
 
-    curl -u user:passwd "ldap://ldap.frontec.se/o=frontec??sub?mail=*"
-    curl "ldap://user:passwd@ldap.frontec.se/o=frontec??sub?mail=*"
+    curl -u user:passwd "ldap://ldap.example.com/o=frontec??sub?mail=*"
+    curl "ldap://user:passwd@ldap.example.com/o=frontec??sub?mail=*"
 
 By default, if user and password are provided, OpenLDAP/WinLDAP will use basic
 authentication. On Windows you can control this behavior by providing one of
 `--basic`, `--ntlm` or `--digest` option in curl command line
 
-    curl --ntlm "ldap://user:passwd@ldap.frontec.se/o=frontec??sub?mail=*"
+    curl --ntlm "ldap://user:passwd@ldap.example.com/o=frontec??sub?mail=*"
 
 On Windows, if no user/password specified, auto-negotiation mechanism will be
 used with current logon credentials (SSPI/SPNEGO).
@@ -866,7 +865,7 @@ information from the previous transfer you want to extract.
 To display the amount of bytes downloaded together with some text and an
 ending newline:
 
-    curl -w 'We downloaded %{size_download} bytes\n' www.download.com
+    curl -w 'We downloaded %{size_download} bytes\n' www.example.com
 
 ## Kerberos FTP Transfer
 
@@ -876,7 +875,7 @@ kerberos package installed and used at curl build time for it to be available.
 First, get the krb-ticket the normal way, like with the `kinit`/`kauth` tool.
 Then use curl in way similar to:
 
-    curl --krb private ftp://krb4site.com -u username:fakepwd
+    curl --krb private ftp://krb4site.example.com -u username:fakepwd
 
 There is no use for a password on the `-u` switch, but a blank one will make
 curl ask for one and you already entered the real password to `kinit`/`kauth`.
@@ -887,7 +886,7 @@ The curl telnet support is basic and easy to use. Curl passes all data passed
 to it on stdin to the remote server. Connect to a remote telnet server using a
 command line similar to:
 
-    curl telnet://remote.server.com
+    curl telnet://remote.example.com
 
 And enter the data to pass to the server on stdin. The result will be sent to
 stdout or to the file you specify with `-o`.
@@ -898,7 +897,7 @@ for slow connections or similar.
 Pass options to the telnet protocol negotiation, by using the `-t` option. To
 tell the server we use a vt100 terminal, try something like:
 
-    curl -tTTYPE=vt100 telnet://remote.server.com
+    curl -tTTYPE=vt100 telnet://remote.example.com
 
 Other interesting options for it `-t` include:
 
@@ -938,11 +937,11 @@ URL you specify. Note that this also goes for the `-O` option (but not
 For example: get two files and use `-O` for the first and a custom file
 name for the second:
 
-    curl -O http://url.com/file.txt ftp://ftp.com/moo.exe -o moo.jpg
+    curl -O http://example.com/file.txt ftp://example.com/moo.exe -o moo.jpg
 
 You can also upload multiple files in a similar fashion:
 
-    curl -T local1 ftp://ftp.com/moo.exe -T local2 ftp://ftp.com/moo2.txt
+    curl -T local1 ftp://example.com/moo.exe -T local2 ftp://example.com/moo2.txt
 
 ## IPv6
 

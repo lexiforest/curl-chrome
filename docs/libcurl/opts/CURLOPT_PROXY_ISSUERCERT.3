@@ -57,14 +57,18 @@ NULL
 All TLS-based protocols
 .SH EXAMPLE
 .nf
-CURL *curl = curl_easy_init();
-if(curl) {
-  curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/");
-  /* using an HTTPS proxy */
-  curl_easy_setopt(curl, CURLOPT_PROXY, "https://localhost:443");
-  curl_easy_setopt(curl, CURLOPT_PROXY_ISSUERCERT, "/etc/certs/cacert.pem");
-  ret = curl_easy_perform(curl);
-  curl_easy_cleanup(curl);
+int main(void)
+{
+  CURL *curl = curl_easy_init();
+  if(curl) {
+    CURLcode res;
+    curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/");
+    /* using an HTTPS proxy */
+    curl_easy_setopt(curl, CURLOPT_PROXY, "https://localhost:443");
+    curl_easy_setopt(curl, CURLOPT_PROXY_ISSUERCERT, "/etc/certs/cacert.pem");
+    res = curl_easy_perform(curl);
+    curl_easy_cleanup(curl);
+  }
 }
 .fi
 .SH AVAILABILITY
@@ -73,5 +77,8 @@ Added in 7.71.0. This option is supported by the OpenSSL backends.
 Returns CURLE_OK if the option is supported, CURLE_UNKNOWN_OPTION if not, or
 CURLE_OUT_OF_MEMORY if there was insufficient heap space.
 .SH "SEE ALSO"
-.BR CURLOPT_PROXY_SSL_VERIFYPEER "(3), " CURLOPT_PROXY_SSL_VERIFYHOST "(3), "
-.BR CURLOPT_SSL_VERIFYPEER "(3), " CURLOPT_SSL_VERIFYHOST "(3), "
+.BR CURLOPT_ISSUERCERT (3),
+.BR CURLOPT_PROXY_SSL_VERIFYHOST (3),
+.BR CURLOPT_PROXY_SSL_VERIFYPEER (3),
+.BR CURLOPT_SSL_VERIFYHOST (3),
+.BR CURLOPT_SSL_VERIFYPEER (3)

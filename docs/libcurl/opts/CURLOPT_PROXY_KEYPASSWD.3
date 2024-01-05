@@ -34,10 +34,10 @@ CURLcode curl_easy_setopt(CURL *handle, CURLOPT_PROXY_KEYPASSWD, char *pwd);
 .SH DESCRIPTION
 This option is for connecting to an HTTPS proxy, not an HTTPS server.
 
-Pass a pointer to a null-terminated string as parameter. It will be used as
-the password required to use the \fICURLOPT_PROXY_SSLKEY(3)\fP private key.
-You never need a pass phrase to load a certificate but you need one to load
-your private key.
+Pass a pointer to a null-terminated string as parameter. It is used as the
+password required to use the \fICURLOPT_PROXY_SSLKEY(3)\fP private key.  You
+never need a pass phrase to load a certificate but you need one to load your
+private key.
 
 The application does not have to keep the string around after setting this
 option.
@@ -47,13 +47,17 @@ NULL
 Used with HTTPS proxy
 .SH EXAMPLE
 .nf
-CURL *curl = curl_easy_init();
-if(curl) {
-  curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/foo.bin");
-  curl_easy_setopt(curl, CURLOPT_PROXY, "https://proxy:443");
-  curl_easy_setopt(curl, CURLOPT_PROXY_KEYPASSWD, "superman");
-  ret = curl_easy_perform(curl);
-  curl_easy_cleanup(curl);
+int main(void)
+{
+  CURL *curl = curl_easy_init();
+  if(curl) {
+    CURLcode res;
+    curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/foo.bin");
+    curl_easy_setopt(curl, CURLOPT_PROXY, "https://proxy:443");
+    curl_easy_setopt(curl, CURLOPT_PROXY_KEYPASSWD, "superman");
+    res = curl_easy_perform(curl);
+    curl_easy_cleanup(curl);
+  }
 }
 .fi
 .SH AVAILABILITY
@@ -62,5 +66,7 @@ Added in 7.52.0
 Returns CURLE_OK if TLS enabled, CURLE_UNKNOWN_OPTION if not, or
 CURLE_OUT_OF_MEMORY if there was insufficient heap space.
 .SH "SEE ALSO"
-.BR CURLOPT_PROXY_SSLKEY "(3), " CURLOPT_SSH_PRIVATE_KEYFILE "(3), "
-.BR CURLOPT_SSLKEY "(3), "
+.BR CURLOPT_KEYPASSWD (3),
+.BR CURLOPT_PROXY_SSLKEY (3),
+.BR CURLOPT_SSH_PRIVATE_KEYFILE (3),
+.BR CURLOPT_SSLKEY (3)

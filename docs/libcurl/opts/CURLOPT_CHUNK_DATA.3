@@ -32,7 +32,7 @@ CURLOPT_CHUNK_DATA \- pointer passed to the FTP chunk callbacks
 CURLcode curl_easy_setopt(CURL *handle, CURLOPT_CHUNK_DATA, void *pointer);
 .fi
 .SH DESCRIPTION
-Pass a \fIpointer\fP that will be untouched by libcurl and passed as the ptr
+Pass a \fIpointer\fP that is untouched by libcurl and passed as the ptr
 argument to the \fICURLOPT_CHUNK_BGN_FUNCTION(3)\fP and
 \fICURLOPT_CHUNK_END_FUNCTION(3)\fP.
 .SH DEFAULT
@@ -41,10 +41,17 @@ NULL
 FTP
 .SH EXAMPLE
 .nf
+#include <stdio.h>
+
+struct callback_data {
+   FILE *output;
+};
+
 static long file_is_coming(struct curl_fileinfo *finfo,
-                           struct callback_data *data,
+                           void *ptr,
                            int remains)
 {
+  struct callback_data *data = ptr;
   printf("%3d %40s %10luB ", remains, finfo->filename,
          (unsigned long)finfo->size);
 
@@ -81,6 +88,8 @@ int main()
   /* data for callback */
   struct callback_data callback_info;
 
+  CURL *curl = curl_easy_init();
+
   /* callback is called before download of concrete file started */
   curl_easy_setopt(curl, CURLOPT_CHUNK_BGN_FUNCTION, file_is_coming);
   curl_easy_setopt(curl, CURLOPT_CHUNK_DATA, &callback_info);
@@ -91,4 +100,5 @@ Added in 7.21.0
 .SH RETURN VALUE
 Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR CURLOPT_CHUNK_BGN_FUNCTION "(3), " CURLOPT_WILDCARDMATCH "(3), "
+.BR CURLOPT_CHUNK_BGN_FUNCTION (3),
+.BR CURLOPT_WILDCARDMATCH (3)

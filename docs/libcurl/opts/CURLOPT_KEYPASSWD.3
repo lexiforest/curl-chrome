@@ -32,8 +32,8 @@ CURLOPT_KEYPASSWD \- passphrase to private key
 CURLcode curl_easy_setopt(CURL *handle, CURLOPT_KEYPASSWD, char *pwd);
 .fi
 .SH DESCRIPTION
-Pass a pointer to a null-terminated string as parameter. It will be used as
-the password required to use the \fICURLOPT_SSLKEY(3)\fP or
+Pass a pointer to a null-terminated string as parameter. It is used as the
+password required to use the \fICURLOPT_SSLKEY(3)\fP or
 \fICURLOPT_SSH_PRIVATE_KEYFILE(3)\fP private key.  You never need a pass
 phrase to load a certificate but you need one to load your private key.
 
@@ -45,14 +45,18 @@ NULL
 All TLS based protocols: HTTPS, FTPS, IMAPS, POP3S, SMTPS etc.
 .SH EXAMPLE
 .nf
-CURL *curl = curl_easy_init();
-if(curl) {
-  curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/foo.bin");
-  curl_easy_setopt(curl, CURLOPT_SSLCERT, "client.pem");
-  curl_easy_setopt(curl, CURLOPT_SSLKEY, "key.pem");
-  curl_easy_setopt(curl, CURLOPT_KEYPASSWD, "superman");
-  ret = curl_easy_perform(curl);
-  curl_easy_cleanup(curl);
+int main(void)
+{
+  CURL *curl = curl_easy_init();
+  if(curl) {
+    CURLcode res;
+    curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/foo.bin");
+    curl_easy_setopt(curl, CURLOPT_SSLCERT, "client.pem");
+    curl_easy_setopt(curl, CURLOPT_SSLKEY, "key.pem");
+    curl_easy_setopt(curl, CURLOPT_KEYPASSWD, "superman");
+    res = curl_easy_perform(curl);
+    curl_easy_cleanup(curl);
+  }
 }
 .fi
 .SH AVAILABILITY
@@ -62,4 +66,5 @@ CURLOPT_SSLCERTPASSWD up to 7.9.2.
 Returns CURLE_OK if TLS enabled, CURLE_UNKNOWN_OPTION if not, or
 CURLE_OUT_OF_MEMORY if there was insufficient heap space.
 .SH "SEE ALSO"
-.BR CURLOPT_SSLKEY "(3), " CURLOPT_SSH_PRIVATE_KEYFILE "(3), "
+.BR CURLOPT_SSH_PRIVATE_KEYFILE (3),
+.BR CURLOPT_SSLKEY (3)

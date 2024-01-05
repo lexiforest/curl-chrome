@@ -25,21 +25,14 @@
 
 #include <sys/stat.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <tchar.h>
 #endif
 
-#ifdef HAVE_SIGNAL_H
 #include <signal.h>
-#endif
 
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
-#endif
-
-#ifdef USE_NSS
-#include <nspr.h>
-#include <plarenas.h>
 #endif
 
 #define ENABLE_CURLX_PRINTF
@@ -78,6 +71,7 @@ int vms_show = 0;
  * when command-line argument globbing is enabled under the MSYS shell, so turn
  * it off.
  */
+extern int _CRT_glob;
 int _CRT_glob = 0;
 #endif /* __MINGW32__ */
 
@@ -175,17 +169,17 @@ static CURLcode main_init(struct GlobalConfig *config)
         config->first->global = config;
       }
       else {
-        errorf(config, "error retrieving curl library information\n");
+        errorf(config, "error retrieving curl library information");
         free(config->first);
       }
     }
     else {
-      errorf(config, "error initializing curl library\n");
+      errorf(config, "error initializing curl library");
       free(config->first);
     }
   }
   else {
-    errorf(config, "error initializing curl\n");
+    errorf(config, "error initializing curl");
     result = CURLE_FAILED_INIT;
   }
 
@@ -212,14 +206,6 @@ static void main_free(struct GlobalConfig *config)
   /* Cleanup the easy handle */
   /* Main cleanup */
   curl_global_cleanup();
-#ifdef USE_NSS
-  if(PR_Initialized()) {
-    /* prevent valgrind from reporting still reachable mem from NSPR arenas */
-    PL_ArenaFinish();
-    /* prevent valgrind from reporting possibly lost memory (fd cache, ...) */
-    PR_Cleanup();
-  }
-#endif
   free_globalconfig(config);
 
   /* Free the config structures */
@@ -234,6 +220,7 @@ static void main_free(struct GlobalConfig *config)
 #ifdef _UNICODE
 #if defined(__GNUC__)
 /* GCC doesn't know about wmain() */
+#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmissing-prototypes"
 #pragma GCC diagnostic ignored "-Wmissing-declarations"
 #endif
@@ -248,7 +235,7 @@ int main(int argc, char *argv[])
 
   tool_init_stderr();
 
-#ifdef WIN32
+#ifdef _WIN32
   /* Undocumented diagnostic option to list the full paths of all loaded
      modules. This is purposely pre-init. */
   if(argc == 2 && !_tcscmp(argv[1], _T("--dump-module-paths"))) {
@@ -261,13 +248,13 @@ int main(int argc, char *argv[])
   /* win32_init must be called before other init routines. */
   result = win32_init();
   if(result) {
-    fprintf(stderr, "curl: (%d) Windows-specific init failed.\n", result);
+    errorf(&global, "(%d) Windows-specific init failed", result);
     return result;
   }
 #endif
 
   if(main_checkfds()) {
-    fprintf(stderr, "curl: out of file descriptors\n");
+    errorf(&global, "out of file descriptors");
     return CURLE_FAILED_INIT;
   }
 
@@ -289,7 +276,7 @@ int main(int argc, char *argv[])
     main_free(&global);
   }
 
-#ifdef WIN32
+#ifdef _WIN32
   /* Flush buffers of all streams opened in write or update mode */
   fflush(NULL);
 #endif
@@ -300,5 +287,11 @@ int main(int argc, char *argv[])
   return (int)result;
 #endif
 }
+
+#ifdef _UNICODE
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+#endif
 
 #endif /* ndef UNITTESTS */

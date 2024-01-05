@@ -110,7 +110,7 @@ libcurl_impersonate_chrome_la_CFLAGS_EXTRA += $(CFLAG_CURL_SYMBOL_HIDING)
 endif
 
 libcurl_impersonate_chrome_la_CPPFLAGS = $(AM_CPPFLAGS) $(libcurl_impersonate_chrome_la_CPPFLAGS_EXTRA)
-libcurl_impersonate_chrome_la_LDFLAGS = $(AM_LDFLAGS) $(libcurl_impersonate_chrome_la_LDFLAGS_EXTRA) $(LDFLAGS) $(LIBCURL_LIBS)
+libcurl_impersonate_chrome_la_LDFLAGS = $(AM_LDFLAGS) $(libcurl_impersonate_chrome_la_LDFLAGS_EXTRA) $(CURL_LDFLAGS_LIB) $(LIBCURL_LIBS)
 libcurl_impersonate_chrome_la_CFLAGS = $(AM_CFLAGS) $(libcurl_impersonate_chrome_la_CFLAGS_EXTRA)
 
 libcurlu_la_CPPFLAGS = $(AM_CPPFLAGS) -DCURL_STATICLIB -DUNITTESTS

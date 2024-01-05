@@ -73,16 +73,20 @@ the correct end-point.
 DoH
 .SH EXAMPLE
 .nf
-CURL *curl = curl_easy_init();
-if(curl) {
-  curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
+int main(void)
+{
+  CURL *curl = curl_easy_init();
+  if(curl) {
+    curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
 
-  curl_easy_setopt(curl, CURLOPT_DOH_URL, "https://cloudflare-dns.com/dns-query");
+    curl_easy_setopt(curl, CURLOPT_DOH_URL,
+                     "https://cloudflare-dns.com/dns-query");
 
-  /* Disable certificate verification of the DoH server */
-  curl_easy_setopt(curl, CURLOPT_DOH_SSL_VERIFYPEER, 0L);
+    /* Disable certificate verification of the DoH server */
+    curl_easy_setopt(curl, CURLOPT_DOH_SSL_VERIFYPEER, 0L);
 
-  curl_easy_perform(curl);
+    curl_easy_perform(curl);
+  }
 }
 .fi
 .SH AVAILABILITY
@@ -92,10 +96,10 @@ If built TLS enabled.
 .SH RETURN VALUE
 Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR CURLOPT_DOH_SSL_VERIFYHOST "(3), "
-.BR CURLOPT_SSL_VERIFYHOST "(3), "
-.BR CURLOPT_SSL_VERIFYPEER "(3), "
-.BR CURLOPT_PROXY_SSL_VERIFYPEER "(3), "
-.BR CURLOPT_PROXY_SSL_VERIFYHOST "(3), "
-.BR CURLOPT_CAINFO "(3), "
-.BR CURLOPT_CAPATH "(3), "
+.BR CURLOPT_CAINFO (3),
+.BR CURLOPT_CAPATH (3),
+.BR CURLOPT_DOH_SSL_VERIFYHOST (3),
+.BR CURLOPT_PROXY_SSL_VERIFYHOST (3),
+.BR CURLOPT_PROXY_SSL_VERIFYPEER (3),
+.BR CURLOPT_SSL_VERIFYHOST (3),
+.BR CURLOPT_SSL_VERIFYPEER (3)

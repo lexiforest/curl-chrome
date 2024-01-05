@@ -39,19 +39,23 @@ upload. Stores -1 if the size is not known.
 All
 .SH EXAMPLE
 .nf
-CURL *curl = curl_easy_init();
-if(curl) {
-  curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
+int main(void)
+{
+  CURL *curl = curl_easy_init();
+  if(curl) {
+    CURLcode res;
+    curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
 
-  /* Perform the upload */
-  res = curl_easy_perform(curl);
+    /* Perform the upload */
+    res = curl_easy_perform(curl);
 
-  if(!res) {
-    /* check the size */
-    curl_off_t cl;
-    res = curl_easy_getinfo(curl, CURLINFO_CONTENT_LENGTH_UPLOAD_T, &cl);
     if(!res) {
-      printf("Upload size: %" CURL_FORMAT_CURL_OFF_T "\\n", cl);
+      /* check the size */
+      curl_off_t cl;
+      res = curl_easy_getinfo(curl, CURLINFO_CONTENT_LENGTH_UPLOAD_T, &cl);
+      if(!res) {
+        printf("Upload size: %" CURL_FORMAT_CURL_OFF_T "\\n", cl);
+      }
     }
   }
 }
@@ -61,5 +65,6 @@ Added in 7.55.0
 .SH RETURN VALUE
 Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR curl_easy_getinfo "(3), " curl_easy_setopt "(3), "
-.BR CURLINFO_CONTENT_LENGTH_DOWNLOAD_T "(3), "
+.BR curl_easy_getinfo (3),
+.BR curl_easy_setopt (3),
+.BR CURLINFO_CONTENT_LENGTH_DOWNLOAD_T (3)

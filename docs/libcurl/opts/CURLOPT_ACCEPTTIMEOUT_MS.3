@@ -40,14 +40,17 @@ server to connect back to libcurl when an active FTP connection is used.
 FTP
 .SH EXAMPLE
 .nf
-CURL *curl = curl_easy_init();
-if(curl) {
-  curl_easy_setopt(curl, CURLOPT_URL, "ftp://example.com/path/file");
+int main(void)
+{
+  CURL *curl = curl_easy_init();
+  if(curl) {
+    curl_easy_setopt(curl, CURLOPT_URL, "ftp://example.com/path/file");
 
-  /* wait no more than 5 seconds for FTP server responses */
-  curl_easy_setopt(curl, CURLOPT_ACCEPTTIMEOUT_MS, 5000L);
+    /* wait no more than 5 seconds for FTP server responses */
+    curl_easy_setopt(curl, CURLOPT_ACCEPTTIMEOUT_MS, 5000L);
 
-  curl_easy_perform(curl);
+    curl_easy_perform(curl);
+  }
 }
 .fi
 .SH AVAILABILITY
@@ -55,4 +58,6 @@ Added in 7.24.0
 .SH RETURN VALUE
 Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR CURLOPT_STDERR "(3), " CURLOPT_DEBUGFUNCTION "(3), "
+.BR CURLOPT_CONNECTTIMEOUT_MS (3),
+.BR CURLOPT_DEBUGFUNCTION (3),
+.BR CURLOPT_STDERR (3)

@@ -52,18 +52,21 @@ when setting \fICURLOPT_FOLLOWLOCATION(3)\fP.
 HTTP(S)
 .SH EXAMPLE
 .nf
-CURL *curl = curl_easy_init();
-if(curl) {
-  curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
+int main(void)
+{
+  CURL *curl = curl_easy_init();
+  if(curl) {
+    curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
 
-  /* a silly POST example */
-  curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "data=true");
+    /* a silly POST example */
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "data=true");
 
-  /* example.com is redirected, so we tell libcurl to send POST on 301, 302 and
-     303 HTTP response codes */
-  curl_easy_setopt(curl, CURLOPT_POSTREDIR, CURL_REDIR_POST_ALL);
+    /* example.com is redirected, so we tell libcurl to send POST on 301,
+       302 and 303 HTTP response codes */
+    curl_easy_setopt(curl, CURLOPT_POSTREDIR, CURL_REDIR_POST_ALL);
 
-  curl_easy_perform(curl);
+    curl_easy_perform(curl);
+  }
 }
 .fi
 .SH AVAILABILITY
@@ -72,4 +75,8 @@ only supported the 301 then. CURL_REDIR_POST_303 was added in 7.26.0.
 .SH RETURN VALUE
 Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR CURLOPT_FOLLOWLOCATION "(3), " CURLOPT_POSTFIELDS "(3), "
+.BR CURLINFO_EFFECTIVE_METHOD (3),
+.BR CURLINFO_REDIRECT_COUNT (3),
+.BR CURLOPT_FOLLOWLOCATION (3),
+.BR CURLOPT_MAXREDIRS (3),
+.BR CURLOPT_POSTFIELDS (3)
