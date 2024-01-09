@@ -343,24 +343,18 @@ CURLsslset curl_global_sslset(curl_sslbackend id, const char *name,
   return rc;
 }
 
+
 /*
  * curl-impersonate:
- * Call curl_easy_setopt() with all the needed options as defined in the
- * 'impersonations' array.
+ * Actually call curl_easy_setopt() with all the needed options
  * */
-CURLcode curl_easy_impersonate(struct Curl_easy *data, const char *target,
-                               int default_headers)
+CURLcode _do_impersonate(struct Curl_easy *data,
+                        const struct impersonate_opts *opts,
+                        int default_headers)
 {
   int i;
   int ret;
-  const struct impersonate_opts *opts = NULL;
   struct curl_slist *headers = NULL;
-
-  for(opts = impersonations; opts->target != NULL; opts++) {
-    if (strcasecompare(target, opts->target)) {
-      break;
-    }
-  }
 
   if(opts->target == NULL) {
     DEBUGF(fprintf(stderr, "Error: unknown impersonation target '%s'\n",
@@ -477,6 +471,54 @@ CURLcode curl_easy_impersonate(struct Curl_easy *data, const char *target,
 
   /* Always enable all supported compressions. */
   ret = curl_easy_setopt(data, CURLOPT_ACCEPT_ENCODING, "");
+  if(ret)
+    return ret;
+
+  return CURLE_OK;
+}
+
+
+/*
+ * curl-impersonate:
+ * Call curl_easy_setopt() with all the needed options as defined by the target
+ * */
+CURLcode curl_easy_impersonate_customized(struct Curl_easy *data,
+                                          const struct impersonate_opts *opts,
+                                          int default_headers)
+{
+  int ret;
+
+  ret = _do_impersonate(data, opts, default_headers)
+  if(ret)
+    return ret;
+
+  return CURLE_OK;
+}
+
+/*
+ * curl-impersonate:
+ * Call curl_easy_setopt() with all the needed options as defined in the
+ * 'impersonations' array.
+ * */
+CURLcode curl_easy_impersonate(struct Curl_easy *data, const char *target,
+                               int default_headers)
+{
+  int ret;
+  const struct impersonate_opts *opts = NULL;
+
+  for(opts = impersonations; opts->target != NULL; opts++) {
+    if (strcasecompare(target, opts->target)) {
+      break;
+    }
+  }
+
+  if(opts->target == NULL) {
+    DEBUGF(fprintf(stderr, "Error: unknown impersonation target '%s'\n",
+                   target));
+    return CURLE_BAD_FUNCTION_ARGUMENT;
+  }
+
+  ret = _do_impersonate(data, opts, default_headers)
   if(ret)
     return ret;
 
