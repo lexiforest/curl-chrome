@@ -739,6 +739,45 @@ const struct impersonate_opts impersonations[] = {
     .http2_pseudo_headers_order = "mspa"
   },
   {
+    .target = "firefox120",
+    .httpversion = CURL_HTTP_VERSION_2_0,
+    .ssl_version = CURL_SSLVERSION_TLSv1_2 | CURL_SSLVERSION_MAX_DEFAULT,
+    .ciphers =
+      "TLS_AES_128_GCM_SHA256,"
+      "TLS_CHACHA20_POLY1305_SHA256,"
+      "TLS_AES_256_GCM_SHA384,"
+      "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,"
+      "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,"
+      "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,"
+      "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,"
+      "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,"
+      "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,"
+      "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,"
+      "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,"
+      "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,"
+      "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,"
+      "TLS_RSA_WITH_AES_128_GCM_SHA256,"
+      "TLS_RSA_WITH_AES_256_GCM_SHA384,"
+      "TLS_RSA_WITH_AES_128_CBC_SHA,"
+      "TLS_RSA_WITH_AES_256_CBC_SHA",
+    .http_headers = {
+      "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:121.0) Gecko/20100101 Firefox/121.0",
+      "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+      "Accept-Language: en-US,en;q=0.5",
+      "Accept-Encoding: gzip, deflate, br",
+      "Upgrade-Insecure-Requests: 1",
+      "Sec-Fetch-Dest: document",
+      "Sec-Fetch-Mode: navigate",
+      "Sec-Fetch-Site: none",
+      "Sec-Fetch-User: ?1",
+      "Te: trailers"
+    },
+    .http2_settings = "1:65536;4:131072;5:16384",
+    .http2_window_update = 12517377,
+    .http2_pseudo_headers_order = "mpas",
+    .http2_streams = "3:0:0:201,5:0:0:101,7:0:0:1,9:0:7:1,11:0:3:1,13:0:0:241"
+  },
+  {
     /* Last one must be NULL. */
     .target = NULL
   }

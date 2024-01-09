@@ -168,6 +168,7 @@ static int populate_settings(nghttp2_settings_entry *iv,
   return i;
 }
 
+
 static ssize_t populate_binsettings(uint8_t *binsettings,
                                     struct Curl_easy *data)
 {
@@ -224,6 +225,75 @@ static void cf_h2_ctx_free(struct cf_h2_ctx *ctx)
     cf_h2_ctx_clear(ctx);
     free(ctx);
   }
+}
+
+static CURLcode http2_set_stream_priority(struct Curl_cfilter *cf,
+                                          struct Curl_easy *data,
+                                          int32_t stream_id,
+                                          int32_t dep_stream_id,
+                                          int32_t weight,
+                                          int exclusive
+                                          )
+{
+  int rv;
+  struct cf_h2_ctx *ctx = cf->ctx;
+  nghttp2_priority_spec pri_spec;
+
+  nghttp2_priority_spec_init(&pri_spec, dep_stream_id, weight, exclusive);
+  rv = nghttp2_submit_priority(ctx->h2, NGHTTP2_FLAG_NONE,
+                               stream_id, &pri_spec);
+  if(rv) {
+    failf(data, "nghttp2_submit_priority() failed: %s(%d)",
+          nghttp2_strerror(rv), rv);
+    return CURLE_HTTP2;
+  }
+
+  return CURLE_OK;
+}
+
+/*
+ * curl-impersonate: Firefox uses an elaborate scheme of http/2 streams to
+ * split the load for html/js/css/images. It builds a tree of streams with
+ * different weights (priorities) by default and communicates this to the
+ * server. Imitate that behavior.
+ */
+static CURLcode http2_set_stream_priorities(struct Curl_cfilter *cf,
+                                            struct Curl_easy *data)
+{
+  CURLcode result;
+  char *stream_delimiter = ",";
+  char *value_delimiter = ":";
+
+  if(!data->set.str[STRING_HTTP2_STREAMS])
+    return CURLE_OK;
+
+  char *tmp1 = strdup(data->set.str[STRING_HTTP2_STREAMS]);
+  char *end1;
+  char *stream = strtok_r(tmp1, stream_delimiter, &end1);
+
+  while(stream != NULL) {
+
+    char *tmp2 = strdup(stream);
+    char *end2;
+
+    int32_t stream_id = atoi(strtok_r(tmp2, value_delimiter, &end2));
+    int exclusive = atoi(strtok_r(NULL, value_delimiter, &end2));
+    int32_t dep_stream_id = atoi(strtok_r(NULL, value_delimiter, &end2));
+    int32_t weight = atoi(strtok_r(NULL, value_delimiter, &end2));
+
+    free(tmp2);
+
+    result = http2_set_stream_priority(cf, data, stream_id, dep_stream_id, weight, exclusive);
+    if(result) {
+      free(tmp1);
+      return result;
+    }
+
+    stream = strtok_r(NULL, stream_delimiter, &end1);
+  }
+
+  free(tmp1);
+  return CURLE_OK;
 }
 
 static CURLcode h2_progress_egress(struct Curl_cfilter *cf,
@@ -587,6 +657,16 @@ static CURLcode cf_h2_ctx_init(struct Curl_cfilter *cf,
     result = CURLE_HTTP2;
     goto out;
   }
+
+  // curl-impersonate: set stream priorities
+  result = http2_set_stream_priorities(cf, data);
+  if(result)
+    goto out;
+
+#define FIREFOX_DEFAULT_STREAM_ID   (15)
+  /* Best effort to set the request's stream id to 15, like Firefox does. */
+  // Let's ignore this for now, as it seems not to be targeted as fingerprints.
+  // nghttp2_session_set_next_stream_id(ctx->h2, FIREFOX_DEFAULT_STREAM_ID);
 
   /* all set, traffic will be send on connect */
   result = CURLE_OK;
@@ -1827,12 +1907,14 @@ out:
  * instead of NGINX default stream weight.
  */
 #define CHROME_DEFAULT_STREAM_WEIGHT    (256)
+#define FIREFOX_DEFAULT_STREAM_WEIGHT  (42)
 
 static int sweight_wanted(const struct Curl_easy *data)
 {
   /* 0 weight is not set by user and we take the nghttp2 default one */
   return data->set.priority.weight?
     data->set.priority.weight : CHROME_DEFAULT_STREAM_WEIGHT;
+    // data->set.priority.weight : FIREFOX_DEFAULT_STREAM_WEIGHT;
 }
 
 static int sweight_in_effect(const struct Curl_easy *data)
@@ -1840,6 +1922,7 @@ static int sweight_in_effect(const struct Curl_easy *data)
   /* 0 weight is not set by user and we take the nghttp2 default one */
   return data->state.priority.weight?
     data->state.priority.weight : NGHTTP2_DEFAULT_WEIGHT;
+    // data->state.priority.weight : FIREFOX_DEFAULT_STREAM_WEIGHT;
 }
 
 /*
@@ -1848,12 +1931,19 @@ static int sweight_in_effect(const struct Curl_easy *data)
  * struct.
  */
 
+/*
+ * curl-impersonate: By default Firefox uses stream 13 as the "parent" of the
+ * stream that fetches the main html resource of the web page.
+ */
+#define FIREFOX_DEFAULT_STREAM_DEP  (13)
+
 static void h2_pri_spec(struct Curl_easy *data,
                         nghttp2_priority_spec *pri_spec)
 {
   struct Curl_data_priority *prio = &data->set.priority;
   struct stream_ctx *depstream = H2_STREAM_CTX(prio->parent);
   int32_t depstream_id = depstream? depstream->id:0;
+  // int32_t depstream_id = depstream? depstream->id:FIREFOX_DEFAULT_STREAM_DEP;
   /* curl-impersonate: Set stream exclusive flag to true. */
   int exclusive = 1;
   nghttp2_priority_spec_init(pri_spec, depstream_id,

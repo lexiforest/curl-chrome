@@ -2255,6 +2255,12 @@ typedef enum {
   /* set ECH configuration, XXX, the official one is 324  */
   CURLOPT(CURLOPT_ECH, CURLOPTTYPE_STRINGPOINT, 333),
 
+  /*
+   * curl-impersonate:
+   * Set the initial streams settings for http2.
+   */
+  CURLOPT(CURLOPT_HTTP2_STREAMS, CURLOPTTYPE_STRINGPOINT, 334),
+
   CURLOPT_LASTENTRY /* the last unused */
 } CURLoption;
 

@@ -307,6 +307,7 @@ static const struct LongShort aliases[]= {
 #ifdef USE_ECH
   {"ER", "ech",                      ARG_STRING},
 #endif
+  {"EV", "http2-streams",            ARG_STRING},
   {"f",  "fail",                     ARG_BOOL},
   {"fa", "fail-early",               ARG_BOOL},
   {"fb", "styled-output",            ARG_BOOL},
@@ -2177,6 +2178,11 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
           return err;
         if(config->http2_window_update < -1)
           return PARAM_BAD_NUMERIC;
+        break;
+
+      case 'V':
+        /* --http2-streams */
+        GetStr(&config->http2_streams, nextarg);
         break;
 
 #ifdef USE_ECH

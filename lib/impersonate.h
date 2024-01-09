@@ -32,6 +32,7 @@ struct impersonate_opts {
   const char *http2_pseudo_headers_order;
   const char *http2_settings;
   int http2_window_update;
+  const char *http2_streams;
   bool tls_permute_extensions;
   const char *ech;
   /* Other TLS options will come here in the future once they are

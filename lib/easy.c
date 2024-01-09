@@ -463,6 +463,12 @@ CURLcode _do_impersonate(struct Curl_easy *data,
       return ret;
   }
 
+  if(opts->http2_streams) {
+    ret = curl_easy_setopt(data, CURLOPT_HTTP2_STREAMS, opts->http2_streams);
+    if(ret)
+      return ret;
+  }
+
   if(opts->ech) {
     ret = curl_easy_setopt(data, CURLOPT_ECH, opts->ech);
     if(ret)
@@ -488,7 +494,7 @@ CURLcode curl_easy_impersonate_customized(struct Curl_easy *data,
 {
   int ret;
 
-  ret = _do_impersonate(data, opts, default_headers)
+  ret = _do_impersonate(data, opts, default_headers);
   if(ret)
     return ret;
 
@@ -518,7 +524,7 @@ CURLcode curl_easy_impersonate(struct Curl_easy *data, const char *target,
     return CURLE_BAD_FUNCTION_ARGUMENT;
   }
 
-  ret = _do_impersonate(data, opts, default_headers)
+  ret = _do_impersonate(data, opts, default_headers);
   if(ret)
     return ret;
 

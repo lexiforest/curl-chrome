@@ -2999,6 +2999,10 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
       return CURLE_BAD_FUNCTION_ARGUMENT;
     data->set.http2_window_update = arg;
     break;
+  case CURLOPT_HTTP2_STREAMS:
+    result = Curl_setstropt(&data->set.str[STRING_HTTP2_STREAMS],
+                            va_arg(param, char *));
+    break;
 #endif
 #ifdef USE_UNIX_SOCKETS
   case CURLOPT_UNIX_SOCKET_PATH:

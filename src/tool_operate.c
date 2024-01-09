@@ -1537,6 +1537,10 @@ static CURLcode single_transfer(struct GlobalConfig *global,
                       CURLOPT_HTTP2_WINDOW_UPDATE,
                       config->http2_window_update);
 
+          if(config->http2_streams)
+            my_setopt_str(curl,
+                          CURLOPT_HTTP2_STREAMS,
+                          config->http2_streams);
 
         } /* (proto_http) */
 
