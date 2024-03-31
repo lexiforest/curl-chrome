@@ -35,6 +35,8 @@ struct impersonate_opts {
   const char *http2_streams;
   bool tls_permute_extensions;
   const char *ech;
+  const char *tls_extension_order;
+  bool tls_grease;
   /* Other TLS options will come here in the future once they are
    * configurable through curl_easy_setopt() */
 };

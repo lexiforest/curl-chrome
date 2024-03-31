@@ -3917,9 +3917,11 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
   SSL_CTX_set_mode(backend->ctx,
       SSL_MODE_CBC_RECORD_SPLITTING | SSL_MODE_ENABLE_FALSE_START);
  
-  /* curl-impersonate: Enable TLS extensions 5 - status_request and
-   * 18 - signed_certificate_timestamp. */
+  /* curl-impersonate: Enable TLS extensions 18 - signed_certificate_timestamp. */
+  // XXX: Firefox does not enable this
   SSL_CTX_enable_signed_cert_timestamps(backend->ctx);
+
+  /* curl-impersonate: Enable TLS extensions 5 - status_request */
   SSL_CTX_enable_ocsp_stapling(backend->ctx);
 
   if(ssl_cert || ssl_cert_blob || ssl_cert_type) {
@@ -4035,8 +4037,10 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
    * and SSLClientSocketImpl::Init()
    * in the Chromium's source code. */
 
-  /* Enable TLS GREASE. */
-  SSL_CTX_set_grease_enabled(backend->ctx, 1);
+  /* curl-impersonate: Enable TLS GREASE. */
+  if(data->set.tls_grease) {
+    SSL_CTX_set_grease_enabled(backend->ctx, 1);
+  }
 
   /*
    * curl-impersonate: Enable TLS extension permutation, enabled by default
@@ -4044,6 +4048,11 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
    */
   if(data->set.ssl_permute_extensions) {
     SSL_CTX_set_permute_extensions(backend->ctx, 1);
+  }
+
+  /* curl-impersonate: Set TLS extensions order. */
+  if(data->set.tls_extension_order) {
+    SSL_CTX_set_grease_enabled(backend->ctx, data->);
   }
 
   if(conn_config->cert_compression &&
@@ -4115,6 +4124,7 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
 
     for(i = 0; i < connssl->alps->count; ++i) {
       /* curl-impersonate: Add the ALPS extension (17513) like Chrome does. */
+      // XXX: Firefox does not enable this.
       SSL_add_application_settings(backend->handle, connssl->alps->entries[i],
                                    strlen(connssl->alps->entries[i]), NULL,
                                    0);
