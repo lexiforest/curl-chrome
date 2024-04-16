@@ -4050,9 +4050,10 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
     SSL_CTX_set_permute_extensions(backend->ctx, 1);
   }
 
-  /* curl-impersonate: Set TLS extensions order. */
-  if(data->set.tls_extension_order) {
-    SSL_CTX_set_grease_enabled(backend->ctx, data->);
+  /* curl-impersonate: Set TLS extensions order.
+   */
+  if(data->set.str[STRING_TLS_EXTENSION_ORDER]) {
+    SSL_CTX_set_extension_order(backend->ctx, data->set.str[STRING_TLS_EXTENSION_ORDER]);
   }
 
   if(conn_config->cert_compression &&

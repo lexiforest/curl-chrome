@@ -1662,6 +1662,7 @@ enum dupstring {
   STRING_HTTP2_STREAMS,
   STRING_ECH_CONFIG,            /* CURLOPT_ECH_CONFIG */
   STRING_ECH_PUBLIC,            /* CURLOPT_ECH_PUBLIC */
+  STRING_TLS_EXTENSION_ORDER,
 
   /* -- end of null-terminated strings -- */
 
@@ -1982,6 +1983,7 @@ struct UserDefined {
   int tls_ech;      /* TLS ECH configuration  */
 #endif
   int http2_window_update;
+  BIT(tls_grease);
 };
 
 struct Names {

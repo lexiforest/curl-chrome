@@ -169,6 +169,8 @@ struct OperationConfig {
   char *http2_settings;
   long http2_window_update;
   char *http2_streams;
+  bool tls_grease;
+  char *tls_extension_order;
   long httpversion;
   bool http09_allowed;
   bool nobuffer;

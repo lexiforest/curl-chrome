@@ -480,6 +480,7 @@ CURLcode _do_impersonate(struct Curl_easy *data,
   }
 
   if(opts->tls_extension_order) {
+    // printf("setting extension order as: %s\n", opts->tls_extension_order);
     ret = curl_easy_setopt(data, CURLOPT_TLS_EXTENSION_ORDER, opts->tls_extension_order);
   }
 

@@ -2984,6 +2984,13 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
   case CURLOPT_SSL_PERMUTE_EXTENSIONS:
     data->set.ssl_permute_extensions = (0 != va_arg(param, long)) ? TRUE : FALSE;
     break;
+  case CURLOPT_TLS_GREASE:
+    data->set.tls_grease = (0 != va_arg(param, long)) ? TRUE : FALSE;
+    break;
+  case CURLOPT_TLS_EXTENSION_ORDER:
+    result = Curl_setstropt(&data->set.str[STRING_TLS_EXTENSION_ORDER],
+                            va_arg(param, char *));
+    break;
 #ifdef USE_HTTP2
   case CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER:
     result = Curl_setstropt(&data->set.str[STRING_HTTP2_PSEUDO_HEADERS_ORDER],

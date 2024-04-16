@@ -2252,7 +2252,9 @@ typedef enum {
    */
   CURLOPT(CURLOPT_HTTP2_WINDOW_UPDATE, CURLOPTTYPE_LONG, 332),
 
-  /* set ECH configuration, XXX, the official one is 324  */
+  /* curl-impersonate:
+   * set ECH configuration, XXX, the official one is 324
+   */
   CURLOPT(CURLOPT_ECH, CURLOPTTYPE_STRINGPOINT, 333),
 
   /*
@@ -2260,6 +2262,16 @@ typedef enum {
    * Set the initial streams settings for http2.
    */
   CURLOPT(CURLOPT_HTTP2_STREAMS, CURLOPTTYPE_STRINGPOINT, 334),
+
+  /* curl-impersonate:
+   * enable tls grease
+   */
+  CURLOPT(CURLOPT_TLS_GREASE, CURLOPTTYPE_LONG, 335),
+
+  /* curl-impersonate:
+   * set tls extension order
+   */
+  CURLOPT(CURLOPT_TLS_EXTENSION_ORDER, CURLOPTTYPE_STRINGPOINT, 336),
 
   CURLOPT_LASTENTRY /* the last unused */
 } CURLoption;

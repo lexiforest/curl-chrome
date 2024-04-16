@@ -308,6 +308,8 @@ static const struct LongShort aliases[]= {
   {"ER", "ech",                      ARG_STRING},
 #endif
   {"EV", "http2-streams",            ARG_STRING},
+  {"EW", "tls-extension-order",      ARG_STRING},
+  {"EX", "tls-grease",               ARG_BOOL},
   {"f",  "fail",                     ARG_BOOL},
   {"fa", "fail-early",               ARG_BOOL},
   {"fb", "styled-output",            ARG_BOOL},
@@ -2167,9 +2169,9 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
         break;
 
       case 'M':
-          /* --tls-permute-extensions */
-          config->ssl_permute_extensions = toggle;
-          break;
+        /* --tls-permute-extensions */
+        config->ssl_permute_extensions = toggle;
+        break;
 
       case 'N':
         /* --http2-window-update */
@@ -2183,6 +2185,17 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
       case 'V':
         /* --http2-streams */
         GetStr(&config->http2_streams, nextarg);
+        break;
+
+      case 'W':
+        /* --tls-extension-order */
+        GetStr(&config->tls_extension_order, nextarg);
+        // printf("setting is %s\n", config->tls_extension_order);
+        break;
+
+      case 'X':
+        /* --tls-grease */
+        config->tls_grease = toggle;
         break;
 
 #ifdef USE_ECH

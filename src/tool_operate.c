@@ -1970,9 +1970,18 @@ static CURLcode single_transfer(struct GlobalConfig *global,
           my_setopt_str(curl, CURLOPT_PROXY_TLS13_CIPHERS,
                         config->proxy_cipher13_list);
 
-          /* curl-impersonate */
+        /* curl-impersonate */
         if(config->ssl_permute_extensions)
-            my_setopt(curl, CURLOPT_SSL_PERMUTE_EXTENSIONS, 1L);
+          my_setopt(curl, CURLOPT_SSL_PERMUTE_EXTENSIONS, 1L);
+
+        /* curl-impersonate */
+        if (config->tls_grease)
+          my_setopt(curl, CURLOPT_TLS_GREASE, 1L);
+
+        /* curl-impersonate */
+        if(config->tls_extension_order)
+          // printf("setting is %s\n", config->tls_extension_order);
+          my_setopt_str(curl, CURLOPT_TLS_EXTENSION_ORDER, config->tls_extension_order);
 
         /* new in libcurl 7.9.2: */
         if(config->disable_epsv)
