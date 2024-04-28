@@ -39,7 +39,9 @@ auth
 autobuild
 autobuilds
 Autoconf
+autoconf
 Automake
+automake
 Autotools
 autotools
 AVR
@@ -50,6 +52,7 @@ backend
 backends
 backoff
 backticks
+balancers
 Baratov
 basename
 bashrc
@@ -83,6 +86,7 @@ CCC
 CDN
 CentOS
 CFLAGS
+cflags
 CGI's
 CHACHA
 chacha
@@ -110,8 +114,10 @@ cliget
 closesocket
 CMake
 cmake
+CMake's
 cmake's
 CMakeLists
+CNA
 CodeQL
 codeql
 CODESET
@@ -138,10 +144,11 @@ cshrc
 CTRL
 cURL
 CURLcode
+curldown
 CURLE
 CURLH
-CURLINFO
 curlimages
+CURLINFO
 curlrc
 curltest
 customizable
@@ -161,8 +168,8 @@ deepcode
 DELE
 DER
 deselectable
-Deserialized
 deserialization
+Deserialized
 destructor
 detections
 dev
@@ -279,12 +286,14 @@ GPL
 GPLed
 Greear
 groff
+gsasl
 GSKit
 gskit
 GSS
 GSSAPI
 GTFO
 Guenter
+GUIs
 Gunderson
 Gustafsson
 gzip
@@ -350,11 +359,10 @@ interoperable
 interoperates
 IoT
 ipadOS
-IPFS
-IPNS
-ipld
-trustless
 IPCXN
+IPFS
+ipld
+IPNS
 IPv
 IPv4
 IPv4/6
@@ -420,6 +428,7 @@ libssh
 libSSH
 libssh2
 Libtool
+libtool
 libuv
 libWebSocket
 libz
@@ -444,6 +453,8 @@ Makefile
 makefiles
 malloc
 mallocs
+manpage
+manpages
 maprintf
 Marek
 Mavrogiannopoulos
@@ -790,6 +801,7 @@ Tekniska
 testability
 TFTP
 tftp
+threadsafe
 Tizen
 TLS
 tlsv
@@ -804,6 +816,7 @@ TPF
 TrackMemory
 transcode
 Tru
+trustless
 Tse
 Tsujikawa
 TTL
@@ -826,6 +839,7 @@ unencoded
 unencrypted
 unescape
 Unglobbed
+Unicode
 UNICOS
 unix
 UnixSockets
@@ -880,6 +894,7 @@ WB
 web page
 WebDAV
 WebOS
+webpage
 WebSocket
 WEBSOCKET
 WHATWG
