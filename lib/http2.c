@@ -1876,7 +1876,8 @@ out:
  * instead of NGINX default stream weight.
  */
 #define CHROME_DEFAULT_STREAM_WEIGHT    (256)
-#define FIREFOX_DEFAULT_STREAM_WEIGHT  (42)
+#define SAFARI_DEFAULT_STREAM_WEIGHT    (255)
+#define FIREFOX_DEFAULT_STREAM_WEIGHT   (42)
 
 static int sweight_wanted(const struct Curl_easy *data)
 {
@@ -1913,6 +1914,7 @@ static void h2_pri_spec(struct Curl_easy *data,
   struct h2_stream_ctx *depstream = H2_STREAM_CTX(prio->parent);
   int32_t depstream_id = depstream? depstream->id:0;
   // int32_t depstream_id = depstream? depstream->id:FIREFOX_DEFAULT_STREAM_DEP;
+
   /* curl-impersonate: Set stream exclusive flag to true. */
   int exclusive = 1;
   nghttp2_priority_spec_init(pri_spec, depstream_id,

@@ -485,6 +485,10 @@ CURLcode _do_impersonate(struct Curl_easy *data,
     ret = curl_easy_setopt(data, CURLOPT_TLS_EXTENSION_ORDER, opts->tls_extension_order);
   }
 
+  if(opts->http2_stream_weight) {
+    ret = curl_easy_setopt(data, CURLOPT_STREAM_WEIGHT, opts->http2_stream_weight);
+  }
+
   /* Always enable all supported compressions. */
   ret = curl_easy_setopt(data, CURLOPT_ACCEPT_ENCODING, "");
   if(ret)
@@ -1274,7 +1278,6 @@ void curl_easy_reset(struct Curl_easy *data)
   char *env_target;
   char *env_headers;
 
-  Curl_free_request_state(data);
   Curl_req_hard_reset(&data->req, data);
 
   /* zero out UserDefined data: */
