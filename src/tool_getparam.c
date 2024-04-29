@@ -77,6 +77,7 @@ static ParameterError getstr(char **str, const char *val, bool allowblank)
 typedef enum {
   C_ABSTRACT_UNIX_SOCKET,
   C_ALPN,
+  C_ALPS,
   C_ALT_SVC,
   C_ANYAUTH,
   C_APPEND,
@@ -87,6 +88,7 @@ typedef enum {
   C_CACERT,
   C_CAPATH,
   C_CERT,
+  C_CERT_COMPRESSION,
   C_CERT_STATUS,
   C_CERT_TYPE,
   C_CIPHERS,
@@ -123,6 +125,7 @@ typedef enum {
   C_DOH_INSECURE,
   C_DOH_URL,
   C_DUMP_HEADER,
+  C_ECH,
   C_EGD_FILE,
   C_ENGINE,
   C_EPRT,
@@ -166,6 +169,10 @@ typedef enum {
   C_HTTP1_1,
   C_HTTP2,
   C_HTTP2_PRIOR_KNOWLEDGE,
+  C_HTTP2_PSEUDO_HEADERS_ORDER,
+  C_HTTP2_SETTINGS,
+  C_HTTP2_WINDOW_UPDATE,
+  C_HTTP2_STREAMS,
   C_HTTP3,
   C_HTTP3_ONLY,
   C_IGNORE_CONTENT_LENGTH,
@@ -283,6 +290,7 @@ typedef enum {
   C_SESSIONID,
   C_SHOW_ERROR,
   C_SILENT,
+  C_SIGNATURE_HASHES,
   C_SOCKS4,
   C_SOCKS4A,
   C_SOCKS5,
@@ -312,6 +320,10 @@ typedef enum {
   C_TFTP_NO_OPTIONS,
   C_TIME_COND,
   C_TLS_MAX,
+  C_TLS_SESSION_TICKET,
+  C_TLS_EXTENSION_ORDER,
+  C_TLS_PERMUTE_EXTENSIONS,
+  C_TLS_GREASE,
   C_TLS13_CIPHERS,
   C_TLSAUTHTYPE,
   C_TLSPASSWORD,
@@ -369,7 +381,7 @@ static const struct LongShort aliases[]= {
   {"cacert",                     ARG_FILE, ' ', C_CACERT},
   {"capath",                     ARG_FILE, ' ', C_CAPATH},
   {"cert",                       ARG_FILE, 'E', C_CERT},
-  {"cert-compression",           ARG_STRG, ' ', C_CERT_CERT_COMPRESSION},  // curl-impersonate
+  {"cert-compression",           ARG_STRG, ' ', C_CERT_COMPRESSION},  // curl-impersonate
   {"cert-status",                ARG_BOOL, ' ', C_CERT_STATUS},
   {"cert-type",                  ARG_STRG, ' ', C_CERT_TYPE},
   {"ciphers",                    ARG_STRG, ' ', C_CIPHERS},
@@ -1888,9 +1900,8 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
     case C_TLS_PERMUTE_EXTENSIONS:  /* --tls-permute-extensions curl-impersonate */
       config->ssl_permute_extensions = toggle;
       break;
-    case C_TLS_EXTENSION_ORDER:  /* --tls-permute-extensions curl-impersonate */
+    case C_TLS_EXTENSION_ORDER:  /* --tls-extension-order curl-impersonate */
       err = getstr(&config->tls_extension_order, nextarg, ALLOW_BLANK);
-      if(err) return err;
       break;
     case C_TLS_GREASE:  /* --tls-grease curl-impersonate */
       config->tls_grease = toggle;
@@ -1953,7 +1964,6 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
       if(!feature_http2)
         return PARAM_LIBCURL_DOESNT_SUPPORT;
       err = getstr(&config->http2_settings, nextarg, ALLOW_BLANK);
-      if(err) return err;
       break;
     case C_HTTP2_WINDOW_UPDATE:  /* --http2-window-update curl-impersonate */
       if(!feature_http2)
@@ -2093,7 +2103,7 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
       }
       else {
         /* Simple case: just a string, with a keyword */
-        getStr(&config->ech, nextarg, ALLOW_BLANK);
+        getstr(&config->ech, nextarg, ALLOW_BLANK);
       }
       break;
 #endif
@@ -2116,7 +2126,7 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
       GetFileAndPassword(nextarg, &config->cert, &config->key_passwd);
       break;
     case C_CERT_COMPRESSION:  /* --cert-compression curl-impersonate */
-      err = getstr(nextarg, &config->ssl_cert_compression ALLOW_BLANK);
+      err = getstr(nextarg, &config->ssl_cert_compression, ALLOW_BLANK);
       break;
     case C_CACERT: /* --cacert */
       err = getstr(&config->cacert, nextarg, DENY_BLANK);
