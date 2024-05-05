@@ -349,7 +349,7 @@ CURLsslset curl_global_sslset(curl_sslbackend id, const char *name,
  * curl-impersonate:
  * Actually call curl_easy_setopt() with all the needed options
  * */
-CURLcode _do_impersonate(struct Curl_easy *data,
+static CURLcode _do_impersonate(struct Curl_easy *data,
                         const struct impersonate_opts *opts,
                         int default_headers)
 {
@@ -359,7 +359,7 @@ CURLcode _do_impersonate(struct Curl_easy *data,
 
   if(opts->target == NULL) {
     DEBUGF(fprintf(stderr, "Error: unknown impersonation target '%s'\n",
-                   target));
+                   opts->target));
     return CURLE_BAD_FUNCTION_ARGUMENT;
   }
 

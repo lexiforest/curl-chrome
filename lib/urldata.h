@@ -316,6 +316,7 @@ struct ssl_primary_config {
   BIT(verifyhost);       /* set TRUE if CN/SAN must match hostname */
   BIT(verifystatus);     /* set TRUE if certificate status must be checked */
   BIT(sessionid);        /* cache session IDs or not */
+  // BIT(grease);           /* grease enabled? */
 };
 
 struct ssl_config_data {
@@ -559,6 +560,7 @@ struct ConnectBits {
   BIT(tls_enable_alps); /* TLS ALPS extension? */
   BIT(tls_enable_ticket); /* TLS session ticket extension? */
   BIT(tls_permute_extensions); /* TLS extension permutations */
+  BIT(tls_grease);  /* TLS grease? */
 #ifndef CURL_DISABLE_DOH
   BIT(doh);
 #endif
@@ -1829,6 +1831,7 @@ struct UserDefined {
   BIT(ssl_enable_alps);/* TLS ALPS extension? */
   BIT(ssl_enable_ticket); /* TLS session ticket extension */
   BIT(ssl_permute_extensions); /* TLS Permute extensions */
+  BIT(tls_grease);  /* TLS grease? */
   BIT(path_as_is);     /* allow dotdots? */
   BIT(pipewait);       /* wait for multiplex status before starting a new
                           connection */
@@ -1853,7 +1856,6 @@ struct UserDefined {
   int tls_ech;      /* TLS ECH configuration  */
 #endif
   int http2_window_update;
-  BIT(tls_grease);
 };
 
 #ifndef CURL_DISABLE_MIME
