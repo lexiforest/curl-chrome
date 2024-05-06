@@ -58,6 +58,7 @@
 #include "multiif.h"
 #include "select.h"
 #include "cfilters.h"
+#include "cw-out.h"
 #include "sendf.h" /* for failf function prototype */
 #include "connect.h" /* for Curl_getconnectinfo */
 #include "slist.h"
@@ -348,7 +349,7 @@ CURLsslset curl_global_sslset(curl_sslbackend id, const char *name,
  * curl-impersonate:
  * Actually call curl_easy_setopt() with all the needed options
  * */
-CURLcode _do_impersonate(struct Curl_easy *data,
+static CURLcode _do_impersonate(struct Curl_easy *data,
                         const struct impersonate_opts *opts,
                         int default_headers)
 {
@@ -358,7 +359,7 @@ CURLcode _do_impersonate(struct Curl_easy *data,
 
   if(opts->target == NULL) {
     DEBUGF(fprintf(stderr, "Error: unknown impersonation target '%s'\n",
-                   target));
+                   opts->target));
     return CURLE_BAD_FUNCTION_ARGUMENT;
   }
 
@@ -482,6 +483,10 @@ CURLcode _do_impersonate(struct Curl_easy *data,
   if(opts->tls_extension_order) {
     // printf("setting extension order as: %s\n", opts->tls_extension_order);
     ret = curl_easy_setopt(data, CURLOPT_TLS_EXTENSION_ORDER, opts->tls_extension_order);
+  }
+
+  if(opts->http2_stream_weight) {
+    ret = curl_easy_setopt(data, CURLOPT_STREAM_WEIGHT, opts->http2_stream_weight);
   }
 
   /* Always enable all supported compressions. */
@@ -704,13 +709,15 @@ static int events_socket(struct Curl_easy *easy,      /* easy handle */
           ev->list = nxt;
         free(m);
         m = nxt;
-        infof(easy, "socket cb: socket %d REMOVED", s);
+        infof(easy, "socket cb: socket %" CURL_FORMAT_SOCKET_T
+              " REMOVED", s);
       }
       else {
         /* The socket 's' is already being monitored, update the activity
            mask. Convert from libcurl bitmask to the poll one. */
         m->socket.events = socketcb2poll(what);
-        infof(easy, "socket cb: socket %d UPDATED as %s%s", s,
+        infof(easy, "socket cb: socket %" CURL_FORMAT_SOCKET_T
+              " UPDATED as %s%s", s,
               (what&CURL_POLL_IN)?"IN":"",
               (what&CURL_POLL_OUT)?"OUT":"");
       }
@@ -734,7 +741,8 @@ static int events_socket(struct Curl_easy *easy,      /* easy handle */
         m->socket.events = socketcb2poll(what);
         m->socket.revents = 0;
         ev->list = m;
-        infof(easy, "socket cb: socket %d ADDED as %s%s", s,
+        infof(easy, "socket cb: socket %" CURL_FORMAT_SOCKET_T
+              " ADDED as %s%s", s,
               (what&CURL_POLL_IN)?"IN":"",
               (what&CURL_POLL_OUT)?"OUT":"");
       }
@@ -823,8 +831,9 @@ static CURLcode wait_or_timeout(struct Curl_multi *multi, struct events *ev)
         if(fds[i].revents) {
           /* socket activity, tell libcurl */
           int act = poll2cselect(fds[i].revents); /* convert */
-          infof(multi->easyp, "call curl_multi_socket_action(socket %d)",
-                fds[i].fd);
+          infof(multi->easyp,
+                "call curl_multi_socket_action(socket "
+                "%" CURL_FORMAT_SOCKET_T ")", fds[i].fd);
           mcode = curl_multi_socket_action(multi, fds[i].fd, act,
                                            &ev->running_handles);
         }
@@ -908,9 +917,9 @@ static CURLcode easy_transfer(struct Curl_multi *multi)
   /* Make sure to return some kind of error if there was a multi problem */
   if(mcode) {
     result = (mcode == CURLM_OUT_OF_MEMORY) ? CURLE_OUT_OF_MEMORY :
-              /* The other multi errors should never happen, so return
-                 something suitably generic */
-              CURLE_BAD_FUNCTION_ARGUMENT;
+      /* The other multi errors should never happen, so return
+         something suitably generic */
+      CURLE_BAD_FUNCTION_ARGUMENT;
   }
 
   return result;
@@ -961,7 +970,6 @@ static CURLcode easy_perform(struct Curl_easy *data, bool events)
     multi = Curl_multi_handle(1, 3, 7);
     if(!multi)
       return CURLE_OUT_OF_MEMORY;
-    data->multi_easy = multi;
   }
 
   if(multi->in_callback)
@@ -970,14 +978,17 @@ static CURLcode easy_perform(struct Curl_easy *data, bool events)
   /* Copy the MAXCONNECTS option to the multi handle */
   curl_multi_setopt(multi, CURLMOPT_MAXCONNECTS, (long)data->set.maxconnects);
 
+  data->multi_easy = NULL; /* pretend it does not exist */
   mcode = curl_multi_add_handle(multi, data);
   if(mcode) {
     curl_multi_cleanup(multi);
-    data->multi_easy = NULL;
     if(mcode == CURLM_OUT_OF_MEMORY)
       return CURLE_OUT_OF_MEMORY;
     return CURLE_FAILED_INIT;
   }
+
+  /* assign this after curl_multi_add_handle() */
+  data->multi_easy = multi;
 
   sigpipe_ignore(data, &pipe_st);
 
@@ -1204,6 +1215,36 @@ struct Curl_easy *curl_easy_duphandle(struct Curl_easy *data)
   }
 #endif
 
+#ifdef CURLRES_ASYNCH
+  /* Clone the resolver handle, if present, for the new handle */
+  if(Curl_resolver_duphandle(outcurl,
+                             &outcurl->state.async.resolver,
+                             data->state.async.resolver))
+    goto fail;
+#endif
+
+#ifdef USE_ARES
+  {
+    CURLcode rc;
+
+    rc = Curl_set_dns_servers(outcurl, data->set.str[STRING_DNS_SERVERS]);
+    if(rc && rc != CURLE_NOT_BUILT_IN)
+      goto fail;
+
+    rc = Curl_set_dns_interface(outcurl, data->set.str[STRING_DNS_INTERFACE]);
+    if(rc && rc != CURLE_NOT_BUILT_IN)
+      goto fail;
+
+    rc = Curl_set_dns_local_ip4(outcurl, data->set.str[STRING_DNS_LOCAL_IP4]);
+    if(rc && rc != CURLE_NOT_BUILT_IN)
+      goto fail;
+
+    rc = Curl_set_dns_local_ip6(outcurl, data->set.str[STRING_DNS_LOCAL_IP6]);
+    if(rc && rc != CURLE_NOT_BUILT_IN)
+      goto fail;
+  }
+#endif /* USE_ARES */
+
   Curl_initinfo(outcurl);
 
   outcurl->magic = CURLEASY_MAGIC_NUMBER;
@@ -1218,7 +1259,6 @@ fail:
 #ifndef CURL_DISABLE_COOKIES
     free(outcurl->cookies);
 #endif
-    free(outcurl->state.buffer);
     Curl_dyn_free(&outcurl->state.headerb);
     Curl_altsvc_cleanup(&outcurl->asi);
     Curl_hsts_cleanup(&outcurl->hsts);
@@ -1238,7 +1278,7 @@ void curl_easy_reset(struct Curl_easy *data)
   char *env_target;
   char *env_headers;
 
-  Curl_free_request_state(data);
+  Curl_req_hard_reset(&data->req, data);
 
   /* zero out UserDefined data: */
   Curl_freeset(data);
@@ -1325,9 +1365,10 @@ CURLcode curl_easy_pause(struct Curl_easy *data, int action)
   /* Unpause parts in active mime tree. */
   if((k->keepon & ~newstate & KEEP_SEND_PAUSE) &&
      (data->mstate == MSTATE_PERFORMING ||
-      data->mstate == MSTATE_RATELIMITING) &&
-     data->state.fread_func == (curl_read_callback) Curl_mime_read) {
-    Curl_mime_unpause(data->state.in);
+      data->mstate == MSTATE_RATELIMITING)) {
+    result = Curl_creader_unpause(data);
+    if(result)
+      return result;
   }
 
   /* put it back in the keepon */
@@ -1335,20 +1376,10 @@ CURLcode curl_easy_pause(struct Curl_easy *data, int action)
 
   if(!(newstate & KEEP_RECV_PAUSE)) {
     Curl_conn_ev_data_pause(data, FALSE);
-    result = Curl_client_unpause(data);
+    result = Curl_cw_out_flush(data);
     if(result)
       return result;
   }
-
-#ifdef USE_HYPER
-  if(!(newstate & KEEP_SEND_PAUSE)) {
-    /* need to wake the send body waker */
-    if(data->hyp.send_body_waker) {
-      hyper_waker_wake(data->hyp.send_body_waker);
-      data->hyp.send_body_waker = NULL;
-    }
-  }
-#endif
 
   /* if there's no error and we're not pausing both directions, we want
      to have this handle checked soon */
@@ -1359,10 +1390,10 @@ CURLcode curl_easy_pause(struct Curl_easy *data, int action)
     /* reset the too-slow time keeper */
     data->state.keeps_speed.tv_sec = 0;
 
-    if(!data->state.tempcount)
+    if(!Curl_cw_out_is_paused(data))
       /* if not pausing again, force a recv/send check of this connection as
          the data might've been read off the socket already */
-      data->conn->cselect_bits = CURL_CSELECT_IN | CURL_CSELECT_OUT;
+      data->state.select_bits = CURL_CSELECT_IN | CURL_CSELECT_OUT;
     if(data->multi) {
       if(Curl_update_timer(data->multi))
         return CURLE_ABORTED_BY_CALLBACK;
@@ -1383,9 +1414,11 @@ CURLcode curl_easy_pause(struct Curl_easy *data, int action)
 }
 
 
-static CURLcode easy_connection(struct Curl_easy *data, curl_socket_t *sfd,
+static CURLcode easy_connection(struct Curl_easy *data,
                                 struct connectdata **connp)
 {
+  curl_socket_t sfd;
+
   if(!data)
     return CURLE_BAD_FUNCTION_ARGUMENT;
 
@@ -1395,9 +1428,9 @@ static CURLcode easy_connection(struct Curl_easy *data, curl_socket_t *sfd,
     return CURLE_UNSUPPORTED_PROTOCOL;
   }
 
-  *sfd = Curl_getconnectinfo(data, connp);
+  sfd = Curl_getconnectinfo(data, connp);
 
-  if(*sfd == CURL_SOCKET_BAD) {
+  if(sfd == CURL_SOCKET_BAD) {
     failf(data, "Failed to get recent socket");
     return CURLE_UNSUPPORTED_PROTOCOL;
   }
@@ -1413,7 +1446,6 @@ static CURLcode easy_connection(struct Curl_easy *data, curl_socket_t *sfd,
 CURLcode curl_easy_recv(struct Curl_easy *data, void *buffer, size_t buflen,
                         size_t *n)
 {
-  curl_socket_t sfd;
   CURLcode result;
   ssize_t n1;
   struct connectdata *c;
@@ -1421,7 +1453,7 @@ CURLcode curl_easy_recv(struct Curl_easy *data, void *buffer, size_t buflen,
   if(Curl_is_in_callback(data))
     return CURLE_RECURSIVE_API_CALL;
 
-  result = easy_connection(data, &sfd, &c);
+  result = easy_connection(data, &c);
   if(result)
     return result;
 
@@ -1431,7 +1463,7 @@ CURLcode curl_easy_recv(struct Curl_easy *data, void *buffer, size_t buflen,
     Curl_attach_connection(data, c);
 
   *n = 0;
-  result = Curl_read(data, sfd, buffer, buflen, &n1);
+  result = Curl_conn_recv(data, FIRSTSOCKET, buffer, buflen, &n1);
 
   if(result)
     return result;
@@ -1443,11 +1475,10 @@ CURLcode curl_easy_recv(struct Curl_easy *data, void *buffer, size_t buflen,
 #ifdef USE_WEBSOCKETS
 CURLcode Curl_connect_only_attach(struct Curl_easy *data)
 {
-  curl_socket_t sfd;
   CURLcode result;
   struct connectdata *c = NULL;
 
-  result = easy_connection(data, &sfd, &c);
+  result = easy_connection(data, &c);
   if(result)
     return result;
 
@@ -1466,15 +1497,14 @@ CURLcode Curl_connect_only_attach(struct Curl_easy *data)
  * This is the private internal version of curl_easy_send()
  */
 CURLcode Curl_senddata(struct Curl_easy *data, const void *buffer,
-                       size_t buflen, ssize_t *n)
+                       size_t buflen, size_t *n)
 {
-  curl_socket_t sfd;
   CURLcode result;
-  ssize_t n1;
   struct connectdata *c = NULL;
   SIGPIPE_VARIABLE(pipe_st);
 
-  result = easy_connection(data, &sfd, &c);
+  *n = 0;
+  result = easy_connection(data, &c);
   if(result)
     return result;
 
@@ -1483,20 +1513,12 @@ CURLcode Curl_senddata(struct Curl_easy *data, const void *buffer,
        needs to be reattached */
     Curl_attach_connection(data, c);
 
-  *n = 0;
   sigpipe_ignore(data, &pipe_st);
-  result = Curl_write(data, sfd, buffer, buflen, &n1);
+  result = Curl_conn_send(data, FIRSTSOCKET, buffer, buflen, n);
   sigpipe_restore(&pipe_st);
 
-  if(n1 == -1)
+  if(result && result != CURLE_AGAIN)
     return CURLE_SEND_ERROR;
-
-  /* detect EAGAIN */
-  if(!result && !n1)
-    return CURLE_AGAIN;
-
-  *n = n1;
-
   return result;
 }
 
@@ -1507,13 +1529,13 @@ CURLcode Curl_senddata(struct Curl_easy *data, const void *buffer,
 CURLcode curl_easy_send(struct Curl_easy *data, const void *buffer,
                         size_t buflen, size_t *n)
 {
-  ssize_t written = 0;
+  size_t written = 0;
   CURLcode result;
   if(Curl_is_in_callback(data))
     return CURLE_RECURSIVE_API_CALL;
 
   result = Curl_senddata(data, buffer, buflen, &written);
-  *n = (size_t)written;
+  *n = written;
   return result;
 }
 

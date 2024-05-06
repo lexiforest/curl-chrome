@@ -386,16 +386,26 @@ class TestDownload:
         r.check_exit_code(0)
 
     # test on paused transfers, based on issue #11982
-    @pytest.mark.parametrize("proto", ['h2', 'h3'])
-    def test_02_27_paused_no_cl(self, env: Env, httpd, nghttpx, proto, repeat):
-        if proto == 'h3' and not env.have_h3():
-            pytest.skip("h3 not supported")
+    def test_02_27_paused_no_cl(self, env: Env, httpd, nghttpx, repeat):
+        proto = 'h2'
         url = f'https://{env.authority_for(env.domain1, proto)}' \
-                       f'/tweak?'\
-                       '&chunks=2&chunk_size=16000'
+            '/tweak?&chunks=2&chunk_size=16000'
         client = LocalClient(env=env, name='h2-pausing')
         r = client.run(args=[url])
         r.check_exit_code(0)
+
+    @pytest.mark.parametrize("proto", ['http/1.1', 'h2', 'h3'])
+    def test_02_28_get_compressed(self, env: Env, httpd, nghttpx, repeat, proto):
+        if proto == 'h3' and not env.have_h3():
+            pytest.skip("h3 not supported")
+        count = 1
+        urln = f'https://{env.authority_for(env.domain1brotli, proto)}/data-100k?[0-{count-1}]'
+        curl = CurlClient(env=env)
+        r = curl.http_download(urls=[urln], alpn_proto=proto, extra_args=[
+            '--compressed'
+        ])
+        r.check_exit_code(code=0)
+        r.check_response(count=count, http_status=200)
 
     def check_downloads(self, client, srcfile: str, count: int,
                         complete: bool = True):

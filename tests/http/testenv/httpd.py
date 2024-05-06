@@ -47,9 +47,10 @@ class Httpd:
         'authn_core', 'authn_file',
         'authz_user', 'authz_core', 'authz_host',
         'auth_basic', 'auth_digest',
-        'alias', 'env', 'filter', 'headers', 'mime',
+        'alias', 'env', 'filter', 'headers', 'mime', 'setenvif',
         'socache_shmcb',
         'rewrite', 'http2', 'ssl', 'proxy', 'proxy_http', 'proxy_connect',
+        'brotli',
         'mpm_event',
     ]
     COMMON_MODULES_DIRS = [
@@ -203,6 +204,7 @@ class Httpd:
 
     def _write_config(self):
         domain1 = self.env.domain1
+        domain1brotli = self.env.domain1brotli
         creds1 = self.env.get_credentials(domain1)
         domain2 = self.env.domain2
         creds2 = self.env.get_credentials(domain2)
@@ -277,6 +279,24 @@ class Httpd:
                 f'    SSLCertificateFile {creds1.cert_file}',
                 f'    SSLCertificateKeyFile {creds1.pkey_file}',
                 f'    DocumentRoot "{self._docs_dir}"',
+            ])
+            conf.extend(self._curltest_conf(domain1))
+            if domain1 in self._extra_configs:
+                conf.extend(self._extra_configs[domain1])
+            conf.extend([
+                f'</VirtualHost>',
+                f'',
+            ])
+            # Alternate to domain1 with BROTLI compression
+            conf.extend([  # https host for domain1, h1 + h2
+                f'<VirtualHost *:{self.env.https_port}>',
+                f'    ServerName {domain1brotli}',
+                f'    Protocols h2 http/1.1',
+                f'    SSLEngine on',
+                f'    SSLCertificateFile {creds1.cert_file}',
+                f'    SSLCertificateKeyFile {creds1.pkey_file}',
+                f'    DocumentRoot "{self._docs_dir}"',
+                f'    SetOutputFilter BROTLI_COMPRESS',
             ])
             conf.extend(self._curltest_conf(domain1))
             if domain1 in self._extra_configs:
@@ -389,6 +409,11 @@ class Httpd:
                 f'    <Location /curltest/1_1>',
                 f'      SetHandler curltest-1_1-required',
                 f'    </Location>',
+                f'    <Location /curltest/shutdown_unclean>',
+                f'      SetHandler curltest-tweak',
+                f'      SetEnv force-response-1.0 1',
+                f'    </Location>',
+                f'    SetEnvIf Request_URI "/shutdown_unclean" ssl-unclean=1',
             ])
         if self._auth_digest:
             lines.extend([

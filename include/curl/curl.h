@@ -631,7 +631,8 @@ typedef enum {
   CURLE_PROXY,                   /* 97 - proxy handshake error */
   CURLE_SSL_CLIENTCERT,          /* 98 - client-side certificate required */
   CURLE_UNRECOVERABLE_POLL,      /* 99 - poll/select returned fatal error */
-  CURLE_ECH_REQUIRED      ,      /* 100 - ECH tried but failed */
+  CURLE_TOO_LARGE,               /* 100 - a value/data met its maximum */
+  CURLE_ECH_REQUIRED,            /* 101 - ECH tried but failed */
   CURL_LAST /* never use! */
 } CURLcode;
 
@@ -1846,7 +1847,8 @@ typedef enum {
   /* allow GSSAPI credential delegation */
   CURLOPT(CURLOPT_GSSAPI_DELEGATION, CURLOPTTYPE_VALUES, 210),
 
-  /* Set the name servers to use for DNS resolution */
+  /* Set the name servers to use for DNS resolution.
+   * Only supported by the c-ares DNS backend */
   CURLOPT(CURLOPT_DNS_SERVERS, CURLOPTTYPE_STRINGPOINT, 211),
 
   /* Time-out accept operations (currently for FTP only) after this amount
@@ -2202,28 +2204,31 @@ typedef enum {
   /* set a specific client IP for HAProxy PROXY protocol header? */
   CURLOPT(CURLOPT_HAPROXY_CLIENT_IP, CURLOPTTYPE_STRINGPOINT, 323),
 
+  /* millisecond version */
+  CURLOPT(CURLOPT_SERVER_RESPONSE_TIMEOUT_MS, CURLOPTTYPE_LONG, 324),
+
   /* curl-impersonate: A list of headers used by the impersonated browser.
    * If given, merged with CURLOPT_HTTPHEADER. */
-  CURLOPT(CURLOPT_HTTPBASEHEADER, CURLOPTTYPE_SLISTPOINT, 324),
+  CURLOPT(CURLOPT_HTTPBASEHEADER, CURLOPTTYPE_SLISTPOINT, 1000),
 
   /* curl-impersonate: A list of TLS signature hash algorithms.
    * See https://datatracker.ietf.org/doc/html/rfc5246#section-7.4.1.4.1 */
-  CURLOPT(CURLOPT_SSL_SIG_HASH_ALGS, CURLOPTTYPE_STRINGPOINT, 325),
+  CURLOPT(CURLOPT_SSL_SIG_HASH_ALGS, CURLOPTTYPE_STRINGPOINT, 1001),
 
   /* curl-impersonate: Whether to enable ALPS in TLS or not.
    * See https://datatracker.ietf.org/doc/html/draft-vvv-tls-alps.
    * Support for ALPS is minimal and is intended only for the TLS client
    * hello to match. */
-  CURLOPT(CURLOPT_SSL_ENABLE_ALPS, CURLOPTTYPE_LONG, 326),
+  CURLOPT(CURLOPT_SSL_ENABLE_ALPS, CURLOPTTYPE_LONG, 1002),
 
   /* curl-impersonate: Comma-separated list of certificate compression
    * algorithms to use. These are published in the client hello.
    * Supported algorithms are "zlib" and "brotli".
    * See https://datatracker.ietf.org/doc/html/rfc8879 */
-  CURLOPT(CURLOPT_SSL_CERT_COMPRESSION, CURLOPTTYPE_STRINGPOINT, 327),
+  CURLOPT(CURLOPT_SSL_CERT_COMPRESSION, CURLOPTTYPE_STRINGPOINT, 1003),
 
   /* Enable/disable TLS session ticket extension (RFC5077) */
-  CURLOPT(CURLOPT_SSL_ENABLE_TICKET, CURLOPTTYPE_LONG, 328),
+  CURLOPT(CURLOPT_SSL_ENABLE_TICKET, CURLOPTTYPE_LONG, 1004),
 
   /*
    * curl-impersonate:
@@ -2232,46 +2237,46 @@ typedef enum {
    * ":method", ":authority", ":scheme", ":path" in the desired order of
    * appearance in the HTTP/2 HEADERS frame.
    */
-  CURLOPT(CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER, CURLOPTTYPE_STRINGPOINT, 329),
+  CURLOPT(CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER, CURLOPTTYPE_STRINGPOINT, 1005),
 
   /*
    * curl-impersonate:
    * HTTP2 settings frame keys and values, format: 1:v;2:v;3:v
    */
-  CURLOPT(CURLOPT_HTTP2_SETTINGS, CURLOPTTYPE_STRINGPOINT, 330),
+  CURLOPT(CURLOPT_HTTP2_SETTINGS, CURLOPTTYPE_STRINGPOINT, 1006),
 
   /* 
    * curl-impersonate: Whether to enable Boringssl permute extensions
    * See https://commondatastorage.googleapis.com/chromium-boringssl-docs/ssl.h.html#SSL_set_permute_extensions.
    */
-  CURLOPT(CURLOPT_SSL_PERMUTE_EXTENSIONS, CURLOPTTYPE_LONG, 331),
+  CURLOPT(CURLOPT_SSL_PERMUTE_EXTENSIONS, CURLOPTTYPE_LONG, 1007),
 
   /*
    * curl-impersonate:
    * HTTP2 initial window update
    */
-  CURLOPT(CURLOPT_HTTP2_WINDOW_UPDATE, CURLOPTTYPE_LONG, 332),
+  CURLOPT(CURLOPT_HTTP2_WINDOW_UPDATE, CURLOPTTYPE_LONG, 1008),
 
   /* curl-impersonate:
-   * set ECH configuration, XXX, the official one is 324
+   * set ECH configuration
    */
-  CURLOPT(CURLOPT_ECH, CURLOPTTYPE_STRINGPOINT, 333),
+  CURLOPT(CURLOPT_ECH, CURLOPTTYPE_STRINGPOINT, 1009),
 
   /*
    * curl-impersonate:
    * Set the initial streams settings for http2.
    */
-  CURLOPT(CURLOPT_HTTP2_STREAMS, CURLOPTTYPE_STRINGPOINT, 334),
+  CURLOPT(CURLOPT_HTTP2_STREAMS, CURLOPTTYPE_STRINGPOINT, 1010),
 
   /* curl-impersonate:
    * enable tls grease
    */
-  CURLOPT(CURLOPT_TLS_GREASE, CURLOPTTYPE_LONG, 335),
+  CURLOPT(CURLOPT_TLS_GREASE, CURLOPTTYPE_LONG, 1011),
 
   /* curl-impersonate:
    * set tls extension order
    */
-  CURLOPT(CURLOPT_TLS_EXTENSION_ORDER, CURLOPTTYPE_STRINGPOINT, 336),
+  CURLOPT(CURLOPT_TLS_EXTENSION_ORDER, CURLOPTTYPE_STRINGPOINT, 1012),
 
   CURLOPT_LASTENTRY /* the last unused */
 } CURLoption;
@@ -3004,7 +3009,9 @@ typedef enum {
   CURLINFO_CAPATH           = CURLINFO_STRING + 62,
   CURLINFO_XFER_ID          = CURLINFO_OFF_T + 63,
   CURLINFO_CONN_ID          = CURLINFO_OFF_T + 64,
-  CURLINFO_LASTONE          = 64
+  CURLINFO_QUEUE_TIME_T     = CURLINFO_OFF_T + 65,
+  CURLINFO_USED_PROXY       = CURLINFO_LONG + 66,
+  CURLINFO_LASTONE          = 66
 } CURLINFO;
 
 /* CURLINFO_RESPONSE_CODE is the new name for the option previously known as

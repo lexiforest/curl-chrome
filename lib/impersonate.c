@@ -690,6 +690,7 @@ const struct impersonate_opts impersonations[] = {
     .http2_settings = "4:4194304;3:100",
     .http2_window_update = 10485760,
     .http2_pseudo_headers_order = "mspa",
+    .http2_stream_weight = 255,
     .tls_extension_order = NULL,
     .tls_grease = true
   },
@@ -745,6 +746,7 @@ const struct impersonate_opts impersonations[] = {
     .http2_settings = "4:4194304;3:100",
     .http2_window_update = 10485760,
     .http2_pseudo_headers_order = "mspa",
+    .http2_stream_weight = 255,
     .tls_extension_order = NULL,
     .tls_grease = true
   },
@@ -803,6 +805,7 @@ const struct impersonate_opts impersonations[] = {
     .http2_settings = "2:0;4:2097152;3:100",
     .http2_window_update = 10485760,
     .http2_pseudo_headers_order = "mspa",
+    .http2_stream_weight = 255,
     .tls_extension_order = NULL,
     .tls_grease = true
   },
@@ -861,6 +864,7 @@ const struct impersonate_opts impersonations[] = {
     .http2_settings = "2:0;4:4194304;3:100",
     .http2_window_update = 10485760,
     .http2_pseudo_headers_order = "mspa",
+    .http2_stream_weight = 255,
     .tls_extension_order = NULL,
     .tls_grease = true
   },
@@ -919,6 +923,7 @@ const struct impersonate_opts impersonations[] = {
     .http2_settings = "2:0;4:4194304;3:100",
     .http2_window_update = 10485760,
     .http2_pseudo_headers_order = "mspa",
+    .http2_stream_weight = 255,
     .tls_extension_order = NULL,
     .tls_grease = true
   },
