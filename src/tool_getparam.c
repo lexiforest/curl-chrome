@@ -351,7 +351,8 @@ typedef enum {
   C_VERSION,
   C_WDEBUG,
   C_WRITE_OUT,
-  C_XATTR
+  C_XATTR,
+  C_TLS_SIGNED_CERT_TIMESTAMP
 } cmdline_t;
 
 struct LongShort {
@@ -649,6 +650,7 @@ static const struct LongShort aliases[]= {
 #endif
   {"write-out",                  ARG_STRG, 'w', C_WRITE_OUT},
   {"xattr",                      ARG_BOOL, ' ', C_XATTR},
+  {"tls-signed-cert-timestamp",  ARG_BOOL, ' ', C_TLS_SIGNED_CERT_TIMESTAMP},  // curl-impersonate
 };
 
 /* Split the argument of -E to 'certname' and 'passphrase' separated by colon.
@@ -1902,6 +1904,9 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
       break;
     case C_TLS_EXTENSION_ORDER:  /* --tls-extension-order curl-impersonate */
       err = getstr(&config->tls_extension_order, nextarg, ALLOW_BLANK);
+      break;
+    case C_TLS_SIGNED_CERT_TIMESTAMP:  /* --tls-signed-cert-timestamp curl-impersonate */
+      config->notimestamp = toggle;
       break;
     case C_TLS_GREASE:  /* --tls-grease curl-impersonate */
       config->tls_grease = toggle;

@@ -3963,8 +3963,9 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
       SSL_MODE_CBC_RECORD_SPLITTING | SSL_MODE_ENABLE_FALSE_START);
  
   /* curl-impersonate: Enable TLS extensions 18 - signed_certificate_timestamp. */
-  // XXX: Firefox does not enable this
-  SSL_CTX_enable_signed_cert_timestamps(backend->ctx);
+  if(data->set.tls_enable_signed_certificate_timestamp) {
+    SSL_CTX_enable_signed_cert_timestamps(backend->ctx);
+  }
 
   /* curl-impersonate: Enable TLS extensions 5 - status_request */
   SSL_CTX_enable_ocsp_stapling(backend->ctx);

@@ -1831,6 +1831,7 @@ struct UserDefined {
   BIT(ssl_enable_alps);/* TLS ALPS extension? */
   BIT(ssl_enable_ticket); /* TLS session ticket extension */
   BIT(ssl_permute_extensions); /* TLS Permute extensions */
+  BIT(tls_enable_signed_certificate_timestamp);  /* TLS signed certificate timestamp? */
   BIT(tls_grease);  /* TLS grease? */
   BIT(path_as_is);     /* allow dotdots? */
   BIT(pipewait);       /* wait for multiplex status before starting a new

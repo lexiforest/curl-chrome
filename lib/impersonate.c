@@ -29,6 +29,7 @@ const struct impersonate_opts impersonations[] = {
     .alpn = true,
     .alps = true,
     .tls_session_ticket = true,
+    .tls_signed_certificate_timestamp = true,
     .cert_compression = "brotli",
     .http_headers = {
       "sec-ch-ua: \" Not A;Brand\";v=\"99\", \"Chromium\";v=\"99\", \"Google Chrome\";v=\"99\"",
@@ -73,6 +74,7 @@ const struct impersonate_opts impersonations[] = {
     .alpn = true,
     .alps = true,
     .tls_session_ticket = true,
+    .tls_signed_certificate_timestamp = true,
     .cert_compression = "brotli",
     .http_headers = {
       "sec-ch-ua: \" Not A;Brand\";v=\"99\", \"Chromium\";v=\"100\", \"Google Chrome\";v=\"100\"",
@@ -117,6 +119,7 @@ const struct impersonate_opts impersonations[] = {
     .alpn = true,
     .alps = true,
     .tls_session_ticket = true,
+    .tls_signed_certificate_timestamp = true,
     .cert_compression = "brotli",
     .http_headers = {
       "sec-ch-ua: \" Not A;Brand\";v=\"99\", \"Chromium\";v=\"101\", \"Google Chrome\";v=\"101\"",
@@ -161,6 +164,7 @@ const struct impersonate_opts impersonations[] = {
     .alpn = true,
     .alps = true,
     .tls_session_ticket = true,
+    .tls_signed_certificate_timestamp = true,
     .cert_compression = "brotli",
     .http_headers = {
       "sec-ch-ua: \"Chromium\";v=\"104\", \" Not A;Brand\";v=\"99\", \"Google Chrome\";v=\"104\"",
@@ -205,6 +209,7 @@ const struct impersonate_opts impersonations[] = {
     .alpn = true,
     .alps = true,
     .tls_session_ticket = true,
+    .tls_signed_certificate_timestamp = true,
     .cert_compression = "brotli",
     .http_headers = {
       "sec-ch-ua: \"Google Chrome\";v=\"107\", \"Chromium\";v=\"107\", \"Not=A?Brand\";v=\"24\"",
@@ -250,6 +255,7 @@ const struct impersonate_opts impersonations[] = {
     .alps = true,
     .tls_permute_extensions = true,
     .tls_session_ticket = true,
+    .tls_signed_certificate_timestamp = true,
     .cert_compression = "brotli",
     .http_headers = {
       "sec-ch-ua: \"Chromium\";v=\"110\", \"Not A(Brand\";v=\"24\", \"Google Chrome\";v=\"110\"",
@@ -295,6 +301,7 @@ const struct impersonate_opts impersonations[] = {
     .alps = true,
     .tls_permute_extensions = true,
     .tls_session_ticket = true,
+    .tls_signed_certificate_timestamp = true,
     .cert_compression = "brotli",
     .http_headers = {
       "sec-ch-ua: \"Chromium\";v=\"116\", \"Not)A;Brand\";v=\"24\", \"Google Chrome\";v=\"116\"",
@@ -340,6 +347,7 @@ const struct impersonate_opts impersonations[] = {
     .alps = true,
     .tls_permute_extensions = true,
     .tls_session_ticket = true,
+    .tls_signed_certificate_timestamp = true,
     .cert_compression = "brotli",
     .http_headers = {
       "sec-ch-ua: \"Google Chrome\";v=\"119\", \"Chromium\";v=\"119\", \"Not?A_Brand\";v=\"24\"",
@@ -386,6 +394,7 @@ const struct impersonate_opts impersonations[] = {
     .alps = true,
     .tls_permute_extensions = true,
     .tls_session_ticket = true,
+    .tls_signed_certificate_timestamp = true,
     .cert_compression = "brotli",
     .http_headers = {
       "sec-ch-ua: \"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\"",
@@ -432,6 +441,7 @@ const struct impersonate_opts impersonations[] = {
     .alps = true,
     .tls_permute_extensions = true,
     .tls_session_ticket = true,
+    .tls_signed_certificate_timestamp = true,
     .cert_compression = "brotli",
     .http_headers = {
       "sec-ch-ua: \"Google Chrome\";v=\"123\", \"Not:A-Brand\";v=\"8\", \"Chromium\";v=\"123\"",
@@ -479,6 +489,7 @@ const struct impersonate_opts impersonations[] = {
     .alps = true,
     .tls_permute_extensions = true,
     .tls_session_ticket = true,
+    .tls_signed_certificate_timestamp = true,
     .cert_compression = "brotli",
     .http_headers = {
       "sec-ch-ua: \"Chromium\";v=\"124\", \"Google Chrome\";v=\"124\", \"Not-A.Brand\";v=\"99\"",
@@ -525,6 +536,7 @@ const struct impersonate_opts impersonations[] = {
     .alpn = true,
     .alps = true,
     .tls_session_ticket = true,
+    .tls_signed_certificate_timestamp = true,
     .cert_compression = "brotli",
     .http_headers = {
       "sec-ch-ua: \" Not A;Brand\";v=\"99\", \"Chromium\";v=\"99\", \"Google Chrome\";v=\"99\"",
@@ -569,6 +581,7 @@ const struct impersonate_opts impersonations[] = {
     .alpn = true,
     .alps = true,
     .tls_session_ticket = true,
+    .tls_signed_certificate_timestamp = true,
     .cert_compression = "brotli",
     .http_headers = {
       "sec-ch-ua: \" Not A;Brand\";v=\"99\", \"Chromium\";v=\"99\", \"Microsoft Edge\";v=\"99\"",
@@ -613,6 +626,7 @@ const struct impersonate_opts impersonations[] = {
     .alpn = true,
     .alps = true,
     .tls_session_ticket = true,
+    .tls_signed_certificate_timestamp = true,
     .cert_compression = "brotli",
     .http_headers = {
       "sec-ch-ua: \" Not A;Brand\";v=\"99\", \"Chromium\";v=\"101\", \"Microsoft Edge\";v=\"101\"",
@@ -681,6 +695,7 @@ const struct impersonate_opts impersonations[] = {
     .alpn = true,
     .alps = false,
     .tls_session_ticket = false,
+    .tls_signed_certificate_timestamp = false,
     .http_headers = {
       "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.3 Safari/605.1.15",
       "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -736,6 +751,7 @@ const struct impersonate_opts impersonations[] = {
     .alpn = true,
     .alps = false,
     .tls_session_ticket = false,
+    .tls_signed_certificate_timestamp = false,
     .cert_compression = "zlib",
     .http_headers = {
       "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.5 Safari/605.1.15",
@@ -792,6 +808,7 @@ const struct impersonate_opts impersonations[] = {
     .alpn = true,
     .alps = false,
     .tls_session_ticket = false,
+    .tls_signed_certificate_timestamp = false,
     .cert_compression = "zlib",
     .http_headers = {
       "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -851,6 +868,7 @@ const struct impersonate_opts impersonations[] = {
     .alpn = true,
     .alps = false,
     .tls_session_ticket = false,
+    .tls_signed_certificate_timestamp = false,
     .cert_compression = "zlib",
     .http_headers = {
       "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -910,6 +928,7 @@ const struct impersonate_opts impersonations[] = {
     .alpn = true,
     .alps = false,
     .tls_session_ticket = false,
+    .tls_signed_certificate_timestamp = false,
     .cert_compression = "zlib",
     .http_headers = {
       "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",

@@ -25,6 +25,8 @@ struct impersonate_opts {
   bool alps;
   /* Enable TLS session ticket extension. */
   bool tls_session_ticket;
+  /* Enable TLS signed certificate timestamp. */
+  bool tls_signed_certificate_timestamp;
   /* TLS certificate compression algorithms.
    * (TLS extension 27) */
   const char *cert_compression;

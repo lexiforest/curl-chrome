@@ -473,6 +473,7 @@ CURLcode Curl_init_userdefined(struct Curl_easy *data)
   set->tcp_nodelay = TRUE;
   set->ssl_enable_alpn = TRUE;
   set->ssl_enable_ticket = TRUE;
+  set->tls_enable_signed_certificate_timestamp = TRUE;
   set->tls_grease = TRUE;
   set->expect_100_timeout = 1000L; /* Wait for a second by default. */
   set->sep_headers = TRUE; /* separated header lists by default */

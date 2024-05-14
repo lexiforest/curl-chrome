@@ -411,6 +411,11 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
   if(ret)
     return ret;
 
+  ret = curl_easy_setopt(data, CURLOPT_TLS_ENABLE_SIGNED_CERITIFICATE_TIMESTAMP,
+                         opts->tls_signed_certificate_timestamp ? 1 : 0);
+  if(ret)
+    return ret;
+
   if(opts->tls_permute_extensions) {
     ret = curl_easy_setopt(data, CURLOPT_SSL_PERMUTE_EXTENSIONS, 1);
     if(ret)

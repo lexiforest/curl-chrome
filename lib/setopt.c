@@ -2981,6 +2981,9 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
   case CURLOPT_SSL_ENABLE_TICKET:
     data->set.ssl_enable_ticket = (0 != va_arg(param, long)) ? TRUE : FALSE;
     break;
+  case CURLOPT_TLS_ENABLE_SIGNED_CERITIFICATE_TIMESTAMP:
+    data->set.tls_enable_signed_certificate_timestamp = (0 != va_arg(param, long)) ? TRUE : FALSE;
+    break;
   case CURLOPT_SSL_PERMUTE_EXTENSIONS:
     data->set.ssl_permute_extensions = (0 != va_arg(param, long)) ? TRUE : FALSE;
     break;

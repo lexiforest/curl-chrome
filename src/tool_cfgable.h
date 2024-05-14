@@ -279,6 +279,7 @@ struct OperationConfig {
   bool noalpn;                    /* enable/disable TLS ALPN extension */
   bool alps;                      /* enable/disable TLS ALPS extension */
   bool noticket;                  /* enable/disable TLS session ticket */
+  bool notimestamp;               /* enable/disable TLS signed certificate timestamp */
   char *unix_socket_path;         /* path to Unix domain socket */
   bool abstract_unix_socket;      /* path to an abstract Unix domain socket */
   bool falsestart;
