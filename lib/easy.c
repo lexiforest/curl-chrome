@@ -412,7 +412,7 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
     return ret;
 
   ret = curl_easy_setopt(data, CURLOPT_TLS_ENABLE_SIGNED_CERITIFICATE_TIMESTAMP,
-                         opts->tls_signed_certificate_timestamp ? 1 : 0);
+                         opts->tls_signed_cert_timestamps ? 1 : 0);
   if(ret)
     return ret;
 

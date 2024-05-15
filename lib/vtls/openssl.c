@@ -3962,8 +3962,8 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
   SSL_CTX_set_mode(backend->ctx,
       SSL_MODE_CBC_RECORD_SPLITTING | SSL_MODE_ENABLE_FALSE_START);
  
-  /* curl-impersonate: Enable TLS extensions 18 - signed_certificate_timestamp. */
-  if(data->set.tls_enable_signed_certificate_timestamp) {
+  /* curl-impersonate: Enable TLS extensions 18 - signed_cert_timestamps. */
+  if(data->set.tls_enable_signed_cert_timestamps) {
     SSL_CTX_enable_signed_cert_timestamps(backend->ctx);
   }
 
