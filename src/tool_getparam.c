@@ -620,6 +620,7 @@ static const struct LongShort aliases[]= {
   {"tls-max",                    ARG_STRG, ' ', C_TLS_MAX},
   {"tls-permute-extensions",     ARG_BOOL, ' ', C_TLS_PERMUTE_EXTENSIONS},  // curl-impersonate
   {"tls-session-ticket",         ARG_BOOL, ' ', C_TLS_SESSION_TICKET},  // curl-impersonate
+  {"tls-signed-cert-timestamp",  ARG_BOOL, ' ', C_TLS_SIGNED_CERT_TIMESTAMP},  // curl-impersonate
   {"tls13-ciphers",              ARG_STRG, ' ', C_TLS13_CIPHERS},
   {"tlsauthtype",                ARG_STRG, ' ', C_TLSAUTHTYPE},
   {"tlspassword",                ARG_STRG, ' ', C_TLSPASSWORD},
@@ -650,7 +651,6 @@ static const struct LongShort aliases[]= {
 #endif
   {"write-out",                  ARG_STRG, 'w', C_WRITE_OUT},
   {"xattr",                      ARG_BOOL, ' ', C_XATTR},
-  {"tls-signed-cert-timestamp",  ARG_BOOL, ' ', C_TLS_SIGNED_CERT_TIMESTAMP},  // curl-impersonate
 };
 
 /* Split the argument of -E to 'certname' and 'passphrase' separated by colon.
