@@ -2278,6 +2278,11 @@ typedef enum {
    */
   CURLOPT(CURLOPT_TLS_EXTENSION_ORDER, CURLOPTTYPE_STRINGPOINT, 1012),
 
+  /* curl-impersonate:
+   * enable tls signed certificate timestamp
+   */
+  CURLOPT(CURLOPT_TLS_ENABLE_SIGNED_CERITIFICATE_TIMESTAMP, CURLOPTTYPE_LONG, 1013),
+
   CURLOPT_LASTENTRY /* the last unused */
 } CURLoption;
 
