@@ -155,6 +155,9 @@ static const struct alpn_spec ALPN_SPEC_H2 = {
 static const struct alpn_spec ALPN_SPEC_H2_H11 = {
   { ALPN_H2, ALPN_HTTP_1_1 }, 2
 };
+static const struct alpn_spec ALPN_SPEC_H2 = {
+  { ALPN_H2 }, 1
+};
 #endif
 
 static const struct alpn_spec *alpn_get_spec(int httpwant, bool use_alpn)
@@ -172,6 +175,17 @@ static const struct alpn_spec *alpn_get_spec(int httpwant, bool use_alpn)
   /* Use the ALPN protocol "http/1.1" for HTTP/1.x.
      Avoid "http/1.0" because some servers do not support it. */
   return &ALPN_SPEC_H11;
+}
+
+static const struct alpn_spec *alps_get_spec(int httpwant, bool use_alps)
+{
+  if(!use_alps)
+    return NULL;
+#ifdef USE_HTTP2
+  if(httpwant >= CURL_HTTP_VERSION_2)
+    return &ALPN_SPEC_H2;
+#endif
+  return NULL;
 }
 #endif /* USE_SSL */
 
@@ -216,6 +230,8 @@ match_ssl_primary_config(struct Curl_easy *data,
      strcasecompare(c1->cipher_list, c2->cipher_list) &&
      strcasecompare(c1->cipher_list13, c2->cipher_list13) &&
      strcasecompare(c1->curves, c2->curves) &&
+     strcasecompare(c1->sig_hash_algs, c2->sig_hash_algs) &&
+     strcasecompare(c1->cert_compression, c2->cert_compression) &&
      strcasecompare(c1->CRLfile, c2->CRLfile) &&
      strcasecompare(c1->pinned_key, c2->pinned_key))
     return TRUE;
@@ -260,6 +276,8 @@ static bool clone_ssl_primary_config(struct ssl_primary_config *source,
   CLONE_STRING(cipher_list13);
   CLONE_STRING(pinned_key);
   CLONE_STRING(curves);
+  CLONE_STRING(sig_hash_algs);
+  CLONE_STRING(cert_compression);
   CLONE_STRING(CRLfile);
 #ifdef USE_TLS_SRP
   CLONE_STRING(username);
@@ -282,6 +300,8 @@ static void free_primary_ssl_config(struct ssl_primary_config *sslc)
   Curl_safefree(sslc->ca_info_blob);
   Curl_safefree(sslc->issuercert_blob);
   Curl_safefree(sslc->curves);
+  Curl_safefree(sslc->sig_hash_algs);
+  Curl_safefree(sslc->cert_compression);
   Curl_safefree(sslc->CRLfile);
 #ifdef USE_TLS_SRP
   Curl_safefree(sslc->username);
@@ -305,6 +325,8 @@ CURLcode Curl_ssl_easy_config_complete(struct Curl_easy *data)
   data->set.ssl.primary.cert_blob = data->set.blobs[BLOB_CERT];
   data->set.ssl.primary.ca_info_blob = data->set.blobs[BLOB_CAINFO];
   data->set.ssl.primary.curves = data->set.str[STRING_SSL_EC_CURVES];
+  data->set.ssl.primary.sig_hash_algs = data->set.str[STRING_SSL_SIG_HASH_ALGS];
+  data->set.ssl.primary.cert_compression = data->set.str[STRING_SSL_CERT_COMPRESSION];
 #ifdef USE_TLS_SRP
   data->set.ssl.primary.username = data->set.str[STRING_TLSAUTH_USERNAME];
   data->set.ssl.primary.password = data->set.str[STRING_TLSAUTH_PASSWORD];
@@ -454,7 +476,8 @@ static bool ssl_prefs_check(struct Curl_easy *data)
 }
 
 static struct ssl_connect_data *cf_ctx_new(struct Curl_easy *data,
-                                           const struct alpn_spec *alpn)
+                                           const struct alpn_spec *alpn,
+                                           const struct alpn_spec *alps)
 {
   struct ssl_connect_data *ctx;
 
@@ -464,6 +487,7 @@ static struct ssl_connect_data *cf_ctx_new(struct Curl_easy *data,
     return NULL;
 
   ctx->alpn = alpn;
+  ctx->alps = alps;
   Curl_bufq_init2(&ctx->earlydata, CURL_SSL_EARLY_MAX, 1, BUFQ_OPT_NO_SPARES);
   ctx->backend = calloc(1, Curl_ssl->sizeof_ssl_backend_data);
   if(!ctx->backend) {
@@ -1972,8 +1996,11 @@ static CURLcode cf_ssl_create(struct Curl_cfilter **pcf,
 
   DEBUGASSERT(data->conn);
 
-  ctx = cf_ctx_new(data, alpn_get_spec(data->state.httpwant,
-                                       conn->bits.tls_enable_alpn));
+  ctx = cf_ctx_new(data,
+                   alpn_get_spec(data->state.httpwant,
+                                 conn->bits.tls_enable_alpn),
+                   alps_get_spec(data->state.httpwant,
+                                 conn->bits.tls_enable_alps));
   if(!ctx) {
     result = CURLE_OUT_OF_MEMORY;
     goto out;
@@ -2023,6 +2050,7 @@ static CURLcode cf_ssl_proxy_create(struct Curl_cfilter **pcf,
   struct ssl_connect_data *ctx;
   CURLcode result;
   bool use_alpn = conn->bits.tls_enable_alpn;
+  bool use_alps = conn->bits.tls_enable_alps;
   int httpwant = CURL_HTTP_VERSION_1_1;
 
 #ifdef USE_HTTP2
@@ -2032,7 +2060,8 @@ static CURLcode cf_ssl_proxy_create(struct Curl_cfilter **pcf,
   }
 #endif
 
-  ctx = cf_ctx_new(data, alpn_get_spec(httpwant, use_alpn));
+  ctx = cf_ctx_new(data, alpn_get_spec(httpwant, use_alpn),
+                   alps_get_spec(httpwant, use_alps));
   if(!ctx) {
     result = CURLE_OUT_OF_MEMORY;
     goto out;

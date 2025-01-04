@@ -56,6 +56,9 @@ entry_new(const char *name, size_t namelen,
   e->valuelen = valuelen;
   if(opts & DYNHDS_OPT_LOWERCASE)
     Curl_strntolower(e->name, e->name, e->namelen);
+  // curl-impersonate: Make value alsow lower case
+  if(opts & DYNHDS_OPT_LOWERCASE_VAL)
+    Curl_strntolower(e->value, e->value, e->valuelen);
   return e;
 }
 
@@ -137,6 +140,19 @@ void Curl_dynhds_set_opts(struct dynhds *dynhds, int opts)
 {
   dynhds->opts = opts;
 }
+
+// curl-impersonate
+void Curl_dynhds_set_opt(struct dynhds *dynhds, int opt)
+{
+  dynhds->opts |= opt;
+}
+
+// curl-impersonate
+void Curl_dynhds_del_opt(struct dynhds *dynhds, int opt)
+{
+  dynhds->opts &= ~opt;
+}
+
 
 struct dynhds_entry *Curl_dynhds_getn(struct dynhds *dynhds, size_t n)
 {

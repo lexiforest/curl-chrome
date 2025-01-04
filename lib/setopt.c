@@ -51,6 +51,7 @@
 #include "altsvc.h"
 #include "hsts.h"
 #include "tftp.h"
+#include "slist.h"
 #include "strdup.h"
 #include "escape.h"
 
@@ -624,6 +625,11 @@ static CURLcode setopt_long(struct Curl_easy *data, CURLoption option,
       /* accepted */
       break;
 #endif
+#if defined(USE_HTTP2) || defined(USE_HTTP3)
+    case CURLOPT_STREAM_EXCLUSIVE:
+      data->set.priority.exclusive = (int)arg;
+      break;
+#endif
     default:
       /* not accepted */
       if(arg < CURL_HTTP_VERSION_NONE)
@@ -1084,6 +1090,25 @@ static CURLcode setopt_long(struct Curl_easy *data, CURLoption option,
     break;
 #endif
 
+  case CURLOPT_SSL_SIG_HASH_ALGS:
+    /*
+     * Set the list of hash algorithms we want to use in the SSL connection.
+     * Specify comma-delimited list of algorithms to use.
+     */
+    result = Curl_setstropt(&data->set.str[STRING_SSL_SIG_HASH_ALGS],
+                            va_arg(param, char *));
+    break;
+
+  case CURLOPT_SSL_CERT_COMPRESSION:
+    /*
+     * Set the list of ceritifcate compression algorithms we support in the TLS
+     * connection.
+     * Specify comma-delimited list of algorithms to use. Options are "zlib"
+     * and "brotli".
+     */
+    result = Curl_setstropt(&data->set.str[STRING_SSL_CERT_COMPRESSION],
+                            va_arg(param, char *));
+    break;
 #endif /* USE_SSL */
   case CURLOPT_IPRESOLVE:
     if((arg < CURL_IPRESOLVE_WHATEVER) || (arg > CURL_IPRESOLVE_V6))
@@ -1320,6 +1345,35 @@ static CURLcode setopt_long(struct Curl_easy *data, CURLoption option,
   case CURLOPT_SSL_ENABLE_ALPN:
     data->set.ssl_enable_alpn = enabled;
     break;
+  case CURLOPT_SSL_ENABLE_ALPS:
+    data->set.ssl_enable_alps = enabled;
+    break;
+  case CURLOPT_SSL_ENABLE_TICKET:
+    data->set.ssl_enable_ticket = enabled;
+    break;
+  case CURLOPT_SSL_PERMUTE_EXTENSIONS:
+    data->set.ssl_permute_extensions = enabled;
+    break;
+  case CURLOPT_TLS_GREASE:
+    data->set.tls_grease = enabled;
+    break;
+  case CURLOPT_TLS_KEY_USAGE_NO_CHECK:
+    data->set.tls_key_usage_no_check = enabled;
+    break;
+  case CURLOPT_TLS_SIGNED_CERT_TIMESTAMPS:
+    data->set.tls_signed_cert_timestamps = enabled;
+    break;
+  case CURLOPT_TLS_STATUS_REQUEST:
+    data->set.tls_status_request = enabled;
+    break;
+
+#ifdef USE_HTTP2
+  case CURLOPT_HTTP2_WINDOW_UPDATE:
+    if(arg < -1)
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    data->set.http2_window_update = arg;
+    break;
+#endif
   case CURLOPT_PATH_AS_IS:
     data->set.path_as_is = enabled;
     break;
@@ -1488,6 +1542,22 @@ static CURLcode setopt_slist(struct Curl_easy *data, CURLoption option,
      * Set a list with HTTP headers to use (or replace internals with)
      */
     data->set.headers = slist;
+    break;
+  case CURLOPT_HTTPBASEHEADER:
+    /*
+     * curl-impersonate:
+     * Set a list of "base" headers. These will be merged with any headers
+     * set by CURLOPT_HTTPHEADER. curl-impersonate uses this option in order
+     * to set a list of default browser headers.
+     *
+     * Unlike CURLOPT_HTTPHEADER,
+     * the list is copied and can be immediately freed by the user.
+     */
+    curl_slist_free_all(data->state.base_headers);
+    data->state.base_headers = \
+      Curl_slist_duplicate(va_arg(param, struct curl_slist *));
+    if (!data->state.base_headers)
+      result = CURLE_OUT_OF_MEMORY;
     break;
 #endif
 #ifndef CURL_DISABLE_TELNET
@@ -1695,6 +1765,19 @@ static CURLcode setopt_cptr(struct Curl_easy *data, CURLoption option,
     }
     else
       return CURLE_NOT_BUILT_IN;
+    break;
+  // curl-impersonate
+  case CURLOPT_TLS_EXTENSION_ORDER:
+    return Curl_setstropt(&data->set.str[STRING_TLS_EXTENSION_ORDER], ptr);
+    break;
+  case CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER:
+    return Curl_setstropt(&data->set.str[STRING_HTTP2_PSEUDO_HEADERS_ORDER], ptr);
+    break;
+  case CURLOPT_HTTP2_SETTINGS:
+    return Curl_setstropt(&data->set.str[STRING_HTTP2_SETTINGS], ptr);
+    break;
+  case CURLOPT_HTTP2_STREAMS:
+    return Curl_setstropt(&data->set.str[STRING_HTTP2_STREAMS], ptr);
     break;
 #ifndef CURL_DISABLE_PROXY
   case CURLOPT_PROXY_TLS13_CIPHERS:

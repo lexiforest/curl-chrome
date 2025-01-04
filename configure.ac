@@ -1541,7 +1541,8 @@ if test X"$OPT_BROTLI" != Xno; then
 
   dnl if given with a prefix, we set -L and -I based on that
   if test -n "$PREFIX_BROTLI"; then
-    LIB_BROTLI="-lbrotlidec"
+    # curl-impersonate: Use static libbrotli, -static postfix dropped since brotli 1.1.0
+    LIB_BROTLI="-lbrotlidec -lbrotlicommon"
     LD_BROTLI=-L${PREFIX_BROTLI}/lib$libsuff
     CPP_BROTLI=-I${PREFIX_BROTLI}/include
     DIR_BROTLI=${PREFIX_BROTLI}/lib$libsuff
@@ -1551,7 +1552,11 @@ if test X"$OPT_BROTLI" != Xno; then
   CPPFLAGS="$CPPFLAGS $CPP_BROTLI"
   LIBS="$LIB_BROTLI $LIBS"
 
-  AC_CHECK_LIB(brotlidec, BrotliDecoderDecompress)
+  AC_CHECK_LIB(brotlidec, BrotliDecoderDecompress,
+    # curl-impersonate: Define 'action-if-found' explicitly to prevent
+    # -lbrotlidec from being added to LIBS (already added before)
+    AC_DEFINE(HAVE_LIBBROTLI, 1, [Define to 1 if libbrotli exists])
+  )
 
   AC_CHECK_HEADERS(brotli/decode.h,
     curl_brotli_msg="enabled (libbrotlidec)"
@@ -5399,8 +5404,8 @@ AC_CONFIG_FILES([\
   tests/http/clients/Makefile \
   packages/Makefile \
   packages/vms/Makefile \
-  curl-config \
-  libcurl.pc
+  curl-impersonate-config:curl-config.in \
+  libcurl-impersonate.pc:libcurl.pc.in
 ])
 AC_OUTPUT
 

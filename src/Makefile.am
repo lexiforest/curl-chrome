@@ -46,7 +46,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/include        \
               -I$(top_srcdir)/lib            \
               -I$(top_srcdir)/src
 
-bin_PROGRAMS = curl
+bin_PROGRAMS = curl-impersonate
 
 if USE_CPPFLAG_CURL_STATICLIB
 AM_CPPFLAGS += -DCURL_STATICLIB
@@ -77,15 +77,15 @@ endif
 curltool_unity.c: $(top_srcdir)/scripts/mk-unity.pl $(CURL_CFILES) $(curl_CURLX)
 	@PERL@  $(top_srcdir)/scripts/mk-unity.pl $(srcdir) $(CURL_CFILES) $(curl_CURLX) --exclude $(curl_EXCLUDE) > curltool_unity.c
 
-nodist_curl_SOURCES = curltool_unity.c
-curl_SOURCES = $(curl_EXCLUDE)
+nodist_curl_impersonate_SOURCES = curltool_unity.c
+curl_impersonate_SOURCES = $(curl_EXCLUDE)
 CLEANFILES += curltool_unity.c
 else
 # CURL_FILES comes from Makefile.inc
-curl_SOURCES = $(CURL_FILES)
+curl_impersonate_SOURCES = $(CURL_FILES)
 endif
 if HAVE_WINDRES
-curl_SOURCES += $(CURL_RCFILES)
+curl_impersonate_SOURCES += $(CURL_RCFILES)
 $(CURL_RCFILES): tool_version.h
 endif
 
@@ -97,7 +97,7 @@ CFLAGS += @CURL_CFLAG_EXTRAS@
 # Prevent LIBS from being used for all link targets
 LIBS = $(BLANK_AT_MAKETIME)
 
-curl_LDADD = $(top_builddir)/lib/libcurl.la @LIBCURL_PC_LIBS_PRIVATE@
+curl_impersonate_LDADD = $(top_builddir)/lib/libcurl-impersonate.la @LIBCURL_PC_LIBS_PRIVATE@
 
 # if unit tests are enabled, build a static library to link them with
 if BUILD_UNITTESTS

@@ -304,6 +304,8 @@ struct ssl_primary_config {
   char *password; /* TLS password (for, e.g., SRP) */
 #endif
   char *curves;          /* list of curves to use */
+  char *sig_hash_algs;   /* List of signature hash algorithms to use */
+  char *cert_compression;  /* List of certificate compression algorithms. */
   unsigned char ssl_options;  /* the CURLOPT_SSL_OPTIONS bitmask */
   unsigned int version_max; /* max supported version the client wants to use */
   unsigned char version;    /* what version the client wants to use */
@@ -548,6 +550,10 @@ struct ConnectBits {
   BIT(multiplex); /* connection is multiplexed */
   BIT(tcp_fastopen); /* use TCP Fast Open */
   BIT(tls_enable_alpn); /* TLS ALPN extension? */
+  BIT(tls_enable_alps); /* TLS ALPS extension? */
+  BIT(tls_enable_ticket); /* TLS session ticket extension? */
+  BIT(tls_permute_extensions); /* TLS extension permutations */
+  BIT(tls_grease);  /* TLS grease? */
 #ifndef CURL_DISABLE_DOH
   BIT(doh);
 #endif
@@ -1314,6 +1320,19 @@ struct UrlState {
   CURLcode hresult; /* used to pass return codes back from hyper callbacks */
 #endif
 
+  /*
+   * curl-impersonate:
+   * List of "base" headers set by CURLOPT_HTTPBASEHEADER.
+   */
+  struct curl_slist *base_headers;
+  /*
+   * curl-impersonate:
+   * Dynamically-constructed list of HTTP headers.
+   * This list is a merge of the default HTTP headers needed to impersonate a
+   * browser, together with any user-supplied headers.
+   */
+  struct curl_slist *merged_headers;
+
 #ifndef CURL_DISABLE_VERBOSE_STRINGS
   struct curl_trc_feat *feat; /* opt. trace feature transfer is part of */
 #endif
@@ -1532,6 +1551,12 @@ enum dupstring {
 #endif
   STRING_ECH_CONFIG,            /* CURLOPT_ECH_CONFIG */
   STRING_ECH_PUBLIC,            /* CURLOPT_ECH_PUBLIC */
+  STRING_SSL_SIG_HASH_ALGS,
+  STRING_SSL_CERT_COMPRESSION,
+  STRING_HTTP2_PSEUDO_HEADERS_ORDER,
+  STRING_HTTP2_SETTINGS,
+  STRING_HTTP2_STREAMS,
+  STRING_TLS_EXTENSION_ORDER,
 
   /* -- end of null-terminated strings -- */
 
@@ -1837,6 +1862,13 @@ struct UserDefined {
   BIT(tcp_keepalive);  /* use TCP keepalives */
   BIT(tcp_fastopen);   /* use TCP Fast Open */
   BIT(ssl_enable_alpn);/* TLS ALPN extension? */
+  BIT(ssl_enable_alps);/* TLS ALPS extension? */
+  BIT(ssl_enable_ticket); /* TLS session ticket extension */
+  BIT(ssl_permute_extensions); /* TLS Permute extensions */
+  BIT(tls_grease);  /* TLS grease? */
+  BIT(tls_key_usage_no_check);  /* TLS key_usage_check? */
+  BIT(tls_signed_cert_timestamps);  /* TLS signed cert timestamps? */
+  BIT(tls_status_request);  /* TLS status request */
   BIT(path_as_is);     /* allow dotdots? */
   BIT(pipewait);       /* wait for multiplex status before starting a new
                           connection */
@@ -1858,12 +1890,14 @@ struct UserDefined {
   BIT(doh_verifystatus);   /* DoH certificate status verification */
 #endif
   BIT(http09_allowed); /* allow HTTP/0.9 responses */
+// BIT(grease);           /* grease enabled? */
 #ifndef CURL_DISABLE_WEBSOCKETS
   BIT(ws_raw_mode);
 #endif
 #ifdef USE_ECH
   int tls_ech;      /* TLS ECH configuration  */
 #endif
+  int http2_window_update;
 };
 
 #ifndef CURL_DISABLE_MIME
