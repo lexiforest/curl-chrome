@@ -536,11 +536,12 @@ CURLcode curl_easy_impersonate_customized(struct Curl_easy *data,
  * Call curl_easy_setopt() with all the needed options as defined in the
  * 'impersonations' array.
  * */
-CURLcode curl_easy_impersonate(struct Curl_easy *data, const char *target,
+CURLcode curl_easy_impersonate(CURL *data, const char *target,
                                int default_headers)
 {
   int ret;
   const struct impersonate_opts *opts = NULL;
+  struct Curl_easy *_data = (struct Curl_easy *)data;
 
   for(opts = impersonations; opts->target != NULL; opts++) {
     if (strcasecompare(target, opts->target)) {
@@ -549,12 +550,11 @@ CURLcode curl_easy_impersonate(struct Curl_easy *data, const char *target,
   }
 
   if(opts->target == NULL) {
-    DEBUGF(fprintf(stderr, "Error: unknown impersonation target '%s'\n",
-                   target));
+    DEBUGF(fprintf(stderr, "Error: unknown impersonation target '%s'\n", target));
     return CURLE_BAD_FUNCTION_ARGUMENT;
   }
 
-  ret = _do_impersonate(data, opts, default_headers);
+  ret = _do_impersonate(_data, opts, default_headers);
   if(ret)
     return ret;
 
@@ -570,8 +570,8 @@ CURL *curl_easy_init(void)
 {
   CURLcode result;
   struct Curl_easy *data;
-  char *env_target;
-  char *env_headers;
+  char *env_target = NULL;
+  char *env_headers = NULL;
 
   /* Make sure we inited the global SSL stuff */
   global_init_lock();
@@ -616,7 +616,6 @@ CURL *curl_easy_init(void)
       return NULL;
     }
   }
-
 
   return data;
 }

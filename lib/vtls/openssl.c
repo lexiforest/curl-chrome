@@ -3759,6 +3759,7 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
   const struct curl_blob *ssl_cert_blob = ssl_config->primary.cert_blob;
   const char * const ssl_cert_type = ssl_config->cert_type;
   const bool verifypeer = conn_config->verifypeer;
+  struct ssl_connect_data *connssl = cf->ctx;
   char error_buffer[256];
 
   /* Make funny stuff to get random input */
@@ -3952,19 +3953,18 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
   }
 #endif
 
-  SSL_CTX_set_options(backend->ctx,
-      SSL_OP_LEGACY_SERVER_CONNECT);
-  SSL_CTX_set_mode(backend->ctx,
+  SSL_CTX_set_options(octx->ssl_ctx, SSL_OP_LEGACY_SERVER_CONNECT);
+  SSL_CTX_set_mode(octx->ssl_ctx,
       SSL_MODE_CBC_RECORD_SPLITTING | SSL_MODE_ENABLE_FALSE_START);
 
   /* curl-impersonate: Enable TLS extensions 18 - signed_certificate_timestamp. */
   if(data->set.tls_signed_cert_timestamps) {
-    SSL_CTX_enable_signed_cert_timestamps(backend->ctx);
+    SSL_CTX_enable_signed_cert_timestamps(octx->ssl_ctx);
   }
 
   /* curl-impersonate: Enable TLS extensions 5 - status_request */
   if(data->set.tls_status_request) {
-    SSL_CTX_enable_ocsp_stapling(backend->ctx);
+    SSL_CTX_enable_ocsp_stapling(octx->ssl_ctx);
   }
 
   if(ssl_cert || ssl_cert_blob || ssl_cert_type) {
@@ -4031,14 +4031,14 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
       CURLcode result = parse_sig_algs(data, sig_hash_algs, algs, &nalgs);
       if (result)
         return result;
-      if (!SSL_CTX_set_verify_algorithm_prefs(backend->ctx, algs, nalgs)) {
+      if (!SSL_CTX_set_verify_algorithm_prefs(octx->ssl_ctx, algs, nalgs)) {
         failf(data, "failed setting signature hash algorithms list: '%s'",
               sig_hash_algs);
         return CURLE_SSL_CIPHER;
       }
     } else {
       /* Use defaults from Chrome. */
-      if (!SSL_CTX_set_verify_algorithm_prefs(backend->ctx,
+      if (!SSL_CTX_set_verify_algorithm_prefs(octx->ssl_ctx,
                                               default_sig_algs,
                                               DEFAULT_SIG_ALGS_LENGTH)) {
         failf(data, "failed setting signature hash algorithms list: '%s'",
@@ -4082,7 +4082,7 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
 
   /* curl-impersonate: Enable TLS GREASE. */
   if(data->set.tls_grease) {
-    SSL_CTX_set_grease_enabled(backend->ctx, 1);
+    SSL_CTX_set_grease_enabled(octx->ssl_ctx, 1);
   }
 
   /*
@@ -4090,24 +4090,24 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
    * since Chrome 110.
    */
   if(data->set.ssl_permute_extensions) {
-    SSL_CTX_set_permute_extensions(backend->ctx, 1);
+    SSL_CTX_set_permute_extensions(octx->ssl_ctx, 1);
   }
 
   /* curl-impersonate: Set TLS extensions order. */
   if(data->set.str[STRING_TLS_EXTENSION_ORDER]) {
-    SSL_CTX_set_extension_order(backend->ctx, data->set.str[STRING_TLS_EXTENSION_ORDER]);
+    SSL_CTX_set_extension_order(octx->ssl_ctx, data->set.str[STRING_TLS_EXTENSION_ORDER]);
   }
 
   // curl-impersonate: Set key usage check
   if(data->set.tls_key_usage_no_check) {
-    SSL_CTX_set_key_usage_check_enabled(backend->ctx, 0);
+    SSL_CTX_set_key_usage_check_enabled(octx->ssl_ctx, 0);
   }else{
-    SSL_CTX_set_key_usage_check_enabled(backend->ctx, 1);
+    SSL_CTX_set_key_usage_check_enabled(octx->ssl_ctx, 1);
   }
 
   if(conn_config->cert_compression &&
      add_cert_compression(data,
-                          backend->ctx,
+                          octx->ssl_ctx,
                           conn_config->cert_compression))
     return CURLE_SSL_CIPHER;
 
@@ -4178,7 +4178,7 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
     for(i = 0; i < connssl->alps->count; ++i) {
       /* curl-impersonate: Add the ALPS extension (17513) like Chrome does. */
       // XXX: Firefox does not enable this.
-      SSL_add_application_settings(backend->handle, connssl->alps->entries[i],
+      SSL_add_application_settings(octx->ssl, connssl->alps->entries[i],
                                    strlen(connssl->alps->entries[i]), NULL,
                                    0);
     }

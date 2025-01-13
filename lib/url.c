@@ -333,15 +333,6 @@ CURLcode Curl_close(struct Curl_easy **datap)
   /* curl-impersonate: Free the dynamic list of headers. */
   curl_slist_free_all(data->state.merged_headers);
 
-#ifndef CURL_DISABLE_DOH
-  if(data->req.doh) {
-    Curl_dyn_free(&data->req.doh->probe[0].serverdoh);
-    Curl_dyn_free(&data->req.doh->probe[1].serverdoh);
-    curl_slist_free_all(data->req.doh->headers);
-    Curl_safefree(data->req.doh);
-  }
-#endif
-
 #if !defined(CURL_DISABLE_HTTP) && !defined(CURL_DISABLE_FORM_API)
   Curl_mime_cleanpart(data->state.formp);
   Curl_safefree(data->state.formp);

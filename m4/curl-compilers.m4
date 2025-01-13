@@ -402,7 +402,6 @@ AC_DEFUN([CURL_CONVERT_INCLUDE_TO_ISYSTEM], [
     dnl To prevent that, disable curl's automatic conversion of -I flags to
     dnl -isystem.
     AC_MSG_RESULT([no])
-  fi
     ;;
   *)
     if test "$compiler_id" = "GNU_C" ||

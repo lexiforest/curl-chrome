@@ -155,9 +155,6 @@ static const struct alpn_spec ALPN_SPEC_H2 = {
 static const struct alpn_spec ALPN_SPEC_H2_H11 = {
   { ALPN_H2, ALPN_HTTP_1_1 }, 2
 };
-static const struct alpn_spec ALPN_SPEC_H2 = {
-  { ALPN_H2 }, 1
-};
 #endif
 
 static const struct alpn_spec *alpn_get_spec(int httpwant, bool use_alpn)

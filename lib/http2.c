@@ -472,7 +472,7 @@ static CURLcode cf_h2_update_local_win(struct Curl_cfilter *cf,
 
       // printf("Using window update %d\n", window_update);
 
-      rc = nghttp2_session_set_local_window_size(
+      rv = nghttp2_session_set_local_window_size(
           ctx->h2, NGHTTP2_FLAG_NONE, 0,
           current_window_size + window_update);
 

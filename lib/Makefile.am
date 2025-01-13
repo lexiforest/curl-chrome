@@ -88,7 +88,7 @@ nodist_libcurlu_la_SOURCES = libcurl_unity.c
 libcurlu_la_SOURCES = $(curl_EXCLUDE)
 CLEANFILES = libcurl_unity.c
 else
-libcurl_la_SOURCES = $(CSOURCES) $(HHEADERS)
+libcurl_impersonate_la_SOURCES = $(CSOURCES) $(HHEADERS)
 libcurlu_la_SOURCES = $(CSOURCES) $(HHEADERS)
 endif
 

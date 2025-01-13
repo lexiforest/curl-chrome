@@ -1090,25 +1090,6 @@ static CURLcode setopt_long(struct Curl_easy *data, CURLoption option,
     break;
 #endif
 
-  case CURLOPT_SSL_SIG_HASH_ALGS:
-    /*
-     * Set the list of hash algorithms we want to use in the SSL connection.
-     * Specify comma-delimited list of algorithms to use.
-     */
-    result = Curl_setstropt(&data->set.str[STRING_SSL_SIG_HASH_ALGS],
-                            va_arg(param, char *));
-    break;
-
-  case CURLOPT_SSL_CERT_COMPRESSION:
-    /*
-     * Set the list of ceritifcate compression algorithms we support in the TLS
-     * connection.
-     * Specify comma-delimited list of algorithms to use. Options are "zlib"
-     * and "brotli".
-     */
-    result = Curl_setstropt(&data->set.str[STRING_SSL_CERT_COMPRESSION],
-                            va_arg(param, char *));
-    break;
 #endif /* USE_SSL */
   case CURLOPT_IPRESOLVE:
     if((arg < CURL_IPRESOLVE_WHATEVER) || (arg > CURL_IPRESOLVE_V6))
@@ -1554,8 +1535,7 @@ static CURLcode setopt_slist(struct Curl_easy *data, CURLoption option,
      * the list is copied and can be immediately freed by the user.
      */
     curl_slist_free_all(data->state.base_headers);
-    data->state.base_headers = \
-      Curl_slist_duplicate(va_arg(param, struct curl_slist *));
+    data->state.base_headers = Curl_slist_duplicate(slist);
     if (!data->state.base_headers)
       result = CURLE_OUT_OF_MEMORY;
     break;
@@ -1779,6 +1759,23 @@ static CURLcode setopt_cptr(struct Curl_easy *data, CURLoption option,
   case CURLOPT_HTTP2_STREAMS:
     return Curl_setstropt(&data->set.str[STRING_HTTP2_STREAMS], ptr);
     break;
+  case CURLOPT_SSL_SIG_HASH_ALGS:
+    /*
+     * Set the list of hash algorithms we want to use in the SSL connection.
+     * Specify comma-delimited list of algorithms to use.
+     */
+    return Curl_setstropt(&data->set.str[STRING_SSL_SIG_HASH_ALGS], ptr);
+    break;
+  case CURLOPT_SSL_CERT_COMPRESSION:
+    /*
+     * Set the list of ceritifcate compression algorithms we support in the TLS
+     * connection.
+     * Specify comma-delimited list of algorithms to use. Options are "zlib"
+     * and "brotli".
+     */
+    return Curl_setstropt(&data->set.str[STRING_SSL_CERT_COMPRESSION], ptr);
+    break;
+
 #ifndef CURL_DISABLE_PROXY
   case CURLOPT_PROXY_TLS13_CIPHERS:
     if(Curl_ssl_supports(data, SSLSUPP_TLS13_CIPHERSUITES))
