@@ -1214,6 +1214,7 @@ const struct impersonate_opts impersonations[] = {
       "Priority: u=0, i",
       "Te: trailers"
     },
+    .curves = "X25519MLKEM768:X25519:P-256:P-384:P-521:ffdhe2048:ffdhe3072",
     .alpn = true,
     .http2_settings = "1:65536;2:0;4:131072;5:16384",
     .http2_window_update = 12517377,
