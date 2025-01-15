@@ -1533,6 +1533,7 @@ enum dupstring {
   STRING_ECH_CONFIG,            /* CURLOPT_ECH_CONFIG */
   STRING_ECH_PUBLIC,            /* CURLOPT_ECH_PUBLIC */
   STRING_TLS_EXTENSION_ORDER,
+  STRING_TLS_DELEGATED_CREDENTIALS,
 
   /* -- end of null-terminated strings -- */
 
@@ -1859,6 +1860,7 @@ struct UserDefined {
   int tls_ech;      /* TLS ECH configuration  */
 #endif
   int http2_window_update;
+  int tls_record_size_limit;
 };
 
 #ifndef CURL_DISABLE_MIME

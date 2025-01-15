@@ -36,6 +36,8 @@ struct impersonate_opts {
   bool tls_permute_extensions;
   const char *ech;
   const char *tls_extension_order;
+  const char *tls_delegated_credentials;
+  int tls_record_size_limit;
   bool tls_grease;
   int http2_stream_weight;
   int http2_stream_exclusive;

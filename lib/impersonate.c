@@ -1202,7 +1202,7 @@ const struct impersonate_opts impersonations[] = {
       "TLS_RSA_WITH_AES_128_CBC_SHA,"
       "TLS_RSA_WITH_AES_256_CBC_SHA",
     .http_headers = {
-      "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:134.0) Gecko/20100101 Firefox/134.0",
+      "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0",
       "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       "Accept-Language: en-US,en;q=0.5",
       "Accept-Encoding: gzip, deflate, br, zstd",
@@ -1214,10 +1214,16 @@ const struct impersonate_opts impersonations[] = {
       "Priority: u=0, i",
       "Te: trailers"
     },
+    .alpn = true,
     .http2_settings = "1:65536;2:0;4:131072;5:16384",
     .http2_window_update = 12517377,
     .http2_pseudo_headers_order = "mpas",
-    .tls_extension_order = NULL,
+    .cert_compression = "zlib,brotli,zstd",
+    .ech = "GREASE",
+    .tls_session_ticket = true,
+    .tls_extension_order = "0-23-65281-10-11-35-16-5-34-51-43-13-45-28-27-65037",
+    .tls_delegated_credentials = "ecdsa_secp256r1_sha256:ecdsa_secp384r1_sha384:ecdsa_secp521r1_sha512:ecdsa_sha1",
+    .tls_record_size_limit = 4001,
     .tls_grease = false
   },
   {

@@ -491,8 +491,15 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
   }
 
   if(opts->tls_extension_order) {
-    // printf("setting extension order as: %s\n", opts->tls_extension_order);
     ret = curl_easy_setopt(data, CURLOPT_TLS_EXTENSION_ORDER, opts->tls_extension_order);
+  }
+
+  if(opts->tls_delegated_credentials) {
+    ret = curl_easy_setopt(data, CURLOPT_TLS_DELEGATED_CREDENTIALS, opts->tls_delegated_credentials);
+  }
+
+  if(opts->tls_record_size_limit) {
+    ret = curl_easy_setopt(data, CURLOPT_TLS_RECORD_SIZE_LIMIT, opts->tls_record_size_limit);
   }
 
   if(opts->http2_stream_weight) {

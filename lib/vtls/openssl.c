@@ -89,6 +89,9 @@
 #ifdef HAVE_BROTLI
 #include <brotli/decode.h>
 #endif
+#ifdef HAVE_ZSTD
+#include <zstd.h>
+#endif
 
 #ifdef USE_ECH
 # ifndef OPENSSL_IS_BORINGSSL
@@ -2836,7 +2839,31 @@ int DecompressBrotliCert(SSL* ssl,
 }
 #endif
 
-#if defined(HAVE_LIBZ) || defined(HAVE_BROTLI)
+#ifdef HAVE_ZSTD
+int DecompressZstdCert(SSL* ssl,
+                         CRYPTO_BUFFER** out,
+                         size_t uncompressed_len,
+                         const uint8_t* in,
+                         size_t in_len) {
+  uint8_t* data;
+  CRYPTO_BUFFER* decompressed = CRYPTO_BUFFER_alloc(&data, uncompressed_len);
+  if (!decompressed) {
+    return 0;
+  }
+
+  // zstd returns the size of decompressed content
+  if (ZSTD_decompress(decompressed, uncompressed_len, in, in_len) != uncompressed_len) {
+    CRYPTO_BUFFER_free(decompressed);
+    return 0;
+  }
+
+  *out = decompressed;
+  return 1;
+}
+
+#endif
+
+#if defined(HAVE_LIBZ) || defined(HAVE_BROTLI) || defined(HAVE_ZSTD)
 static struct {
   char *alg_name;
   uint16_t alg_id;
@@ -2848,6 +2875,9 @@ static struct {
 #endif
 #ifdef HAVE_BROTLI
   {"brotli", TLSEXT_cert_compression_brotli, NULL, DecompressBrotliCert},
+#endif
+#ifdef HAVE_ZSTD
+  {"zstd", TLSEXT_cert_compression_zstd, NULL, DecompressZstdCert},
 #endif
 };
 
@@ -4101,6 +4131,14 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
   /* curl-impersonate: Set TLS extensions order. */
   if(data->set.str[STRING_TLS_EXTENSION_ORDER]) {
     SSL_CTX_set_extension_order(backend->ctx, data->set.str[STRING_TLS_EXTENSION_ORDER]);
+  }
+
+  if(data->set.str[STRING_TLS_DELEGATED_CREDENTIALS]) {
+    SSL_CTX_set_delegated_credentials(backend->ctx, data->set.str[STRING_TLS_DELEGATED_CREDENTIALS]);
+  }
+
+  if(data->set.tls_record_size_limit) {
+    SSL_CTX_set_record_size_limit(backend->ctx, data->set.tls_record_size_limit);
   }
 
   // curl-impersonate: Set key usage check

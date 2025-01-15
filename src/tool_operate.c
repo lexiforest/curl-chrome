@@ -1978,8 +1978,15 @@ static CURLcode single_transfer(struct GlobalConfig *global,
 
         /* curl-impersonate */
         if(config->tls_extension_order)
-          // printf("setting is %s\n", config->tls_extension_order);
           my_setopt_str(curl, CURLOPT_TLS_EXTENSION_ORDER, config->tls_extension_order);
+
+        /* curl-impersonate */
+        if(config->tls_delegated_credentials)
+          my_setopt_str(curl, CURLOPT_TLS_DELEGATED_CREDENTIALS, config->tls_delegated_credentials);
+
+        /* curl-impersonate */
+        if(config->tls_record_size_limit)
+          my_setopt(curl, CURLOPT_TLS_RECORD_SIZE_LIMIT, config->tls_record_size_limit);
 
         /* new in libcurl 7.9.2: */
         if(config->disable_epsv)

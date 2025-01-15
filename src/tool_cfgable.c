@@ -103,6 +103,7 @@ static void free_config_fields(struct OperationConfig *config)
   Curl_safefree(config->http2_settings);
   Curl_safefree(config->http2_streams);
   Curl_safefree(config->tls_extension_order);
+  Curl_safefree(config->tls_delegated_credentials);
 
   urlnode = config->url_list;
   while(urlnode) {

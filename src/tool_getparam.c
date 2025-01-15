@@ -321,7 +321,9 @@ typedef enum {
   C_TFTP_BLKSIZE,
   C_TFTP_NO_OPTIONS,
   C_TIME_COND,
+  C_TLS_DELEGATED_CREDENTIALS,
   C_TLS_MAX,
+  C_TLS_RECORD_SIZE_LIMIT,
   C_TLS_SESSION_TICKET,
   C_TLS_EXTENSION_ORDER,
   C_TLS_PERMUTE_EXTENSIONS,
@@ -618,10 +620,12 @@ static const struct LongShort aliases[]= {
   {"tftp-blksize",               ARG_STRG, ' ', C_TFTP_BLKSIZE},
   {"tftp-no-options",            ARG_BOOL, ' ', C_TFTP_NO_OPTIONS},
   {"time-cond",                  ARG_STRG, 'z', C_TIME_COND},
+  {"tls-delegated-credentials",  ARG_STRG, ' ', C_TLS_DELEGATED_CREDENTIALS},  // curl-impersonate
   {"tls-extension-order",        ARG_STRG, ' ', C_TLS_EXTENSION_ORDER},  // curl-impersonate
   {"tls-grease",                 ARG_BOOL, ' ', C_TLS_GREASE},  // curl-impersonate
   {"tls-max",                    ARG_STRG, ' ', C_TLS_MAX},
   {"tls-permute-extensions",     ARG_BOOL, ' ', C_TLS_PERMUTE_EXTENSIONS},  // curl-impersonate
+  {"tls-record-size-limit",      ARG_STRG, ' ', C_TLS_RECORD_SIZE_LIMIT},  // curl-impersonate
   {"tls-session-ticket",         ARG_BOOL, ' ', C_TLS_SESSION_TICKET},  // curl-impersonate
   {"tls13-ciphers",              ARG_STRG, ' ', C_TLS13_CIPHERS},
   {"tlsauthtype",                ARG_STRG, ' ', C_TLSAUTHTYPE},
@@ -1906,6 +1910,12 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
       break;
     case C_TLS_EXTENSION_ORDER:  /* --tls-extension-order curl-impersonate */
       err = getstr(&config->tls_extension_order, nextarg, ALLOW_BLANK);
+      break;
+    case C_TLS_DELEGATED_CREDENTIALS:
+      err = getstr(&config->tls_delegated_credentials, nextarg, ALLOW_BLANK);
+      break;
+    case C_TLS_RECORD_SIZE_LIMIT:
+      err = str2unum(&config->tls_record_size_limit, nextarg);
       break;
     case C_TLS_GREASE:  /* --tls-grease curl-impersonate */
       config->tls_grease = toggle;

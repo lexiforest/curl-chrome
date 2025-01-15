@@ -3000,6 +3000,14 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
   case CURLOPT_TLS_STATUS_REQUEST:
     data->set.tls_status_request = (0 != va_arg(param, long)) ? TRUE : FALSE;
     break;
+  case CURLOPT_TLS_DELEGATED_CREDENTIALS:
+    result = Curl_setstropt(&data->set.str[STRING_TLS_DELEGATED_CREDENTIALS],
+                            va_arg(param, char *));
+    break;
+  case CURLOPT_TLS_RECORD_SIZE_LIMIT:
+    arg = va_arg(param, long);
+    data->set.tls_record_size_limit = arg;
+    break;
 
 #ifdef USE_HTTP2
   case CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER:
