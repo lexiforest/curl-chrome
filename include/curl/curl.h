@@ -632,6 +632,7 @@ typedef enum {
   CURLE_SSL_CLIENTCERT,          /* 98 - client-side certificate required */
   CURLE_UNRECOVERABLE_POLL,      /* 99 - poll/select returned fatal error */
   CURLE_TOO_LARGE,               /* 100 - a value/data met its maximum */
+  CURLE_ECH_REQUIRED,            /* 101 - ECH tried but failed */
   CURL_LAST /* never use! */
 } CURLcode;
 
@@ -2205,6 +2206,85 @@ typedef enum {
 
   /* millisecond version */
   CURLOPT(CURLOPT_SERVER_RESPONSE_TIMEOUT_MS, CURLOPTTYPE_LONG, 324),
+
+  /* curl-impersonate: A list of headers used by the impersonated browser.
+   * If given, merged with CURLOPT_HTTPHEADER. */
+  CURLOPT(CURLOPT_HTTPBASEHEADER, CURLOPTTYPE_SLISTPOINT, 1000),
+
+  /* curl-impersonate: A list of TLS signature hash algorithms.
+   * See https://datatracker.ietf.org/doc/html/rfc5246#section-7.4.1.4.1 */
+  CURLOPT(CURLOPT_SSL_SIG_HASH_ALGS, CURLOPTTYPE_STRINGPOINT, 1001),
+
+  /* curl-impersonate: Whether to enable ALPS in TLS or not.
+   * See https://datatracker.ietf.org/doc/html/draft-vvv-tls-alps.
+   * Support for ALPS is minimal and is intended only for the TLS client
+   * hello to match. */
+  CURLOPT(CURLOPT_SSL_ENABLE_ALPS, CURLOPTTYPE_LONG, 1002),
+
+  /* curl-impersonate: Comma-separated list of certificate compression
+   * algorithms to use. These are published in the client hello.
+   * Supported algorithms are "zlib" and "brotli".
+   * See https://datatracker.ietf.org/doc/html/rfc8879 */
+  CURLOPT(CURLOPT_SSL_CERT_COMPRESSION, CURLOPTTYPE_STRINGPOINT, 1003),
+
+  /* Enable/disable TLS session ticket extension (RFC5077) */
+  CURLOPT(CURLOPT_SSL_ENABLE_TICKET, CURLOPTTYPE_LONG, 1004),
+
+  /*
+   * curl-impersonate:
+   * Set the order of the HTTP/2 pseudo headers. The value must contain
+   * the letters 'm', 'a', 's', 'p' representing the pseudo-headers
+   * ":method", ":authority", ":scheme", ":path" in the desired order of
+   * appearance in the HTTP/2 HEADERS frame.
+   */
+  CURLOPT(CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER, CURLOPTTYPE_STRINGPOINT, 1005),
+
+  /*
+   * curl-impersonate:
+   * HTTP2 settings frame keys and values, format: 1:v;2:v;3:v
+   */
+  CURLOPT(CURLOPT_HTTP2_SETTINGS, CURLOPTTYPE_STRINGPOINT, 1006),
+
+  /* 
+   * curl-impersonate: Whether to enable Boringssl permute extensions
+   * See https://commondatastorage.googleapis.com/chromium-boringssl-docs/ssl.h.html#SSL_set_permute_extensions.
+   */
+  CURLOPT(CURLOPT_SSL_PERMUTE_EXTENSIONS, CURLOPTTYPE_LONG, 1007),
+
+  /*
+   * curl-impersonate:
+   * HTTP2 initial window update
+   */
+  CURLOPT(CURLOPT_HTTP2_WINDOW_UPDATE, CURLOPTTYPE_LONG, 1008),
+
+  /* curl-impersonate:
+   * set ECH configuration
+   */
+  CURLOPT(CURLOPT_ECH, CURLOPTTYPE_STRINGPOINT, 1009),
+
+  /*
+   * curl-impersonate:
+   * Set the initial streams settings for http2.
+   */
+  CURLOPT(CURLOPT_HTTP2_STREAMS, CURLOPTTYPE_STRINGPOINT, 1010),
+
+  /* curl-impersonate: enable tls grease */
+  CURLOPT(CURLOPT_TLS_GREASE, CURLOPTTYPE_LONG, 1011),
+
+  /* curl-impersonate: set tls extension order */
+  CURLOPT(CURLOPT_TLS_EXTENSION_ORDER, CURLOPTTYPE_STRINGPOINT, 1012),
+
+  /* curl-impersonate: Set stream exclusiveness, 0 or 1 */
+  CURLOPT(CURLOPT_STREAM_EXCLUSIVE, CURLOPTTYPE_LONG, 1013),
+
+  /* curl-impersonate: enable tls key usage check, defaults: on */
+  CURLOPT(CURLOPT_TLS_KEY_USAGE_NO_CHECK, CURLOPTTYPE_LONG, 1014),
+
+  /* curl-impersonate: enable tls signed cert stamps */
+  CURLOPT(CURLOPT_TLS_SIGNED_CERT_TIMESTAMPS, CURLOPTTYPE_LONG, 1015),
+
+  /* curl-impersonate: enable tls status request */
+  CURLOPT(CURLOPT_TLS_STATUS_REQUEST, CURLOPTTYPE_LONG, 1016),
 
   CURLOPT_LASTENTRY /* the last unused */
 } CURLoption;

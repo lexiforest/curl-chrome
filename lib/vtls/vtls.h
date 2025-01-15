@@ -44,6 +44,8 @@ struct Curl_ssl_session;
   "ALPN: server did not agree on a protocol. Uses default."
 #define VTLS_INFOF_ALPN_OFFER_1STR              \
   "ALPN: curl offers %s"
+#define VTLS_INFOF_ALPS_OFFER_1STR              \
+  "ALPS: offers %s"
 #define VTLS_INFOF_ALPN_ACCEPTED_1STR           \
   ALPN_ACCEPTED "%s"
 #define VTLS_INFOF_ALPN_ACCEPTED_LEN_1STR       \

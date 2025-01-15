@@ -96,6 +96,14 @@ static void free_config_fields(struct OperationConfig *config)
   Curl_safefree(config->proto_str);
   Curl_safefree(config->proto_redir_str);
 
+  // curl-impersonate
+  Curl_safefree(config->ssl_sig_hash_algs);
+  Curl_safefree(config->ssl_cert_compression);
+  Curl_safefree(config->http2_pseudo_headers_order);
+  Curl_safefree(config->http2_settings);
+  Curl_safefree(config->http2_streams);
+  Curl_safefree(config->tls_extension_order);
+
   urlnode = config->url_list;
   while(urlnode) {
     struct getout *next = urlnode->next;
@@ -176,6 +184,14 @@ static void free_config_fields(struct OperationConfig *config)
   Curl_safefree(config->aws_sigv4);
   Curl_safefree(config->proto_str);
   Curl_safefree(config->proto_redir_str);
+#ifdef USE_ECH
+  Curl_safefree(config->ech);
+  config->ech = NULL;
+  Curl_safefree(config->ech_config);
+  config->ech_config = NULL;
+  Curl_safefree(config->ech_public);
+  config->ech_public = NULL;
+#endif
 }
 
 void config_free(struct OperationConfig *config)

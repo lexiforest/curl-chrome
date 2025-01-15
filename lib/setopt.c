@@ -51,6 +51,7 @@
 #include "altsvc.h"
 #include "hsts.h"
 #include "tftp.h"
+#include "slist.h"
 #include "strdup.h"
 /* The last 3 #include files should be in this order */
 #include "curl_printf.h"
@@ -715,6 +716,23 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
      */
     result = Curl_setstropt(&data->set.str[STRING_USERAGENT],
                             va_arg(param, char *));
+    break;
+
+  case CURLOPT_HTTPBASEHEADER:
+    /*
+     * curl-impersonate:
+     * Set a list of "base" headers. These will be merged with any headers
+     * set by CURLOPT_HTTPHEADER. curl-impersonate uses this option in order
+     * to set a list of default browser headers.
+     *
+     * Unlike CURLOPT_HTTPHEADER,
+     * the list is copied and can be immediately freed by the user.
+     */
+    curl_slist_free_all(data->state.base_headers);
+    data->state.base_headers = \
+      Curl_slist_duplicate(va_arg(param, struct curl_slist *));
+    if (!data->state.base_headers)
+      result = CURLE_OUT_OF_MEMORY;
     break;
 
 #ifndef CURL_DISABLE_PROXY
@@ -2398,6 +2416,27 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
     result = Curl_setstropt(&data->set.str[STRING_SSL_EC_CURVES],
                             va_arg(param, char *));
     break;
+
+  case CURLOPT_SSL_SIG_HASH_ALGS:
+    /*
+     * Set the list of hash algorithms we want to use in the SSL connection.
+     * Specify comma-delimited list of algorithms to use.
+     */
+    result = Curl_setstropt(&data->set.str[STRING_SSL_SIG_HASH_ALGS],
+                            va_arg(param, char *));
+    break;
+
+  case CURLOPT_SSL_CERT_COMPRESSION:
+    /*
+     * Set the list of ceritifcate compression algorithms we support in the TLS
+     * connection.
+     * Specify comma-delimited list of algorithms to use. Options are "zlib"
+     * and "brotli".
+     */
+    result = Curl_setstropt(&data->set.str[STRING_SSL_CERT_COMPRESSION],
+                            va_arg(param, char *));
+    break;
+
 #endif
   case CURLOPT_IPRESOLVE:
     arg = va_arg(param, long);
@@ -2936,6 +2975,52 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
   case CURLOPT_SSL_ENABLE_ALPN:
     data->set.ssl_enable_alpn = (0 != va_arg(param, long));
     break;
+  case CURLOPT_SSL_ENABLE_ALPS:
+    data->set.ssl_enable_alps = (0 != va_arg(param, long)) ? TRUE : FALSE;
+    break;
+  case CURLOPT_SSL_ENABLE_TICKET:
+    data->set.ssl_enable_ticket = (0 != va_arg(param, long)) ? TRUE : FALSE;
+    break;
+  case CURLOPT_SSL_PERMUTE_EXTENSIONS:
+    data->set.ssl_permute_extensions = (0 != va_arg(param, long)) ? TRUE : FALSE;
+    break;
+  case CURLOPT_TLS_GREASE:
+    data->set.tls_grease = (0 != va_arg(param, long)) ? TRUE : FALSE;
+    break;
+  case CURLOPT_TLS_EXTENSION_ORDER:
+    result = Curl_setstropt(&data->set.str[STRING_TLS_EXTENSION_ORDER],
+                            va_arg(param, char *));
+    break;
+  case CURLOPT_TLS_KEY_USAGE_NO_CHECK:
+    data->set.tls_key_usage_no_check = (0 != va_arg(param, long)) ? TRUE : FALSE;
+    break;
+  case CURLOPT_TLS_SIGNED_CERT_TIMESTAMPS:
+    data->set.tls_signed_cert_timestamps = (0 != va_arg(param, long)) ? TRUE : FALSE;
+    break;
+  case CURLOPT_TLS_STATUS_REQUEST:
+    data->set.tls_status_request = (0 != va_arg(param, long)) ? TRUE : FALSE;
+    break;
+
+#ifdef USE_HTTP2
+  case CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER:
+    result = Curl_setstropt(&data->set.str[STRING_HTTP2_PSEUDO_HEADERS_ORDER],
+                            va_arg(param, char *));
+    break;
+  case CURLOPT_HTTP2_SETTINGS:
+    result = Curl_setstropt(&data->set.str[STRING_HTTP2_SETTINGS],
+                            va_arg(param, char *));
+    break;
+  case CURLOPT_HTTP2_WINDOW_UPDATE:
+    arg = va_arg(param, long);
+    if(arg < -1)
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    data->set.http2_window_update = arg;
+    break;
+  case CURLOPT_HTTP2_STREAMS:
+    result = Curl_setstropt(&data->set.str[STRING_HTTP2_STREAMS],
+                            va_arg(param, char *));
+    break;
+#endif
 #ifdef USE_UNIX_SOCKETS
   case CURLOPT_UNIX_SOCKET_PATH:
     data->set.abstract_unix_socket = FALSE;
@@ -2960,6 +3045,14 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
     arg = va_arg(param, long);
     if((arg >= 1) && (arg <= 256))
       data->set.priority.weight = (int)arg;
+    break;
+#else
+    return CURLE_NOT_BUILT_IN;
+#endif
+  case CURLOPT_STREAM_EXCLUSIVE:
+#if defined(USE_HTTP2) || defined(USE_HTTP3)
+    arg = va_arg(param, long);
+    data->set.priority.exclusive = (int)arg;
     break;
 #else
     return CURLE_NOT_BUILT_IN;
@@ -3130,6 +3223,31 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
     arg = va_arg(param, long);
     raw = (arg & CURLWS_RAW_MODE);
     data->set.ws_raw_mode = raw;
+    break;
+  }
+#endif
+#ifdef USE_ECH
+  case CURLOPT_ECH: {
+    size_t plen = 0;
+    argptr = va_arg(param, char *);
+    if(!argptr) {
+      data->set.tls_ech = CURLECH_DISABLE;
+      result = CURLE_BAD_FUNCTION_ARGUMENT;
+      return result;
+    }
+    plen = strlen(argptr);
+    if(plen > CURL_MAX_INPUT_LENGTH) {
+      data->set.tls_ech = CURLECH_DISABLE;
+      result = CURLE_BAD_FUNCTION_ARGUMENT;
+      return result;
+    }
+    if(plen == 6 && strcasecompare(argptr, "GREASE"))
+      data->set.tls_ech = CURLECH_GREASE;
+    else {
+      data->set.tls_ech = CURLECH_DISABLE;
+      result = CURLE_BAD_FUNCTION_ARGUMENT;
+      return result;
+    }
     break;
   }
 #endif

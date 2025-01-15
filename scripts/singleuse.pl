@@ -56,6 +56,7 @@ my %api = (
     'curl_easy_escape' => 'API',
     'curl_easy_getinfo' => 'API',
     'curl_easy_init' => 'API',
+    'curl_easy_impersonate' => 'API',
     'curl_easy_pause' => 'API',
     'curl_easy_perform' => 'API',
     'curl_easy_recv' => 'API',

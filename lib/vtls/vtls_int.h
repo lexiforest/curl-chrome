@@ -70,6 +70,7 @@ struct ssl_connect_data {
   ssl_connect_state connecting_state;
   struct ssl_peer peer;
   const struct alpn_spec *alpn;     /* ALPN to use or NULL for none */
+  const struct alpn_spec *alps;     /* ALPS to use or NULL for none */
   void *backend;                    /* vtls backend specific props */
   struct cf_call_data call_data;    /* data handle used in current call */
   struct curltime handshake_done;   /* time when handshake finished */

@@ -161,8 +161,18 @@ struct OperationConfig {
   bool crlf;
   char *customrequest;
   char *ssl_ec_curves;
+  char *ssl_sig_hash_algs;
+  char *ssl_cert_compression;
   char *krblevel;
   char *request_target;
+  char *http2_pseudo_headers_order;
+  char *http2_settings;
+  long http2_window_update;
+  long http2_stream_weight;
+  long http2_stream_exclusive;
+  char *http2_streams;
+  bool tls_grease;
+  char *tls_extension_order;
   long httpversion;
   bool http09_allowed;
   bool nobuffer;
@@ -192,6 +202,7 @@ struct OperationConfig {
   struct curl_slist *prequote;
   long ssl_version;
   long ssl_version_max;
+  bool ssl_permute_extensions;
   long proxy_ssl_version;
   long ip_version;
   long create_file_mode; /* CURLOPT_NEW_FILE_PERMS */
@@ -268,6 +279,8 @@ struct OperationConfig {
   bool proxy_ssl_auto_client_cert; /* proxy version of ssl_auto_client_cert */
   char *oauth_bearer;             /* OAuth 2.0 bearer token */
   bool noalpn;                    /* enable/disable TLS ALPN extension */
+  bool alps;                      /* enable/disable TLS ALPS extension */
+  bool noticket;                  /* enable/disable TLS session ticket */
   char *unix_socket_path;         /* path to Unix domain socket */
   bool abstract_unix_socket;      /* path to an abstract Unix domain socket */
   bool falsestart;
@@ -298,6 +311,11 @@ struct OperationConfig {
   struct State state;             /* for create_transfer() */
   bool rm_partial;                /* on error, remove partially written output
                                      files */
+#ifdef USE_ECH
+  char *ech;                      /* Config set by --ech keywords */
+  char *ech_config;               /* Config set by "--ech esl:" option */
+  char *ech_public;               /* Config set by "--ech pn:" option */
+#endif
 };
 
 struct GlobalConfig {

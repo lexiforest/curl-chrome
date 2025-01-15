@@ -79,8 +79,23 @@
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
 #include <openssl/pkcs12.h>
+#include <openssl/pool.h>
 #include <openssl/tls1.h>
 #include <openssl/evp.h>
+
+#ifdef HAVE_LIBZ
+#include <zlib.h>
+#endif
+#ifdef HAVE_BROTLI
+#include <brotli/decode.h>
+#endif
+
+#ifdef USE_ECH
+# ifndef OPENSSL_IS_BORINGSSL
+#  include <openssl/ech.h>
+# endif
+# include "curl_base64.h"
+#endif /* USE_ECH */
 
 #if (OPENSSL_VERSION_NUMBER >= 0x0090808fL) && !defined(OPENSSL_NO_OCSP)
 #include <openssl/ocsp.h>
@@ -274,6 +289,113 @@
     !defined(OPENSSL_IS_BORINGSSL) && \
     !defined(OPENSSL_IS_AWSLC)
 #define HAVE_OPENSSL_VERSION
+#endif
+
+#if defined(OPENSSL_IS_BORINGSSL)
+#define HAVE_SSL_CTX_SET_VERIFY_ALGORITHM_PREFS
+
+/*
+ * kMaxSignatureAlgorithmNameLen and kSignatureAlgorithmNames
+ * Taken from BoringSSL, see ssl/ssl_privkey.cc
+ * */
+static const size_t kMaxSignatureAlgorithmNameLen = 23;
+
+static const struct {
+  uint16_t signature_algorithm;
+  const char *name;
+} kSignatureAlgorithmNames[] = {
+    {SSL_SIGN_RSA_PKCS1_MD5_SHA1, "rsa_pkcs1_md5_sha1"},
+    {SSL_SIGN_RSA_PKCS1_SHA1, "rsa_pkcs1_sha1"},
+    {SSL_SIGN_RSA_PKCS1_SHA256, "rsa_pkcs1_sha256"},
+    {SSL_SIGN_RSA_PKCS1_SHA384, "rsa_pkcs1_sha384"},
+    {SSL_SIGN_RSA_PKCS1_SHA512, "rsa_pkcs1_sha512"},
+    {SSL_SIGN_ECDSA_SHA1, "ecdsa_sha1"},
+    {SSL_SIGN_ECDSA_SECP256R1_SHA256, "ecdsa_secp256r1_sha256"},
+    {SSL_SIGN_ECDSA_SECP384R1_SHA384, "ecdsa_secp384r1_sha384"},
+    {SSL_SIGN_ECDSA_SECP521R1_SHA512, "ecdsa_secp521r1_sha512"},
+    {SSL_SIGN_RSA_PSS_RSAE_SHA256, "rsa_pss_rsae_sha256"},
+    {SSL_SIGN_RSA_PSS_RSAE_SHA384, "rsa_pss_rsae_sha384"},
+    {SSL_SIGN_RSA_PSS_RSAE_SHA512, "rsa_pss_rsae_sha512"},
+    {SSL_SIGN_ED25519, "ed25519"},
+};
+
+#define MAX_SIG_ALGS \
+  sizeof(kSignatureAlgorithmNames) / sizeof(kSignatureAlgorithmNames[0])
+
+/* Default signature hash algorithms taken from Chrome/Chromium.
+ * See kVerifyPeers @ net/socket/ssl_client_socket_impl.cc */
+static const uint16_t default_sig_algs[] = {
+  SSL_SIGN_ECDSA_SECP256R1_SHA256, SSL_SIGN_RSA_PSS_RSAE_SHA256,
+  SSL_SIGN_RSA_PKCS1_SHA256,       SSL_SIGN_ECDSA_SECP384R1_SHA384,
+  SSL_SIGN_RSA_PSS_RSAE_SHA384,    SSL_SIGN_RSA_PKCS1_SHA384,
+  SSL_SIGN_RSA_PSS_RSAE_SHA512,    SSL_SIGN_RSA_PKCS1_SHA512,
+};
+
+#define DEFAULT_SIG_ALGS_LENGTH  \
+  sizeof(default_sig_algs) / sizeof(default_sig_algs[0])
+
+static CURLcode parse_sig_algs(struct Curl_easy *data,
+                               const char *sigalgs,
+                               uint16_t *algs,
+                               size_t *nalgs)
+{
+  *nalgs = 0;
+  while (sigalgs && sigalgs[0]) {
+    int i;
+    bool found = FALSE;
+    const char *end;
+    size_t len;
+    char algname[kMaxSignatureAlgorithmNameLen + 1];
+
+    end = strpbrk(sigalgs, ":,");
+    if (end)
+      len = end - sigalgs;
+    else
+      len = strlen(sigalgs);
+
+    if (len > kMaxSignatureAlgorithmNameLen) {
+      failf(data, "Bad signature hash algorithm list");
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    }
+
+    if (!len) {
+      ++sigalgs;
+      continue;
+    }
+
+    if (*nalgs == MAX_SIG_ALGS) {
+      /* Reached the maximum number of possible algorithms, but more data
+       * available in the list. */
+      failf(data, "Bad signature hash algorithm list");
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    }
+
+    memcpy(algname, sigalgs, len);
+    algname[len] = 0;
+
+    for (i = 0; i < MAX_SIG_ALGS; i++) {
+      if (strcasecompare(algname, kSignatureAlgorithmNames[i].name)) {
+        algs[*nalgs] = kSignatureAlgorithmNames[i].signature_algorithm;
+        (*nalgs)++;
+        found = TRUE;
+        break;
+      }
+    }
+
+    if (!found) {
+      failf(data, "Unknown signature hash algorithm: '%s'", algname);
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    }
+
+    if (end)
+      sigalgs = ++end;
+    else
+      break;
+  }
+
+  return CURLE_OK;
+}
+
 #endif
 
 #if defined(OPENSSL_IS_BORINGSSL) || defined(OPENSSL_IS_AWSLC)
@@ -2644,6 +2766,151 @@ static const char *tls_rt_type(int type)
   }
 }
 
+#ifdef HAVE_LIBZ
+int DecompressZlibCert(SSL *ssl,
+                       CRYPTO_BUFFER** out,
+                       size_t uncompressed_len,
+                       const uint8_t* in,
+                       size_t in_len)
+{
+  z_stream strm;
+  uint8_t* data;
+  CRYPTO_BUFFER* decompressed = CRYPTO_BUFFER_alloc(&data, uncompressed_len);
+  if(!decompressed) {
+    return 0;
+  }
+
+  strm.zalloc = NULL;
+  strm.zfree = NULL;
+  strm.opaque = NULL;
+  strm.next_in = (Bytef *)in;
+  strm.avail_in = in_len;
+  strm.next_out = (Bytef *)data;
+  strm.avail_out = uncompressed_len;
+
+  if(inflateInit(&strm) != Z_OK) {
+    CRYPTO_BUFFER_free(decompressed);
+    return 0;
+  }
+
+  if(inflate(&strm, Z_FINISH) != Z_STREAM_END ||
+    strm.avail_in != 0 ||
+    strm.avail_out != 0) {
+    inflateEnd(&strm);
+    CRYPTO_BUFFER_free(decompressed);
+    return 0;
+  }
+
+  inflateEnd(&strm);
+  *out = decompressed;
+  return 1;
+}
+#endif
+
+#ifdef HAVE_BROTLI
+
+/* Taken from Chromium and adapted to C,
+ * see net/ssl/cert_compression.cc
+ */
+int DecompressBrotliCert(SSL* ssl,
+                         CRYPTO_BUFFER** out,
+                         size_t uncompressed_len,
+                         const uint8_t* in,
+                         size_t in_len) {
+  uint8_t* data;
+  CRYPTO_BUFFER* decompressed = CRYPTO_BUFFER_alloc(&data, uncompressed_len);
+  if (!decompressed) {
+    return 0;
+  }
+
+  size_t output_size = uncompressed_len;
+  if (BrotliDecoderDecompress(in_len, in, &output_size, data) !=
+          BROTLI_DECODER_RESULT_SUCCESS ||
+      output_size != uncompressed_len) {
+    CRYPTO_BUFFER_free(decompressed);
+    return 0;
+  }
+
+  *out = decompressed;
+  return 1;
+}
+#endif
+
+#if defined(HAVE_LIBZ) || defined(HAVE_BROTLI)
+static struct {
+  char *alg_name;
+  uint16_t alg_id;
+  ssl_cert_compression_func_t compress;
+  ssl_cert_decompression_func_t decompress;
+} cert_compress_algs[] = {
+#ifdef HAVE_LIBZ
+  {"zlib", TLSEXT_cert_compression_zlib, NULL, DecompressZlibCert},
+#endif
+#ifdef HAVE_BROTLI
+  {"brotli", TLSEXT_cert_compression_brotli, NULL, DecompressBrotliCert},
+#endif
+};
+
+#define NUM_CERT_COMPRESSION_ALGS \
+  sizeof(cert_compress_algs) / sizeof(cert_compress_algs[0])
+
+/*
+ * curl-impersonate:
+ * Add support for TLS extension 27 - compress_certificate.
+ * This calls the BoringSSL-specific API SSL_CTX_add_cert_compression_alg
+ * for each algorithm specified in cert_compression, which is a comma separated list.
+ */
+static CURLcode add_cert_compression(struct Curl_easy *data,
+                                     SSL_CTX *ctx,
+                                     const char *algorithms)
+{
+  int i;
+  const char *s = algorithms;
+  char *alg_name;
+  size_t alg_name_len;
+  bool found;
+
+  while (s && s[0]) {
+    found = FALSE;
+
+    for(i = 0; i < NUM_CERT_COMPRESSION_ALGS; i++) {
+      alg_name = cert_compress_algs[i].alg_name;
+      alg_name_len = strlen(alg_name);
+      if(strlen(s) >= alg_name_len &&
+         strncasecompare(s, alg_name, alg_name_len) &&
+         (s[alg_name_len] == ',' || s[alg_name_len] == 0)) {
+        if(!SSL_CTX_add_cert_compression_alg(ctx,
+                    cert_compress_algs[i].alg_id,
+                    cert_compress_algs[i].compress,
+                    cert_compress_algs[i].decompress)) {
+          failf(data, "Error adding certificate compression algorithm '%s'",
+                alg_name);
+          return CURLE_SSL_CIPHER;
+        }
+        s += alg_name_len;
+        if(*s == ',')
+          s += 1;
+        found = TRUE;
+        break;
+      }
+    }
+
+    if(!found) {
+      failf(data, "Invalid compression algorithm list");
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    }
+  }
+
+  return CURLE_OK;
+}
+#else
+static CURLcode add_cert_compression(SSL_CTX *ctx, const char *algorithms)
+{
+  /* No compression algorithms are available. */
+  return CURLE_BAD_FUNCTION_ARGUMENT;
+}
+#endif
+
 /*
  * Our callback from the SSL/TLS layers.
  */
@@ -3616,7 +3883,14 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
   ctx_options = SSL_OP_ALL;
 
 #ifdef SSL_OP_NO_TICKET
-  ctx_options |= SSL_OP_NO_TICKET;
+  if(data->set.ssl_enable_ticket) {
+  /* curl-impersonate:
+   * Turn off SSL_OP_NO_TICKET, we want TLS extension 35 (session_ticket)
+   * to be present in the client hello. */
+    ctx_options &= ~SSL_OP_NO_TICKET;
+  } else {
+    ctx_options |= SSL_OP_NO_TICKET;
+  }
 #endif
 
 #ifdef SSL_OP_NO_COMPRESSION
@@ -3683,6 +3957,21 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
   }
 #endif
 
+  SSL_CTX_set_options(backend->ctx,
+      SSL_OP_LEGACY_SERVER_CONNECT);
+  SSL_CTX_set_mode(backend->ctx,
+      SSL_MODE_CBC_RECORD_SPLITTING | SSL_MODE_ENABLE_FALSE_START);
+
+  /* curl-impersonate: Enable TLS extensions 18 - signed_certificate_timestamp. */
+  if(data->set.tls_signed_cert_timestamps) {
+    SSL_CTX_enable_signed_cert_timestamps(backend->ctx);
+  }
+
+  /* curl-impersonate: Enable TLS extensions 5 - status_request */
+  if(data->set.tls_status_request) {
+    SSL_CTX_enable_ocsp_stapling(backend->ctx);
+  }
+
   if(ssl_cert || ssl_cert_blob || ssl_cert_type) {
     if(!result &&
        !cert_stuff(data, backend->ctx,
@@ -3736,6 +4025,35 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
   }
 #endif
 
+#ifdef HAVE_SSL_CTX_SET_VERIFY_ALGORITHM_PREFS
+  {
+    uint16_t algs[MAX_SIG_ALGS];
+    size_t nalgs;
+    /* curl-impersonate: Set the signature algorithms (TLS extension 13).
+     * See net/socket/ssl_client_socket_impl.cc in Chromium's source. */
+    char *sig_hash_algs = conn_config->sig_hash_algs;
+    if (sig_hash_algs) {
+      CURLcode result = parse_sig_algs(data, sig_hash_algs, algs, &nalgs);
+      if (result)
+        return result;
+      if (!SSL_CTX_set_verify_algorithm_prefs(backend->ctx, algs, nalgs)) {
+        failf(data, "failed setting signature hash algorithms list: '%s'",
+              sig_hash_algs);
+        return CURLE_SSL_CIPHER;
+      }
+    } else {
+      /* Use defaults from Chrome. */
+      if (!SSL_CTX_set_verify_algorithm_prefs(backend->ctx,
+                                              default_sig_algs,
+                                              DEFAULT_SIG_ALGS_LENGTH)) {
+        failf(data, "failed setting signature hash algorithms list: '%s'",
+              sig_hash_algs);
+        return CURLE_SSL_CIPHER;
+      }
+    }
+  }
+#endif
+
 #ifdef USE_OPENSSL_SRP
   if(ssl_config->primary.username && Curl_auth_allowed_to_host(data)) {
     char * const ssl_username = ssl_config->primary.username;
@@ -3760,6 +4078,44 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
     }
   }
 #endif
+
+  /* curl-impersonate:
+   * Configure BoringSSL to behave like Chrome. 
+   * See Constructor of SSLContext at net/socket/ssl_client_socket_impl.cc
+   * and SSLClientSocketImpl::Init()
+   * in the Chromium's source code. */
+
+  /* curl-impersonate: Enable TLS GREASE. */
+  if(data->set.tls_grease) {
+    SSL_CTX_set_grease_enabled(backend->ctx, 1);
+  }
+
+  /*
+   * curl-impersonate: Enable TLS extension permutation, enabled by default
+   * since Chrome 110.
+   */
+  if(data->set.ssl_permute_extensions) {
+    SSL_CTX_set_permute_extensions(backend->ctx, 1);
+  }
+
+  /* curl-impersonate: Set TLS extensions order. */
+  if(data->set.str[STRING_TLS_EXTENSION_ORDER]) {
+    SSL_CTX_set_extension_order(backend->ctx, data->set.str[STRING_TLS_EXTENSION_ORDER]);
+  }
+
+  // curl-impersonate: Set key usage check
+  if(data->set.tls_key_usage_no_check) {
+    SSL_CTX_set_key_usage_check_enabled(backend->ctx, 0);
+  }else{
+    SSL_CTX_set_key_usage_check_enabled(backend->ctx, 1);
+  }
+
+  if(conn_config->cert_compression &&
+     add_cert_compression(data,
+                          backend->ctx,
+                          conn_config->cert_compression))
+    return CURLE_SSL_CIPHER;
+
 
   /* OpenSSL always tries to verify the peer, this only says whether it should
    * fail to connect if the verification fails, or if it should continue
@@ -3816,6 +4172,24 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
 
   SSL_set_app_data(backend->handle, cf);
 
+#ifdef HAS_ALPN
+  if(connssl->alps) {
+    size_t i;
+    struct alpn_proto_buf proto;
+
+    for(i = 0; i < connssl->alps->count; ++i) {
+      /* curl-impersonate: Add the ALPS extension (17513) like Chrome does. */
+      // XXX: Firefox does not enable this.
+      SSL_add_application_settings(backend->handle, connssl->alps->entries[i],
+                                   strlen(connssl->alps->entries[i]), NULL,
+                                   0);
+    }
+
+    Curl_alpn_to_proto_str(&proto, connssl->alps);
+    infof(data, VTLS_INFOF_ALPS_OFFER_1STR, proto.data);
+  }
+#endif
+
 #if (OPENSSL_VERSION_NUMBER >= 0x0090808fL) && !defined(OPENSSL_NO_TLSEXT) && \
   !defined(OPENSSL_NO_OCSP)
   if(conn_config->verifystatus)
@@ -3835,6 +4209,21 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
     if(!SSL_set_tlsext_host_name(backend->handle, connssl->peer.sni)) {
       failf(data, "Failed set SNI");
       return CURLE_SSL_CONNECT_ERROR;
+    }
+  }
+#endif
+
+#ifdef USE_ECH
+  if(data->set.tls_ech != CURLECH_DISABLE) {
+    unsigned char *ech_config = NULL;
+    size_t ech_config_len = 0;
+    int trying_ech_now = 0;
+    if(data->set.tls_ech == CURLECH_GREASE) {
+# ifdef OPENSSL_IS_BORINGSSL
+      SSL_set_enable_ech_grease(backend->handle, 1);
+# else
+      SSL_set_options(backend->handle, SSL_OP_ECH_GREASE);
+# endif
     }
   }
 #endif
@@ -4049,6 +4438,60 @@ static CURLcode ossl_connect_step2(struct Curl_cfilter *cf,
           SSL_get_cipher(backend->handle),
           negotiated_group_name? negotiated_group_name : "[blank]",
           OBJ_nid2sn(psigtype_nid));
+
+#ifdef USE_ECH
+# ifndef OPENSSL_IS_BORINGSSL
+    if(data->set.tls_ech != CURLECH_DISABLE) {
+      char *inner = NULL, *outer = NULL;
+      const char *status = NULL;
+      int rv;
+
+      rv = SSL_ech_get_status(backend->handle, &inner, &outer);
+      switch(rv) {
+      case SSL_ECH_STATUS_SUCCESS:
+        status = "Succeeded";
+        break;
+      case SSL_ECH_STATUS_GREASE_ECH:
+        status = "sent GREASE, got retry-configs";
+        break;
+      case SSL_ECH_STATUS_GREASE:
+        status = "sent GREASE";
+        break;
+      case SSL_ECH_STATUS_NOT_TRIED:
+        status = "not attempted";
+        break;
+      case SSL_ECH_STATUS_NOT_CONFIGURED:
+        status = "not configured";
+        break;
+      case SSL_ECH_STATUS_BACKEND:
+        status = "backend (unexpected)";
+        break;
+      case SSL_ECH_STATUS_FAILED:
+        status = "failed";
+        break;
+      case SSL_ECH_STATUS_BAD_CALL:
+        status = "bad call (unexpected)";
+        break;
+      case SSL_ECH_STATUS_BAD_NAME:
+        status = "bad name (unexpected)";
+        break;
+      default:
+        status = "unexpected status";
+        infof(data, "ECH: unexpected status %d",rv);
+      }
+      infof(data, "ECH: result: status is %s, inner is %s, outer is %s",
+             (status?status:"NULL"),
+             (inner?inner:"NULL"),
+             (outer?outer:"NULL"));
+      OPENSSL_free(inner);
+      OPENSSL_free(outer);
+      if(rv != SSL_ECH_STATUS_SUCCESS && data->set.tls_ech == CURLECH_HARD) {
+        infof(data, "ECH: ech-hard failed");
+        return CURLE_SSL_CONNECT_ERROR;
+      }
+   }
+# endif  /* BORING */
+#endif  /* USE_ECH */
 
 #ifdef HAS_ALPN
     /* Sets data and len to negotiated protocol, len is 0 if no protocol was

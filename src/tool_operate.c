@@ -1510,6 +1510,36 @@ static CURLcode single_transfer(struct GlobalConfig *global,
             return result;
           }
 
+          if(config->http2_pseudo_headers_order)
+            my_setopt_str(curl,
+                          CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER,
+                          config->http2_pseudo_headers_order);
+
+          if(config->http2_settings)
+            my_setopt_str(curl,
+                          CURLOPT_HTTP2_SETTINGS,
+                          config->http2_settings);
+
+          if(config->http2_window_update)
+            my_setopt(curl,
+                      CURLOPT_HTTP2_WINDOW_UPDATE,
+                      config->http2_window_update);
+
+          if(config->http2_stream_exclusive)
+            my_setopt(curl,
+                      CURLOPT_STREAM_EXCLUSIVE,
+                      config->http2_stream_exclusive);
+
+          if(config->http2_stream_weight)
+            my_setopt(curl,
+                      CURLOPT_STREAM_WEIGHT,
+                      config->http2_stream_weight);
+
+          if(config->http2_streams)
+            my_setopt_str(curl,
+                          CURLOPT_HTTP2_STREAMS,
+                          config->http2_streams);
+
         } /* (proto_http) */
 
         if(proto_ftp)
@@ -1597,6 +1627,14 @@ static CURLcode single_transfer(struct GlobalConfig *global,
 
         if(config->ssl_ec_curves)
           my_setopt_str(curl, CURLOPT_SSL_EC_CURVES, config->ssl_ec_curves);
+
+        if(config->ssl_sig_hash_algs)
+          my_setopt_str(curl, CURLOPT_SSL_SIG_HASH_ALGS,
+                        config->ssl_sig_hash_algs);
+
+        if(config->ssl_cert_compression)
+          my_setopt_str(curl, CURLOPT_SSL_CERT_COMPRESSION,
+                        config->ssl_cert_compression);
 
         if(config->writeout)
           my_setopt_str(curl, CURLOPT_CERTINFO, 1L);
@@ -1930,6 +1968,19 @@ static CURLcode single_transfer(struct GlobalConfig *global,
           my_setopt_str(curl, CURLOPT_PROXY_TLS13_CIPHERS,
                         config->proxy_cipher13_list);
 
+        /* curl-impersonate */
+        if(config->ssl_permute_extensions)
+          my_setopt(curl, CURLOPT_SSL_PERMUTE_EXTENSIONS, 1L);
+
+        /* curl-impersonate */
+        if (config->tls_grease)
+          my_setopt(curl, CURLOPT_TLS_GREASE, 1L);
+
+        /* curl-impersonate */
+        if(config->tls_extension_order)
+          // printf("setting is %s\n", config->tls_extension_order);
+          my_setopt_str(curl, CURLOPT_TLS_EXTENSION_ORDER, config->tls_extension_order);
+
         /* new in libcurl 7.9.2: */
         if(config->disable_epsv)
           /* disable it */
@@ -2139,6 +2190,18 @@ static CURLcode single_transfer(struct GlobalConfig *global,
           my_setopt(curl, CURLOPT_SSL_ENABLE_ALPN, 0L);
         }
 
+        if(config->alps) {
+          my_setopt(curl, CURLOPT_SSL_ENABLE_ALPS, 1L);
+        }
+
+        if (config->noticket) {
+          my_setopt(curl, CURLOPT_SSL_ENABLE_TICKET, 0L);
+        }
+
+        // curl-impersonate: always enable thess two for browsers
+        my_setopt(curl, CURLOPT_TLS_SIGNED_CERT_TIMESTAMPS, 1L);
+        my_setopt(curl, CURLOPT_TLS_STATUS_REQUEST, 1L);
+
         /* new in 7.40.0, abstract support added in 7.53.0 */
         if(config->unix_socket_path) {
           if(config->abstract_unix_socket) {
@@ -2186,6 +2249,16 @@ static CURLcode single_transfer(struct GlobalConfig *global,
 
         if(config->hsts)
           my_setopt_str(curl, CURLOPT_HSTS, config->hsts);
+
+#ifdef USE_ECH
+        /* only if enabled in configure */
+        if(config->ech) /* only if set (optional) */
+          my_setopt_str(curl, CURLOPT_ECH, config->ech);
+        if(config->ech_public) /* only if set (optional) */
+          my_setopt_str(curl, CURLOPT_ECH, config->ech_public);
+        if(config->ech_config) /* only if set (optional) */
+          my_setopt_str(curl, CURLOPT_ECH, config->ech_config);
+#endif
 
         /* initialize retry vars for loop below */
         per->retry_sleep_default = (config->retry_delay) ?

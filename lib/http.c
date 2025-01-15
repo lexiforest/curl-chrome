@@ -91,6 +91,7 @@
 #include "ws.h"
 #include "c-hyper.h"
 #include "curl_ctype.h"
+#include "slist.h"
 
 /* The last 3 #include files should be in this order */
 #include "curl_printf.h"
@@ -1451,6 +1452,15 @@ CURLcode Curl_add_custom_headers(struct Curl_easy *data,
   int numlists = 1; /* by default */
   int i;
 
+  /*
+   * curl-impersonate: Use the merged list of headers if it exists (i.e. when
+   * the CURLOPT_HTTPBASEHEADER option was set.
+   */
+  struct curl_slist *noproxyheaders =
+    (data->state.merged_headers ?
+     data->state.merged_headers :
+     data->set.headers);
+
 #ifndef CURL_DISABLE_PROXY
   enum proxy_use proxy;
 
@@ -1462,10 +1472,10 @@ CURLcode Curl_add_custom_headers(struct Curl_easy *data,
 
   switch(proxy) {
   case HEADER_SERVER:
-    h[0] = data->set.headers;
+    h[0] = noproxyheaders;
     break;
   case HEADER_PROXY:
-    h[0] = data->set.headers;
+    h[0] = noproxyheaders;
     if(data->set.sep_headers) {
       h[1] = data->set.proxyheaders;
       numlists++;
@@ -1475,12 +1485,12 @@ CURLcode Curl_add_custom_headers(struct Curl_easy *data,
     if(data->set.sep_headers)
       h[0] = data->set.proxyheaders;
     else
-      h[0] = data->set.headers;
+      h[0] = noproxyheaders;
     break;
   }
 #else
   (void)is_connect;
-  h[0] = data->set.headers;
+  h[0] = noproxyheaders;
 #endif
 
   /* loop through one or two lists */
@@ -1715,6 +1725,108 @@ void Curl_http_method(struct Curl_easy *data, struct connectdata *conn,
   }
   *method = request;
   *reqp = httpreq;
+}
+
+/*
+ * curl-impersonate:
+ * Create a new linked list of headers.
+ * The new list is a merge between the "base" headers and the application given
+ * headers. The "base" headers contain curl-impersonate's list of headers
+ * used by default by the impersonated browser.
+ *
+ * The application given headers will override the "base" headers if supplied.
+ */
+CURLcode Curl_http_merge_headers(struct Curl_easy *data)
+{
+  int i;
+  int ret;
+  struct curl_slist *head;
+  struct curl_slist *dup = NULL;
+  struct curl_slist *new_list = NULL;
+  char *uagent;
+
+  if (!data->state.base_headers)
+    return CURLE_OK;
+
+  /* Duplicate the list for temporary use. */
+  if (data->set.headers) {
+    dup = Curl_slist_duplicate(data->set.headers);
+    if(!dup)
+      return CURLE_OUT_OF_MEMORY;
+  }
+
+  for(head = data->state.base_headers; head; head = head->next) {
+    char *sep;
+    size_t prefix_len;
+    bool found = FALSE;
+    struct curl_slist *head2;
+
+    sep = strchr(head->data, ':');
+    if(!sep)
+      continue;
+
+    prefix_len = sep - head->data;
+
+    /* Check if this header was added by the application. */
+    for(head2 = dup; head2; head2 = head2->next) {
+      if(head2->data &&
+         strncasecompare(head2->data, head->data, prefix_len) &&
+         Curl_headersep(head2->data[prefix_len]) ) {
+        new_list = curl_slist_append(new_list, head2->data);
+        /* Free and set to NULL to mark that it's been added. */
+        Curl_safefree(head2->data);
+        found = TRUE;
+        break;
+      }
+    }
+
+    /* If the user agent was set with CURLOPT_USERAGENT, but not with
+     * CURLOPT_HTTPHEADER, take it from there instead. */
+    if(!found &&
+       strncasecompare(head->data, "User-Agent", prefix_len) &&
+       data->set.str[STRING_USERAGENT] &&
+       *data->set.str[STRING_USERAGENT]) {
+      uagent = aprintf("User-Agent: %s", data->set.str[STRING_USERAGENT]);
+      if(!uagent) {
+        ret = CURLE_OUT_OF_MEMORY;
+        goto fail;
+      }
+      new_list = Curl_slist_append_nodup(new_list, uagent);
+      found = TRUE;
+    }
+
+    if (!found) {
+      new_list = curl_slist_append(new_list, head->data);
+    }
+
+    if (!new_list) {
+      ret = CURLE_OUT_OF_MEMORY;
+      goto fail;
+    }
+  }
+
+  /* Now go over any additional application-supplied headers. */
+  for(head = dup; head; head = head->next) {
+    if(head->data) {
+      new_list = curl_slist_append(new_list, head->data);
+      if(!new_list) {
+        ret = CURLE_OUT_OF_MEMORY;
+        goto fail;
+      }
+    }
+  }
+
+  curl_slist_free_all(dup);
+  /* Save the new, merged list separately, so it can be freed later. */
+  curl_slist_free_all(data->state.merged_headers);
+  data->state.merged_headers = new_list;
+
+  return CURLE_OK;
+
+fail:
+  Curl_safefree(dup);
+  curl_slist_free_all(new_list);
+  return ret;
 }
 
 CURLcode Curl_http_useragent(struct Curl_easy *data)
@@ -2557,6 +2669,11 @@ CURLcode Curl_http(struct Curl_easy *data, bool *done)
   result = Curl_headers_init(data);
   if(result)
     goto fail;
+
+  /* curl-impersonate: Add HTTP headers to impersonate real browsers. */
+  result = Curl_http_merge_headers(data);
+  if (result)
+    return result;
 
   result = Curl_http_host(data, conn);
   if(result)
@@ -4269,12 +4386,41 @@ static bool h2_non_field(const char *name, size_t namelen)
   return FALSE;
 }
 
+/*
+ * curl-impersonate:
+ * Determine the position of HTTP/2 pseudo headers.
+ * The pseudo headers ":method", ":path", ":scheme", ":authority"
+ * are sent in different order by different browsers. An important part of the
+ * impersonation is ordering them like the browser does.
+ */
+static CURLcode h2_check_pseudo_header_order(const char *order)
+{
+  if(strlen(order) != 4)
+    return CURLE_BAD_FUNCTION_ARGUMENT;
+
+  // :method should always be first
+  if(order[0] != 'm')
+    return CURLE_BAD_FUNCTION_ARGUMENT;
+
+  // All pseudo-headers must be present
+  if(!strchr(order, 'm') ||
+     !strchr(order, 'a') ||
+     !strchr(order, 's') ||
+     !strchr(order, 'p'))
+    return CURLE_BAD_FUNCTION_ARGUMENT;
+
+  return CURLE_OK;
+}
+
 CURLcode Curl_http_req_to_h2(struct dynhds *h2_headers,
                              struct httpreq *req, struct Curl_easy *data)
 {
   const char *scheme = NULL, *authority = NULL;
   struct dynhds_entry *e;
   size_t i;
+  // Use the Chrome ordering by default:
+  // :method, :authority, :scheme, :path
+  char *order = "masp";
   CURLcode result;
 
   DEBUGASSERT(req);
@@ -4308,25 +4454,56 @@ CURLcode Curl_http_req_to_h2(struct dynhds *h2_headers,
 
   Curl_dynhds_reset(h2_headers);
   Curl_dynhds_set_opts(h2_headers, DYNHDS_OPT_LOWERCASE);
-  result = Curl_dynhds_add(h2_headers, STRCONST(HTTP_PSEUDO_METHOD),
-                           req->method, strlen(req->method));
-  if(!result && scheme) {
-    result = Curl_dynhds_add(h2_headers, STRCONST(HTTP_PSEUDO_SCHEME),
-                             scheme, strlen(scheme));
+
+  /* curl-impersonate: order of pseudo headers is different from the default */
+  if(data->set.str[STRING_HTTP2_PSEUDO_HEADERS_ORDER]) {
+    order = data->set.str[STRING_HTTP2_PSEUDO_HEADERS_ORDER];
   }
-  if(!result && authority) {
-    result = Curl_dynhds_add(h2_headers, STRCONST(HTTP_PSEUDO_AUTHORITY),
-                             authority, strlen(authority));
+
+  result = h2_check_pseudo_header_order(order);
+
+  /* curl-impersonate: add http2 pseudo headers according to the specified order. */
+  for(i = 0; !result && i < strlen(order); ++i) {
+    switch(order[i]) {
+      case 'm':
+        result = Curl_dynhds_add(h2_headers, STRCONST(HTTP_PSEUDO_METHOD),
+                                 req->method, strlen(req->method));
+        break;
+      case 'a':
+        if(authority) {
+          result = Curl_dynhds_add(h2_headers, STRCONST(HTTP_PSEUDO_AUTHORITY),
+                                   authority, strlen(authority));
+        }
+        break;
+      case 's':
+        if(scheme) {
+          result = Curl_dynhds_add(h2_headers, STRCONST(HTTP_PSEUDO_SCHEME),
+                                   scheme, strlen(scheme));
+        }
+        break;
+      case 'p':
+        if(req->path) {
+          result = Curl_dynhds_add(h2_headers, STRCONST(HTTP_PSEUDO_PATH),
+                                   req->path, strlen(req->path));
+        }
+        break;
+    }
   }
-  if(!result && req->path) {
-    result = Curl_dynhds_add(h2_headers, STRCONST(HTTP_PSEUDO_PATH),
-                             req->path, strlen(req->path));
-  }
+
   for(i = 0; !result && i < Curl_dynhds_count(&req->headers); ++i) {
     e = Curl_dynhds_getn(&req->headers, i);
     if(!h2_non_field(e->name, e->namelen)) {
+      /* curl-impersonate:
+       * Some HTTP/2 servers reject 'te' header value that is not lowercase (e.g. 'Trailers).
+       * Convert to lowercase explicitly.
+       */
+      if(e->namelen == 2 && strcasecompare(e->name, "te"))
+        Curl_dynhds_set_opt(h2_headers, DYNHDS_OPT_LOWERCASE_VAL);
+
       result = Curl_dynhds_add(h2_headers, e->name, e->namelen,
                                e->value, e->valuelen);
+
+      Curl_dynhds_del_opt(h2_headers, DYNHDS_OPT_LOWERCASE_VAL);
     }
   }
 

@@ -31,7 +31,7 @@ EXTRA_DIST = Makefile.mk config-win32.h config-win32ce.h config-plan9.h    \
  config-os400.h setup-os400.h $(CMAKE_DIST) setup-win32.h .checksrc \
  Makefile.soname
 
-lib_LTLIBRARIES = libcurl.la
+lib_LTLIBRARIES = libcurl-impersonate-chrome.la
 
 if BUILD_UNITTESTS
 noinst_LTLIBRARIES = libcurlu.la
@@ -67,51 +67,51 @@ AM_CFLAGS =
 # Makefile.inc provides the CSOURCES and HHEADERS defines
 include Makefile.inc
 
-libcurl_la_SOURCES = $(CSOURCES) $(HHEADERS)
+libcurl_impersonate_chrome_la_SOURCES = $(CSOURCES) $(HHEADERS)
 libcurlu_la_SOURCES = $(CSOURCES) $(HHEADERS)
 
-libcurl_la_CPPFLAGS_EXTRA =
-libcurl_la_LDFLAGS_EXTRA =
-libcurl_la_CFLAGS_EXTRA =
+libcurl_impersonate_chrome_la_CPPFLAGS_EXTRA =
+libcurl_impersonate_chrome_la_LDFLAGS_EXTRA =
+libcurl_impersonate_chrome_la_CFLAGS_EXTRA =
 
 if CURL_LT_SHLIB_USE_VERSION_INFO
-libcurl_la_LDFLAGS_EXTRA += $(VERSIONINFO)
+libcurl_impersonate_chrome_la_LDFLAGS_EXTRA += $(VERSIONINFO)
 endif
 
 if CURL_LT_SHLIB_USE_NO_UNDEFINED
-libcurl_la_LDFLAGS_EXTRA += -no-undefined
+libcurl_impersonate_chrome_la_LDFLAGS_EXTRA += -no-undefined
 endif
 
 if CURL_LT_SHLIB_USE_MIMPURE_TEXT
-libcurl_la_LDFLAGS_EXTRA += -mimpure-text
+libcurl_impersonate_chrome_la_LDFLAGS_EXTRA += -mimpure-text
 endif
 
 if CURL_LT_SHLIB_USE_VERSIONED_SYMBOLS
-libcurl_la_LDFLAGS_EXTRA += -Wl,--version-script=libcurl.vers
+libcurl_impersonate_chrome_la_LDFLAGS_EXTRA += -Wl,--version-script=libcurl.vers
 else
 # if symbol-hiding is enabled, hide them!
 if DOING_CURL_SYMBOL_HIDING
-libcurl_la_LDFLAGS_EXTRA += -export-symbols-regex '^curl_.*'
+libcurl_impersonate_chrome_la_LDFLAGS_EXTRA += -export-symbols-regex '^curl_.*'
 endif
 endif
 
 if USE_CPPFLAG_CURL_STATICLIB
-libcurl_la_CPPFLAGS_EXTRA += -DCURL_STATICLIB
+libcurl_impersonate_chrome_la_CPPFLAGS_EXTRA += -DCURL_STATICLIB
 else
 if HAVE_WINDRES
-libcurl_la_SOURCES += $(LIB_RCFILES)
+libcurl_impersonate_chrome_la_SOURCES += $(LIB_RCFILES)
 $(LIB_RCFILES): $(top_srcdir)/include/curl/curlver.h
 endif
 endif
 
 if DOING_CURL_SYMBOL_HIDING
-libcurl_la_CPPFLAGS_EXTRA += -DCURL_HIDDEN_SYMBOLS
-libcurl_la_CFLAGS_EXTRA += $(CFLAG_CURL_SYMBOL_HIDING)
+libcurl_impersonate_chrome_la_CPPFLAGS_EXTRA += -DCURL_HIDDEN_SYMBOLS
+libcurl_impersonate_chrome_la_CFLAGS_EXTRA += $(CFLAG_CURL_SYMBOL_HIDING)
 endif
 
-libcurl_la_CPPFLAGS = $(AM_CPPFLAGS) $(libcurl_la_CPPFLAGS_EXTRA)
-libcurl_la_LDFLAGS = $(AM_LDFLAGS) $(libcurl_la_LDFLAGS_EXTRA) $(CURL_LDFLAGS_LIB) $(LIBCURL_LIBS)
-libcurl_la_CFLAGS = $(AM_CFLAGS) $(libcurl_la_CFLAGS_EXTRA)
+libcurl_impersonate_chrome_la_CPPFLAGS = $(AM_CPPFLAGS) $(libcurl_impersonate_chrome_la_CPPFLAGS_EXTRA)
+libcurl_impersonate_chrome_la_LDFLAGS = $(AM_LDFLAGS) $(libcurl_impersonate_chrome_la_LDFLAGS_EXTRA) $(CURL_LDFLAGS_LIB) $(LIBCURL_LIBS)
+libcurl_impersonate_chrome_la_CFLAGS = $(AM_CFLAGS) $(libcurl_impersonate_chrome_la_CFLAGS_EXTRA)
 
 libcurlu_la_CPPFLAGS = $(AM_CPPFLAGS) -DCURL_STATICLIB -DUNITTESTS
 libcurlu_la_LDFLAGS = $(AM_LDFLAGS) -static $(LIBCURL_LIBS)

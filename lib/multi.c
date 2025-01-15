@@ -401,7 +401,8 @@ struct Curl_multi *Curl_multi_handle(int hashsize, /* socket hash */
   Curl_llist_init(&multi->msgsent, NULL);
 
   multi->multiplexing = TRUE;
-  multi->max_concurrent_streams = 100;
+  /* curl-impersonate: Use 1000 concurrent streams like Chrome. */
+  multi->max_concurrent_streams = 1000;
 
 #ifdef USE_WINSOCK
   multi->wsa_event = WSACreateEvent();
