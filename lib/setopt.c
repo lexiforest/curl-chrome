@@ -3008,6 +3008,10 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
     arg = va_arg(param, long);
     data->set.tls_record_size_limit = arg;
     break;
+  case CURLOPT_TLS_KEY_SHARES_LIMIT:
+    arg = va_arg(param, long);
+    data->set.tls_key_shares_limit = arg;
+    break;
 
 #ifdef USE_HTTP2
   case CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER:

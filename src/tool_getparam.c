@@ -324,6 +324,7 @@ typedef enum {
   C_TLS_DELEGATED_CREDENTIALS,
   C_TLS_MAX,
   C_TLS_RECORD_SIZE_LIMIT,
+  C_TLS_KEY_SHARES_LIMIT,
   C_TLS_SESSION_TICKET,
   C_TLS_EXTENSION_ORDER,
   C_TLS_PERMUTE_EXTENSIONS,
@@ -623,6 +624,7 @@ static const struct LongShort aliases[]= {
   {"tls-delegated-credentials",  ARG_STRG, ' ', C_TLS_DELEGATED_CREDENTIALS},  // curl-impersonate
   {"tls-extension-order",        ARG_STRG, ' ', C_TLS_EXTENSION_ORDER},  // curl-impersonate
   {"tls-grease",                 ARG_BOOL, ' ', C_TLS_GREASE},  // curl-impersonate
+  {"tls-key-shares-limit",       ARG_STRG, ' ', C_TLS_KEY_SHARES_LIMIT},  // curl-impersonate
   {"tls-max",                    ARG_STRG, ' ', C_TLS_MAX},
   {"tls-permute-extensions",     ARG_BOOL, ' ', C_TLS_PERMUTE_EXTENSIONS},  // curl-impersonate
   {"tls-record-size-limit",      ARG_STRG, ' ', C_TLS_RECORD_SIZE_LIMIT},  // curl-impersonate
@@ -1916,6 +1918,9 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
       break;
     case C_TLS_RECORD_SIZE_LIMIT:
       err = str2unum(&config->tls_record_size_limit, nextarg);
+      break;
+    case C_TLS_KEY_SHARES_LIMIT:
+      err = str2unum(&config->tls_key_shares_limit, nextarg);
       break;
     case C_TLS_GREASE:  /* --tls-grease curl-impersonate */
       config->tls_grease = toggle;

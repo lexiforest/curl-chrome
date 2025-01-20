@@ -1861,6 +1861,7 @@ struct UserDefined {
 #endif
   int http2_window_update;
   int tls_record_size_limit;
+  int tls_key_shares_limit;
 };
 
 #ifndef CURL_DISABLE_MIME

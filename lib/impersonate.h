@@ -38,6 +38,7 @@ struct impersonate_opts {
   const char *tls_extension_order;
   const char *tls_delegated_credentials;
   int tls_record_size_limit;
+  int tls_key_shares_limit;  // for firefox key_shares extension
   bool tls_grease;
   int http2_stream_weight;
   int http2_stream_exclusive;

@@ -4141,6 +4141,10 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
     SSL_CTX_set_record_size_limit(backend->ctx, data->set.tls_record_size_limit);
   }
 
+  if(data->set.tls_key_shares_limit) {
+    SSL_CTX_set_key_shares_limit(backend->ctx, data->set.tls_key_shares_limit);
+  }
+
   // curl-impersonate: Set key usage check
   if(data->set.tls_key_usage_no_check) {
     SSL_CTX_set_key_usage_check_enabled(backend->ctx, 0);

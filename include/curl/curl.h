@@ -2292,6 +2292,9 @@ typedef enum {
   /* curl-impersonate: firefox record size limit */
   CURLOPT(CURLOPT_TLS_RECORD_SIZE_LIMIT, CURLOPTTYPE_LONG, 1018),
 
+  /* curl-impersonate: firefox key_shares_limit */
+  CURLOPT(CURLOPT_TLS_KEY_SHARES_LIMIT, CURLOPTTYPE_LONG, 1019),
+
   CURLOPT_LASTENTRY /* the last unused */
 } CURLoption;
 

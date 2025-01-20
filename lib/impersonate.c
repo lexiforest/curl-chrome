@@ -1215,6 +1215,18 @@ const struct impersonate_opts impersonations[] = {
       "Te: trailers"
     },
     .curves = "X25519MLKEM768:X25519:P-256:P-384:P-521:ffdhe2048:ffdhe3072",
+    .sig_hash_algs =
+      "ecdsa_secp256r1_sha256,"
+      "ecdsa_secp384r1_sha384,"
+      "ecdsa_secp521r1_sha512,"
+      "rsa_pss_rsae_sha256,"
+      "rsa_pss_rsae_sha384,"
+      "rsa_pss_rsae_sha512,"
+      "rsa_pkcs1_sha256,"
+      "rsa_pkcs1_sha384,"
+      "rsa_pkcs1_sha512,"
+      "ecdsa_sha1,"
+      "rsa_pkcs1_sha1",
     .alpn = true,
     .http2_settings = "1:65536;2:0;4:131072;5:16384",
     .http2_window_update = 12517377,
@@ -1225,7 +1237,8 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = "0-23-65281-10-11-35-16-5-34-51-43-13-45-28-27-65037",
     .tls_delegated_credentials = "ecdsa_secp256r1_sha256:ecdsa_secp384r1_sha384:ecdsa_secp521r1_sha512:ecdsa_sha1",
     .tls_record_size_limit = 4001,
-    .tls_grease = false
+    .tls_grease = false,
+    .tls_key_shares_limit = 3
   },
   {
     /* Last one must be NULL. */

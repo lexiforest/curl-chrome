@@ -1988,6 +1988,10 @@ static CURLcode single_transfer(struct GlobalConfig *global,
         if(config->tls_record_size_limit)
           my_setopt(curl, CURLOPT_TLS_RECORD_SIZE_LIMIT, config->tls_record_size_limit);
 
+        /* curl-impersonate */
+        if(config->tls_key_shares_limit)
+          my_setopt(curl, CURLOPT_TLS_KEY_SHARES_LIMIT, config->tls_key_shares_limit);
+
         /* new in libcurl 7.9.2: */
         if(config->disable_epsv)
           /* disable it */
