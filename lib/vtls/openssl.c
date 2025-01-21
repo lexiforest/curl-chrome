@@ -2839,12 +2839,14 @@ int DecompressBrotliCert(SSL* ssl,
 }
 #endif
 
+// curl-impersonate: decompress the zstd cert
 #ifdef HAVE_ZSTD
 int DecompressZstdCert(SSL* ssl,
-                         CRYPTO_BUFFER** out,
-                         size_t uncompressed_len,
-                         const uint8_t* in,
-                         size_t in_len) {
+                       CRYPTO_BUFFER** out,
+                       size_t uncompressed_len,
+                       const uint8_t* in,
+                       size_t in_len) {
+  size_t result;
   uint8_t* data;
   CRYPTO_BUFFER* decompressed = CRYPTO_BUFFER_alloc(&data, uncompressed_len);
   if (!decompressed) {
@@ -2852,7 +2854,8 @@ int DecompressZstdCert(SSL* ssl,
   }
 
   // zstd returns the size of decompressed content
-  if (ZSTD_decompress(decompressed, uncompressed_len, in, in_len) != uncompressed_len) {
+  result = ZSTD_decompress(data, uncompressed_len, in, in_len);
+  if (ZSTD_isError(result)) {
     CRYPTO_BUFFER_free(decompressed);
     return 0;
   }
