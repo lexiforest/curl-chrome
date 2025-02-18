@@ -176,6 +176,7 @@ struct OperationConfig {
   char *tls_delegated_credentials;
   long tls_record_size_limit;
   long tls_key_shares_limit;
+  bool tls_use_new_alps_codepoint;
   long httpversion;
   bool http09_allowed;
   bool nobuffer;

@@ -4918,6 +4918,9 @@ if test "x$USE_LIBRTMP" = "x1"; then
   SUPPORT_PROTOCOLS="$SUPPORT_PROTOCOLS RTMP"
 fi
 
+AC_CHECK_FUNCS([SSL_set_alps_use_new_codepoint])
+
+
 dnl replace spaces with newlines
 dnl sort the lines
 dnl replace the newlines back to spaces

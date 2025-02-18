@@ -3012,6 +3012,9 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
     arg = va_arg(param, long);
     data->set.tls_key_shares_limit = arg;
     break;
+  case CURLOPT_TLS_USE_NEW_ALPS_CODEPOINT:
+    data->set.tls_use_new_alps_codepoint = (0 != va_arg(param, long)) ? TRUE : FALSE;
+    break;
 
 #ifdef USE_HTTP2
   case CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER:

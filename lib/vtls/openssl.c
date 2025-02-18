@@ -4222,6 +4222,11 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
     size_t i;
     struct alpn_proto_buf proto;
 
+    /* curl-impersonate: Set new ALPS codepoint before adding any ALPS settings */
+    if(data->set.tls_use_new_alps_codepoint) {
+      SSL_set_alps_use_new_codepoint(backend->handle, 1);
+    }
+
     for(i = 0; i < connssl->alps->count; ++i) {
       /* curl-impersonate: Add the ALPS extension (17513) like Chrome does. */
       // XXX: Firefox does not enable this.

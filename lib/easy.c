@@ -488,30 +488,50 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
 
   if(opts->tls_grease) {
     ret = curl_easy_setopt(data, CURLOPT_TLS_GREASE, opts->tls_grease);
+    if(ret)
+      return ret;
   }
 
   if(opts->tls_extension_order) {
     ret = curl_easy_setopt(data, CURLOPT_TLS_EXTENSION_ORDER, opts->tls_extension_order);
+    if(ret)
+      return ret;
   }
 
   if(opts->tls_delegated_credentials) {
     ret = curl_easy_setopt(data, CURLOPT_TLS_DELEGATED_CREDENTIALS, opts->tls_delegated_credentials);
+    if(ret)
+      return ret;
   }
 
   if(opts->tls_record_size_limit) {
     ret = curl_easy_setopt(data, CURLOPT_TLS_RECORD_SIZE_LIMIT, opts->tls_record_size_limit);
+    if(ret)
+      return ret;
   }
 
   if(opts->tls_key_shares_limit) {
     ret = curl_easy_setopt(data, CURLOPT_TLS_KEY_SHARES_LIMIT, opts->tls_key_shares_limit);
+    if(ret)
+      return ret;
+  }
+
+  if(opts->tls_use_new_alps_codepoint) {
+    ret = curl_easy_setopt(data, CURLOPT_TLS_USE_NEW_ALPS_CODEPOINT, opts->tls_use_new_alps_codepoint);
+    if(ret)
+      return ret;
   }
 
   if(opts->http2_stream_weight) {
     ret = curl_easy_setopt(data, CURLOPT_STREAM_WEIGHT, opts->http2_stream_weight);
+    if(ret)
+      return ret;
   }
 
   if(opts->http2_stream_exclusive) {
     ret = curl_easy_setopt(data, CURLOPT_STREAM_EXCLUSIVE, opts->http2_stream_exclusive);
+    if(ret)
+      return ret;
   }
 
   /* Always enable all supported compressions. */

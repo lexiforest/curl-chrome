@@ -474,6 +474,7 @@ CURLcode Curl_init_userdefined(struct Curl_easy *data)
   set->ssl_enable_alpn = TRUE;
   set->ssl_enable_ticket = TRUE;
   set->tls_grease = FALSE;
+  set->tls_use_new_alps_codepoint = FALSE;
   set->expect_100_timeout = 1000L; /* Wait for a second by default. */
   set->sep_headers = TRUE; /* separated header lists by default */
   set->buffer_size = READBUFFER_SIZE;

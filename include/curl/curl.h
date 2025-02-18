@@ -2295,6 +2295,9 @@ typedef enum {
   /* curl-impersonate: firefox key_shares_limit */
   CURLOPT(CURLOPT_TLS_KEY_SHARES_LIMIT, CURLOPTTYPE_LONG, 1019),
 
+  /* curl-impersonate: Use the new ALPS code point */
+  CURLOPT(CURLOPT_TLS_USE_NEW_ALPS_CODEPOINT, CURLOPTTYPE_LONG, 1020),
+
   CURLOPT_LASTENTRY /* the last unused */
 } CURLoption;
 

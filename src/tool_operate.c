@@ -1977,6 +1977,10 @@ static CURLcode single_transfer(struct GlobalConfig *global,
           my_setopt(curl, CURLOPT_TLS_GREASE, 1L);
 
         /* curl-impersonate */
+        if (config->tls_use_new_alps_codepoint)
+          my_setopt(curl, CURLOPT_TLS_USE_NEW_ALPS_CODEPOINT, 1L);
+
+        /* curl-impersonate */
         if(config->tls_extension_order)
           my_setopt_str(curl, CURLOPT_TLS_EXTENSION_ORDER, config->tls_extension_order);
 

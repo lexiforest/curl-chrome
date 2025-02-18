@@ -322,13 +322,14 @@ typedef enum {
   C_TFTP_NO_OPTIONS,
   C_TIME_COND,
   C_TLS_DELEGATED_CREDENTIALS,
-  C_TLS_MAX,
-  C_TLS_RECORD_SIZE_LIMIT,
-  C_TLS_KEY_SHARES_LIMIT,
-  C_TLS_SESSION_TICKET,
   C_TLS_EXTENSION_ORDER,
-  C_TLS_PERMUTE_EXTENSIONS,
   C_TLS_GREASE,
+  C_TLS_KEY_SHARES_LIMIT,
+  C_TLS_MAX,
+  C_TLS_PERMUTE_EXTENSIONS,
+  C_TLS_RECORD_SIZE_LIMIT,
+  C_TLS_SESSION_TICKET,
+  C_TLS_USE_NEW_ALPS_CODEPOINT,
   C_TLS13_CIPHERS,
   C_TLSAUTHTYPE,
   C_TLSPASSWORD,
@@ -629,6 +630,7 @@ static const struct LongShort aliases[]= {
   {"tls-permute-extensions",     ARG_BOOL, ' ', C_TLS_PERMUTE_EXTENSIONS},  // curl-impersonate
   {"tls-record-size-limit",      ARG_STRG, ' ', C_TLS_RECORD_SIZE_LIMIT},  // curl-impersonate
   {"tls-session-ticket",         ARG_BOOL, ' ', C_TLS_SESSION_TICKET},  // curl-impersonate
+  {"tls-use-new-alps-codepoint", ARG_BOOL, ' ', C_TLS_USE_NEW_ALPS_CODEPOINT},  // curl-impersonate
   {"tls13-ciphers",              ARG_STRG, ' ', C_TLS13_CIPHERS},
   {"tlsauthtype",                ARG_STRG, ' ', C_TLSAUTHTYPE},
   {"tlspassword",                ARG_STRG, ' ', C_TLSPASSWORD},
@@ -1924,6 +1926,9 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
       break;
     case C_TLS_GREASE:  /* --tls-grease curl-impersonate */
       config->tls_grease = toggle;
+      break;
+    case C_TLS_USE_NEW_ALPS_CODEPOINT: /* --tls-use-new-alps-codepoint curl-impersonate */
+      config->tls_use_new_alps_codepoint = toggle;
       break;
     case C_SUPPRESS_CONNECT_HEADERS: /* --suppress-connect-headers */
       config->suppress_connect_headers = toggle;
