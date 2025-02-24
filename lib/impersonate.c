@@ -50,6 +50,7 @@ const struct impersonate_opts impersonations[] = {
     .http2_stream_exclusive = 1,
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
+    .tls_signed_cert_timestamps = true,
     .tls_grease = true
   },
   {
@@ -97,6 +98,7 @@ const struct impersonate_opts impersonations[] = {
     .http2_stream_exclusive = 1,
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
+    .tls_signed_cert_timestamps = true,
     .tls_grease = true
   },
   {
@@ -144,6 +146,7 @@ const struct impersonate_opts impersonations[] = {
     .http2_stream_exclusive = 1,
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
+    .tls_signed_cert_timestamps = true,
     .tls_grease = true
   },
   {
@@ -191,6 +194,7 @@ const struct impersonate_opts impersonations[] = {
     .http2_stream_exclusive = 1,
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
+    .tls_signed_cert_timestamps = true,
     .tls_grease = true
   },
   {
@@ -238,6 +242,7 @@ const struct impersonate_opts impersonations[] = {
     .http2_stream_exclusive = 1,
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
+    .tls_signed_cert_timestamps = true,
     .tls_grease = true
   },
   {
@@ -286,6 +291,7 @@ const struct impersonate_opts impersonations[] = {
     .http2_stream_exclusive = 1,
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
+    .tls_signed_cert_timestamps = true,
     .tls_grease = true
   },
   {
@@ -334,6 +340,7 @@ const struct impersonate_opts impersonations[] = {
     .http2_stream_exclusive = 1,
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
+    .tls_signed_cert_timestamps = true,
     .tls_grease = true
   },
   {
@@ -383,6 +390,7 @@ const struct impersonate_opts impersonations[] = {
     .ech = "GREASE",
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
+    .tls_signed_cert_timestamps = true,
     .tls_grease = true
   },
   {
@@ -432,6 +440,7 @@ const struct impersonate_opts impersonations[] = {
     .ech = "GREASE",
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
+    .tls_signed_cert_timestamps = true,
     .tls_grease = true
   },
   {
@@ -481,6 +490,7 @@ const struct impersonate_opts impersonations[] = {
     .ech = "GREASE",
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
+    .tls_signed_cert_timestamps = true,
     .tls_grease = true
   },
   {
@@ -532,6 +542,7 @@ const struct impersonate_opts impersonations[] = {
     .ech = "GREASE",
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
+    .tls_signed_cert_timestamps = true,
     .tls_grease = true
   },
   {
@@ -583,6 +594,7 @@ const struct impersonate_opts impersonations[] = {
     .ech = "GREASE",
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
+    .tls_signed_cert_timestamps = true,
     .tls_grease = true
   },
   {
@@ -634,6 +646,7 @@ const struct impersonate_opts impersonations[] = {
     .ech = "GREASE",
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = true,
+    .tls_signed_cert_timestamps = true,
     .tls_grease = true
   },
   {
@@ -681,6 +694,7 @@ const struct impersonate_opts impersonations[] = {
     .http2_stream_exclusive = 1,
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
+    .tls_signed_cert_timestamps = true,
     .tls_grease = true
   },
   {
@@ -732,6 +746,7 @@ const struct impersonate_opts impersonations[] = {
     .ech = "GREASE",
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
+    .tls_signed_cert_timestamps = true,
     .tls_grease = true
   },
   {
@@ -779,6 +794,7 @@ const struct impersonate_opts impersonations[] = {
     .http2_stream_exclusive = 1,
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
+    .tls_signed_cert_timestamps = true,
     .tls_grease = true
   },
   {
@@ -826,6 +842,7 @@ const struct impersonate_opts impersonations[] = {
     .http2_stream_exclusive = 1,
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
+    .tls_signed_cert_timestamps = true,
     .tls_grease = true
   },
   {
@@ -889,6 +906,7 @@ const struct impersonate_opts impersonations[] = {
     .http2_stream_exclusive = 0,
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
+    .tls_signed_cert_timestamps = true,
     .tls_grease = true
   },
   {
@@ -947,6 +965,7 @@ const struct impersonate_opts impersonations[] = {
     .http2_stream_exclusive = 0,
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
+    .tls_signed_cert_timestamps = true,
     .tls_grease = true
   },
   {
@@ -1008,6 +1027,7 @@ const struct impersonate_opts impersonations[] = {
     .http2_stream_exclusive = 0,
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
+    .tls_signed_cert_timestamps = true,
     .tls_grease = true
   },
   {
@@ -1069,6 +1089,7 @@ const struct impersonate_opts impersonations[] = {
     .http2_stream_exclusive = 0,
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
+    .tls_signed_cert_timestamps = true,
     .tls_grease = true
   },
   {
@@ -1130,6 +1151,7 @@ const struct impersonate_opts impersonations[] = {
     .http2_stream_exclusive = 0,
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
+    .tls_signed_cert_timestamps = true,
     .tls_grease = true
   },
   {
@@ -1191,6 +1213,7 @@ const struct impersonate_opts impersonations[] = {
     .http2_stream_exclusive = 0,
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
+    .tls_signed_cert_timestamps = true,
     .tls_grease = true
   },
   {
@@ -1251,6 +1274,7 @@ const struct impersonate_opts impersonations[] = {
     .http2_stream_weight = 255,
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
+    .tls_signed_cert_timestamps = true,
     .tls_grease = true
   },
   {
@@ -1312,6 +1336,69 @@ const struct impersonate_opts impersonations[] = {
     .tls_delegated_credentials = "ecdsa_secp256r1_sha256:ecdsa_secp384r1_sha384:ecdsa_secp521r1_sha512:ecdsa_sha1",
     .tls_record_size_limit = 4001,
     .tls_grease = false,
+    .tls_signed_cert_timestamps = false,
+    .tls_key_shares_limit = 3
+  },
+  {
+    .target = "firefox135",
+    .httpversion = CURL_HTTP_VERSION_2_0,
+    .ssl_version = CURL_SSLVERSION_TLSv1_2 | CURL_SSLVERSION_MAX_DEFAULT,
+    .ciphers =
+      "TLS_AES_128_GCM_SHA256,"
+      "TLS_CHACHA20_POLY1305_SHA256,"
+      "TLS_AES_256_GCM_SHA384,"
+      "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,"
+      "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,"
+      "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,"
+      "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,"
+      "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,"
+      "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,"
+      "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,"
+      "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,"
+      "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,"
+      "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,"
+      "TLS_RSA_WITH_AES_128_GCM_SHA256,"
+      "TLS_RSA_WITH_AES_256_GCM_SHA384,"
+      "TLS_RSA_WITH_AES_128_CBC_SHA,"
+      "TLS_RSA_WITH_AES_256_CBC_SHA",
+    .http_headers = {
+      "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:135.0) Gecko/20100101 Firefox/135.0",
+      "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language: en-US,en;q=0.5",
+      "Accept-Encoding: gzip, deflate, br, zstd",
+      "Upgrade-Insecure-Requests: 1",
+      "Sec-Fetch-Dest: document",
+      "Sec-Fetch-Mode: navigate",
+      "Sec-Fetch-Site: none",
+      "Sec-Fetch-User: ?1",
+      "Priority: u=0, i",
+      "Te: trailers"
+    },
+    .curves = "X25519MLKEM768:X25519:P-256:P-384:P-521:ffdhe2048:ffdhe3072",
+    .sig_hash_algs =
+      "ecdsa_secp256r1_sha256,"
+      "ecdsa_secp384r1_sha384,"
+      "ecdsa_secp521r1_sha512,"
+      "rsa_pss_rsae_sha256,"
+      "rsa_pss_rsae_sha384,"
+      "rsa_pss_rsae_sha512,"
+      "rsa_pkcs1_sha256,"
+      "rsa_pkcs1_sha384,"
+      "rsa_pkcs1_sha512,"
+      "ecdsa_sha1,"
+      "rsa_pkcs1_sha1",
+    .alpn = true,
+    .http2_settings = "1:65536;2:0;4:131072;5:16384",
+    .http2_window_update = 12517377,
+    .http2_pseudo_headers_order = "mpas",
+    .cert_compression = "zlib,brotli,zstd",
+    .ech = "GREASE",
+    .tls_session_ticket = true,
+    .tls_extension_order = "0-23-65281-10-11-35-16-5-34-18-51-43-13-45-28-27-65037",
+    .tls_delegated_credentials = "ecdsa_secp256r1_sha256:ecdsa_secp384r1_sha384:ecdsa_secp521r1_sha512:ecdsa_sha1",
+    .tls_record_size_limit = 4001,
+    .tls_grease = false,
+    .tls_signed_cert_timestamps = true,
     .tls_key_shares_limit = 3
   },
   {

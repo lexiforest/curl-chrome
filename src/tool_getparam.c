@@ -329,6 +329,7 @@ typedef enum {
   C_TLS_PERMUTE_EXTENSIONS,
   C_TLS_RECORD_SIZE_LIMIT,
   C_TLS_SESSION_TICKET,
+  C_TLS_SIGNED_CERT_TIMESTAMPS,
   C_TLS_USE_NEW_ALPS_CODEPOINT,
   C_TLS13_CIPHERS,
   C_TLSAUTHTYPE,
@@ -630,6 +631,7 @@ static const struct LongShort aliases[]= {
   {"tls-permute-extensions",     ARG_BOOL, ' ', C_TLS_PERMUTE_EXTENSIONS},  // curl-impersonate
   {"tls-record-size-limit",      ARG_STRG, ' ', C_TLS_RECORD_SIZE_LIMIT},  // curl-impersonate
   {"tls-session-ticket",         ARG_BOOL, ' ', C_TLS_SESSION_TICKET},  // curl-impersonate
+  {"tls-signed-cert-timestamps", ARG_BOOL, ' ', C_TLS_SIGNED_CERT_TIMESTAMPS}, // curl-impersonate
   {"tls-use-new-alps-codepoint", ARG_BOOL, ' ', C_TLS_USE_NEW_ALPS_CODEPOINT},  // curl-impersonate
   {"tls13-ciphers",              ARG_STRG, ' ', C_TLS13_CIPHERS},
   {"tlsauthtype",                ARG_STRG, ' ', C_TLSAUTHTYPE},
@@ -1905,6 +1907,9 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
       break;
     case C_TLS_MAX: /* --tls-max */
       err = str2tls_max(&config->ssl_version_max, nextarg);
+      break;
+    case C_TLS_SIGNED_CERT_TIMESTAMPS:
+      config->tls_signed_cert_timestamps = toggle;
       break;
     case C_TLS_SESSION_TICKET:  /* --tls-session-ticket curl-impersonate */
       config->noticket = (!toggle)?TRUE:FALSE;

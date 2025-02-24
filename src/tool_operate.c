@@ -2209,12 +2209,16 @@ static CURLcode single_transfer(struct GlobalConfig *global,
           my_setopt(curl, CURLOPT_SSL_ENABLE_ALPS, 1L);
         }
 
-        if (config->noticket) {
+        if(config->noticket) {
           my_setopt(curl, CURLOPT_SSL_ENABLE_TICKET, 0L);
         }
 
-        // curl-impersonate: always enable thess two for browsers
-        my_setopt(curl, CURLOPT_TLS_SIGNED_CERT_TIMESTAMPS, 1L);
+        // curl-impersonate
+        if(config->tls_signed_cert_timestamps) {
+          my_setopt(curl, CURLOPT_TLS_SIGNED_CERT_TIMESTAMPS, 1L);
+        }
+
+        // curl-impersonate: always enable this
         my_setopt(curl, CURLOPT_TLS_STATUS_REQUEST, 1L);
 
         /* new in 7.40.0, abstract support added in 7.53.0 */

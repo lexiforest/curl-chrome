@@ -411,8 +411,8 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
   if(ret)
     return ret;
 
-  // always enable this for browsers
-  ret = curl_easy_setopt(data, CURLOPT_TLS_SIGNED_CERT_TIMESTAMPS, 1);
+  ret = curl_easy_setopt(data, CURLOPT_TLS_SIGNED_CERT_TIMESTAMPS,
+                         opts->tls_signed_cert_timestamps ? 1 : 0);
   if(ret)
     return ret;
 
@@ -428,9 +428,7 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
   }
 
   if(opts->cert_compression) {
-    ret = curl_easy_setopt(data,
-                           CURLOPT_SSL_CERT_COMPRESSION,
-                           opts->cert_compression);
+    ret = curl_easy_setopt(data, CURLOPT_SSL_CERT_COMPRESSION, opts->cert_compression);
     if(ret)
       return ret;
   }

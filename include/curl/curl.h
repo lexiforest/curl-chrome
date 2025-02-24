@@ -2280,7 +2280,7 @@ typedef enum {
   /* curl-impersonate: enable tls key usage check, defaults: on */
   CURLOPT(CURLOPT_TLS_KEY_USAGE_NO_CHECK, CURLOPTTYPE_LONG, 1014),
 
-  /* curl-impersonate: enable tls signed cert stamps */
+  /* curl-impersonate: enable tls signed cert timestamps */
   CURLOPT(CURLOPT_TLS_SIGNED_CERT_TIMESTAMPS, CURLOPTTYPE_LONG, 1015),
 
   /* curl-impersonate: enable tls status request */
