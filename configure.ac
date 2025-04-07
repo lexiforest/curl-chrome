@@ -4979,8 +4979,8 @@ AC_CONFIG_FILES([Makefile \
            tests/http/clients/Makefile \
            packages/Makefile \
            packages/vms/Makefile \
-           curl-impersonate-chrome-config:curl-config.in \
-           libcurl-impersonate-chrome.pc:libcurl.pc.in
+           curl-impersonate-config:curl-config.in \
+           libcurl-impersonate.pc:libcurl.pc.in
 ])
 AC_OUTPUT
 
