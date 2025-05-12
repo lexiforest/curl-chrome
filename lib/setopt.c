@@ -622,11 +622,6 @@ static CURLcode setopt_long(struct Curl_easy *data, CURLoption option,
       /* accepted */
       break;
 #endif
-#if defined(USE_HTTP2) || defined(USE_HTTP3)
-    case CURLOPT_STREAM_EXCLUSIVE:
-      data->set.priority.exclusive = (int)arg;
-      break;
-#endif
     default:
       /* not accepted */
       if(arg < CURL_HTTP_VERSION_NONE)
@@ -635,6 +630,11 @@ static CURLcode setopt_long(struct Curl_easy *data, CURLoption option,
     }
     data->set.httpwant = (unsigned char)arg;
     break;
+#ifdef USE_HTTP2
+  case CURLOPT_STREAM_EXCLUSIVE:
+    data->set.priority.exclusive = (int)arg;
+    break;
+#endif
 
   case CURLOPT_EXPECT_100_TIMEOUT_MS:
     /*
@@ -1403,6 +1403,9 @@ static CURLcode setopt_long(struct Curl_easy *data, CURLoption option,
     break;
   case CURLOPT_TLS_USE_NEW_ALPS_CODEPOINT:
     data->set.tls_use_new_alps_codepoint = enabled;
+    break;
+  case CURLOPT_TLS_USE_FIREFOX_TLS13_CIPHERS:
+    data->set.tls_use_firefox_tls13_ciphers = enabled;
     break;
 
 #ifndef CURL_DISABLE_HSTS

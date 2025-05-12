@@ -4056,16 +4056,6 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
   SSL_CTX_set_mode(octx->ssl_ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
 #endif
 
-// XXX: Why this is deleted in curl 8.13.0?
-#ifdef HAS_ALPN
-  if(alpn && alpn_len) {
-    if(SSL_CTX_set_alpn_protos(octx->ssl_ctx, alpn, (int)alpn_len)) {
-      failf(data, "Error setting ALPN");
-      return CURLE_SSL_CONNECT_ERROR;
-    }
-  }
-#endif
-
   SSL_CTX_set_options(octx->ssl_ctx, SSL_OP_LEGACY_SERVER_CONNECT);
   SSL_CTX_set_mode(octx->ssl_ctx,
       SSL_MODE_CBC_RECORD_SPLITTING | SSL_MODE_ENABLE_FALSE_START);
@@ -4235,6 +4225,10 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
     SSL_CTX_set_key_usage_check_enabled(octx->ssl_ctx, 1);
   }
 
+  if(data->set.tls_use_firefox_tls13_ciphers) {
+    SSL_CTX_set_use_firefox_tls13_ciphers(octx->ssl_ctx, 1);
+  }
+
   if(conn_config->cert_compression &&
      add_cert_compression(data,
                           octx->ssl_ctx,
@@ -4299,7 +4293,6 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
   }
 
   SSL_set_app_data(octx->ssl, ssl_user_data);
-
 
 
 #ifdef HAS_ALPN_OPENSSL

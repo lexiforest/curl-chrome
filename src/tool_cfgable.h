@@ -151,6 +151,7 @@ struct OperationConfig {
   long tls_record_size_limit;
   long tls_key_shares_limit;
   bool tls_use_new_alps_codepoint;
+  bool tls_use_firefox_tls13_ciphers;
   char *writeout;           /* %-styled format string to output */
   struct curl_slist *quote;
   struct curl_slist *postquote;

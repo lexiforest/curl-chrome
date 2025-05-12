@@ -523,19 +523,23 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
       return ret;
   }
 
+  if(opts->use_firefox_tls13_ciphers) {
+    ret = curl_easy_setopt(data, CURLOPT_TLS_USE_FIREFOX_TLS13_CIPHERS, opts->use_firefox_tls13_ciphers);
+    if(ret)
+      return ret;
+  }
 
   if(opts->http2_stream_weight) {
     ret = curl_easy_setopt(data, CURLOPT_STREAM_WEIGHT, opts->http2_stream_weight);
+    if(ret)
+      return ret;
   }
 
   if(opts->http2_stream_exclusive) {
     ret = curl_easy_setopt(data, CURLOPT_STREAM_EXCLUSIVE, opts->http2_stream_exclusive);
+    if(ret)
+      return ret;
   }
-
-  /* FIXME: Always enable all supported compressions. */
-  ret = curl_easy_setopt(data, CURLOPT_ACCEPT_ENCODING, "");
-  if(ret)
-    return ret;
 
   return CURLE_OK;
 }
@@ -558,6 +562,28 @@ CURLcode curl_easy_impersonate_customized(struct Curl_easy *data,
   return CURLE_OK;
 }
 
+
+static const struct impersonate_opts *binary_search(size_t size, const char *key)
+{
+  int low = 0;
+  int high = size - 1;
+
+  while(low <= high) {
+    int mid = low + (high - low) / 2;
+    int cmp = strcmp(impersonations[mid].target, key);
+
+    if(cmp == 0) {
+      return &impersonations[mid];
+    } else if(cmp < 0) {
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+
+  return NULL;
+}
+
 /*
  * curl-impersonate:
  * Call curl_easy_setopt() with all the needed options as defined in the
@@ -570,13 +596,19 @@ CURLcode curl_easy_impersonate(CURL *data, const char *target,
   const struct impersonate_opts *opts = NULL;
   struct Curl_easy *_data = (struct Curl_easy *)data;
 
-  for(opts = impersonations; opts->target != NULL; opts++) {
-    if (strcasecompare(target, opts->target)) {
-      break;
+  opts = binary_search(num_impersonations, target);
+
+  // If not found, fallback and search by alias again
+  if(opts == NULL) {
+    for(int i = 0; i < num_impersonations; ++i) {
+      if (strcasecompare(target, impersonations[i].alias)) {
+        opts = impersonations + i;
+        break;
+      }
     }
   }
 
-  if(opts->target == NULL) {
+  if(opts == NULL) {
     DEBUGF(fprintf(stderr, "Error: unknown impersonation target '%s'\n", target));
     return CURLE_BAD_FUNCTION_ARGUMENT;
   }

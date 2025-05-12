@@ -4598,10 +4598,6 @@ static CURLcode h2_check_pseudo_header_order(const char *order)
   if(strlen(order) != 4)
     return CURLE_BAD_FUNCTION_ARGUMENT;
 
-  // :method should always be first
-  if(order[0] != 'm')
-    return CURLE_BAD_FUNCTION_ARGUMENT;
-
   // All pseudo-headers must be present
   if(!strchr(order, 'm') ||
      !strchr(order, 'a') ||

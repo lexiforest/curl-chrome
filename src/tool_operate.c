@@ -1518,6 +1518,10 @@ static CURLcode config2setopts(struct GlobalConfig *global,
     my_setopt(curl, CURLOPT_TLS_USE_NEW_ALPS_CODEPOINT, 1L);
 
   /* curl-impersonate */
+  if (config->tls_use_firefox_tls13_ciphers)
+    my_setopt(curl, CURLOPT_TLS_USE_FIREFOX_TLS13_CIPHERS, 1L);
+
+  /* curl-impersonate */
   if(config->tls_delegated_credentials)
     my_setopt_str(curl, CURLOPT_TLS_DELEGATED_CREDENTIALS, config->tls_delegated_credentials);
  

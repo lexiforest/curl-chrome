@@ -360,6 +360,7 @@ static const struct LongShort aliases[]= {
   {"tls-record-size-limit",      ARG_STRG, ' ', C_TLS_RECORD_SIZE_LIMIT},  // curl-impersonate
   {"tls-session-ticket",         ARG_BOOL, ' ', C_TLS_SESSION_TICKET},  // curl-impersonate
   {"tls-signed-cert-timestamps", ARG_BOOL, ' ', C_TLS_SIGNED_CERT_TIMESTAMPS}, // curl-impersonate
+  {"tls-use-firefox-tls13-ciphers", ARG_BOOL, ' ', C_TLS_USE_FIREFOX_TLS13_CIPHERS},  // curl-impersonate
   {"tls-use-new-alps-codepoint", ARG_BOOL, ' ', C_TLS_USE_NEW_ALPS_CODEPOINT},  // curl-impersonate
   {"tls13-ciphers",              ARG_STRG|ARG_TLS, ' ', C_TLS13_CIPHERS},
   {"tlsauthtype",                ARG_STRG|ARG_TLS, ' ', C_TLSAUTHTYPE},
@@ -2341,6 +2342,9 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
       break;
     case C_TLS_USE_NEW_ALPS_CODEPOINT: /* --tls-use-new-alps-codepoint curl-impersonate */
       config->tls_use_new_alps_codepoint = toggle;
+      break;
+    case C_TLS_USE_FIREFOX_TLS13_CIPHERS: /* --tls-use-new-alps-codepoint curl-impersonate */
+      config->tls_use_firefox_tls13_ciphers = toggle;
       break;
     case C_SUPPRESS_CONNECT_HEADERS: /* --suppress-connect-headers */
       config->suppress_connect_headers = toggle;
