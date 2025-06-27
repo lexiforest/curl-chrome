@@ -40,13 +40,14 @@ permissions: {}
 #
 # - 10.7  Lion (2011)          - GSS
 # - 10.8  Mountain Lion (2012) - CFURLCreateDataAndPropertiesFromResource (used by curl Secure Transport code)
-# - 10.9  Maverick (2013)      - LDAP
+# - 10.9  Mavericks (2013)     - LDAP
 # - 10.14 Mojave (2018)        - Secure Transport
 #
 # For Secure Transport, curl implements features that require a target
 # newer than the 10.8 required by `CFURLCreateDataAndPropertiesFromResource`.
 
 env:
+  CURL_CI: github
   MAKEFLAGS: -j 4
   LDFLAGS: -w  # suppress 'object file was built for newer macOS version than being linked' warnings
 
@@ -116,9 +117,11 @@ jobs:
           - name: 'LibreSSL +examples'
             compiler: clang
             install: libressl
+            install_steps: pytest
             configure: --enable-debug --with-openssl=$(brew --prefix libressl)
           - name: 'OpenSSL'
             compiler: clang
+            install_steps: pytest
             configure: --enable-debug --with-openssl=$(brew --prefix openssl)
           - name: 'OpenSSL event-based'
             compiler: clang
@@ -149,6 +152,7 @@ jobs:
             generate: -DOPENSSL_ROOT_DIR=$(brew --prefix libressl) -DENABLE_ARES=ON -DCURL_USE_GSSAPI=ON -DGSS_ROOT_DIR=$(brew --prefix heimdal) -DCURL_DISABLE_LDAP=ON
           - name: 'wolfSSL !ldap brotli zstd'
             install: brotli wolfssl zstd
+            install_steps: pytest
             generate: -DCURL_USE_WOLFSSL=ON -DCURL_DISABLE_LDAP=ON -DUSE_ECH=ON
           - name: 'mbedTLS openldap brotli zstd'
             install: brotli mbedtls zstd openldap
@@ -183,6 +187,7 @@ jobs:
         # Run this command with retries because of spurious failures seen
         # while running the tests, for example
         # https://github.com/curl/curl/runs/4095721123?check_suite_focus=true
+        # zizmor: ignore[template-injection]
         run: |
           echo ${{ matrix.build.generate && 'ninja' || 'automake libtool' }} \
             pkgconf libpsl libssh2 \
@@ -236,7 +241,7 @@ jobs:
             for _chkprefill in '' ${{ matrix.build.chkprefill }}; do
               options=''
               [ -n '${{ matrix.build.macos-version-min }}' ] && options+=' -DCMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.build.macos-version-min }}'
-              [[ '${{ matrix.build.install_steps }}' = *'pytest'* ]] && options+=' -DTEST_NGHTTPX= -DHTTPD_NGHTTPX='
+              [[ '${{ matrix.build.install_steps }}' = *'pytest'* ]] && options+=' -DVSFTPD=NO'  # Skip ~20 tests that stretch run time by 7x on macOS
               [ "${_chkprefill}" = '_chkprefill' ] && options+=' -D_CURL_PREFILL=OFF'
               cmake -B "bld${_chkprefill}" -G Ninja -D_CURL_PREFILL=ON \
                 -DCMAKE_INSTALL_PREFIX="$HOME/curl" \
@@ -259,7 +264,7 @@ jobs:
               CFLAGS+=" --sysroot=${sysroot}"
             fi
             [ -n '${{ matrix.build.macos-version-min }}' ] && CFLAGS+=' -mmacosx-version-min=${{ matrix.build.macos-version-min }}'
-            [[ '${{ matrix.build.install_steps }}' = *'pytest'* ]] && options+=' --with-test-nghttpx= ac_cv_path_HTTPD_NGHTTPX='
+            [[ '${{ matrix.build.install_steps }}' = *'pytest'* ]] && options+=' --with-test-vsftpd=no'  # Skip ~20 tests that stretch run time by 7x on macOS
             mkdir bld && cd bld && ../configure --enable-unity --enable-test-bundles --enable-warnings --enable-werror \
               --disable-dependency-tracking \
               --with-libpsl=$(brew --prefix libpsl) \
@@ -311,11 +316,9 @@ jobs:
       - name: 'run tests'
         if: ${{ !matrix.build.clang-tidy }}
         timeout-minutes: ${{ matrix.build.torture && 20 || 10 }}
+        # zizmor: ignore[template-injection]
         run: |
           export TFLAGS='-j20 ${{ matrix.build.tflags }}'
-          if [ -z '${{ matrix.build.torture }}' ]; then
-            TFLAGS+=' ~2037 ~2041'  # flaky
-          fi
           source $HOME/venv/bin/activate
           rm -f $HOME/.curlrc
           if [ -n '${{ matrix.build.generate }}' ]; then
@@ -333,8 +336,8 @@ jobs:
       - name: 'run pytest'
         if: ${{ !matrix.build.clang-tidy && contains(matrix.build.install_steps, 'pytest') }}
         env:
-          CURL_CI: github
           PYTEST_ADDOPTS: '--color=yes'
+          PYTEST_XDIST_AUTO_NUM_WORKERS: 4
         run: |
           source $HOME/venv/bin/activate
           if [ -n '${{ matrix.build.generate }}' ]; then
@@ -439,6 +442,11 @@ jobs:
 
       - name: 'configure / ${{ matrix.build }}'
         run: |
+          if [ '${{ matrix.compiler }}' = 'gcc-13' ] && [ '${{ matrix.image }}' = 'macos-15' ] ; then
+            # Ref: https://github.com/Homebrew/homebrew-core/issues/194778#issuecomment-2793243409
+            /opt/homebrew/opt/gcc@13/libexec/gcc/aarch64-apple-darwin24/13/install-tools/mkheaders
+          fi
+
           if [[ '${{ matrix.compiler }}' = 'gcc'* ]]; then
             sysroot="$("${CC}" --print-sysroot)"  # Must match the SDK gcc was built for
           else
@@ -456,7 +464,7 @@ jobs:
             [ '${{ matrix.config }}' = 'SecureTransport' ] && options+=' -DCURL_USE_SECTRANSP=ON'
             [ -n '${{ matrix.macos-version-min }}' ] && options+=' -DCMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.macos-version-min }}'
             # would pick up nghttp2, libidn2, and libssh2
-            cmake -B bld -D_CURL_PREFILL=ON \
+            cmake -B bld -G Ninja -D_CURL_PREFILL=ON \
               -DCMAKE_UNITY_BUILD=ON -DCURL_TEST_BUNDLES=ON -DCURL_WERROR=ON \
               -DCMAKE_OSX_SYSROOT="${sysroot}" \
               -DCMAKE_C_COMPILER_TARGET="$(uname -m | sed 's/arm64/aarch64/')-apple-darwin$(uname -r)" \
@@ -496,7 +504,12 @@ jobs:
           grep -F '#define' bld/lib/curl_config.h | sort || true
 
       - name: 'build / ${{ matrix.build }}'
-        run: make -C bld V=1 VERBOSE=1
+        run: |
+          if [ '${{ matrix.build }}' = 'cmake' ]; then
+            cmake --build bld --verbose
+          else
+            make -C bld V=1
+          fi
 
       - name: 'curl version'
         run: bld/src/curl --disable --version

@@ -63,6 +63,7 @@ BearSSL
 Benoit
 BeOS
 bitmask
+bitset
 bitwise
 Björn
 Bjørn
@@ -175,6 +176,7 @@ DELE
 DER
 dereference
 dereferences
+DES
 deselectable
 deserialization
 Deserialized
