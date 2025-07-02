@@ -279,6 +279,7 @@ static void cf_h2_ctx_close(struct cf_h2_ctx *ctx)
   }
 }
 
+// XXX: this function should be deprecated
 static CURLcode http2_set_stream_priority(struct Curl_cfilter *cf,
                                           struct Curl_easy *data,
                                           int32_t stream_id,
@@ -308,6 +309,7 @@ static CURLcode http2_set_stream_priority(struct Curl_cfilter *cf,
  * split the load for html/js/css/images. It builds a tree of streams with
  * different weights (priorities) by default and communicates this to the
  * server. Imitate that behavior.
+ * XXX: This has been deprecated in the RFC
  */
 static CURLcode http2_set_stream_priorities(struct Curl_cfilter *cf,
                                             struct Curl_easy *data)
@@ -785,8 +787,6 @@ static CURLcode cf_h2_ctx_open(struct Curl_cfilter *cf,
     window_update = data->set.http2_window_update;
   }
 
-  // printf("Using window update %d\n", window_update);
-
   rc = nghttp2_session_set_local_window_size(
       ctx->h2, NGHTTP2_FLAG_NONE, 0,
       current_window_size + window_update);
@@ -803,9 +803,7 @@ static CURLcode cf_h2_ctx_open(struct Curl_cfilter *cf,
   if(result)
     goto out;
 
-#define FIREFOX_DEFAULT_STREAM_ID   (15)
-  /* Best effort to set the request's stream id to 15, like Firefox does. */
-  // Let's ignore this for now, as it seems not to be targeted as fingerprints.
+  // #define FIREFOX_DEFAULT_STREAM_ID   (15)
   // nghttp2_session_set_next_stream_id(ctx->h2, FIREFOX_DEFAULT_STREAM_ID);
 
 
@@ -2197,6 +2195,7 @@ static CURLcode h2_progress_egress(struct Curl_cfilter *cf,
     /* send new weight and/or dependency */
     nghttp2_priority_spec pri_spec;
 
+    // XXX: http2 priority has been deprecated, and not browser sends this frame.
     h2_pri_spec(ctx, data, &pri_spec);
     /* curl-impersonate: Don't send PRIORITY frames for main stream. */
     if(stream->id != 1) {
@@ -2508,11 +2507,15 @@ static ssize_t h2_submit(struct h2_stream_ctx **pstream,
   case HTTPREQ_PUT:
     data_prd.read_callback = req_body_read_callback;
     data_prd.source.ptr = NULL;
-    stream_id = nghttp2_submit_request(ctx->h2, &pri_spec, nva, nheader,
+    stream_id = nghttp2_submit_request(ctx->h2,
+                                       data->set.http2_no_priority ? NULL : &pri_spec,
+                                       nva, nheader,
                                        &data_prd, data);
     break;
   default:
-    stream_id = nghttp2_submit_request(ctx->h2, &pri_spec, nva, nheader,
+    stream_id = nghttp2_submit_request(ctx->h2,
+                                       data->set.http2_no_priority ? NULL : &pri_spec,
+                                       nva, nheader,
                                        NULL, data);
   }
 

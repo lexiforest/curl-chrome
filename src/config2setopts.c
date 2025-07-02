@@ -444,9 +444,6 @@ static CURLcode ssl_setopts(struct GlobalConfig *global,
   if (config->tls_use_new_alps_codepoint)
     my_setopt(curl, CURLOPT_TLS_USE_NEW_ALPS_CODEPOINT, 1L);
 
-  if (config->tls_use_firefox_tls13_ciphers)
-    my_setopt(curl, CURLOPT_TLS_USE_FIREFOX_TLS13_CIPHERS, 1L);
-
   if(config->tls_delegated_credentials)
     my_setopt_str(curl, CURLOPT_TLS_DELEGATED_CREDENTIALS, config->tls_delegated_credentials);
  
@@ -565,6 +562,11 @@ static CURLcode http_setopts(struct GlobalConfig *global,
     my_setopt_str(curl, CURLOPT_HSTS, config->hsts);
 
   /* curl-impersonate */
+  if(config->http2_no_priority)
+    my_setopt(curl,
+              CURLOPT_HTTP2_NO_PRIORITY,
+              config->http2_no_priority);
+
   if(config->http2_pseudo_headers_order)
     my_setopt_str(curl,
                   CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER,

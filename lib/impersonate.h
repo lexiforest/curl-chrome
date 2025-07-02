@@ -36,7 +36,6 @@ struct impersonate_opts {
   const char *http2_streams;
   bool tls_permute_extensions;
   bool tls_use_new_alps_codepoint;
-  bool tls_use_firefox_tls13_ciphers;
   bool tls_signed_cert_timestamps;
   const char *ech;
   const char *tls_extension_order;
@@ -46,7 +45,7 @@ struct impersonate_opts {
   bool tls_grease;
   int http2_stream_weight;
   int http2_stream_exclusive;
-  bool use_firefox_tls13_ciphers;
+  bool http2_no_priority;  // disable http2 priority in header frame
   /* Other TLS options will come here in the future once they are
    * configurable through curl_easy_setopt() */
 };

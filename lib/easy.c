@@ -489,6 +489,12 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
       return ret;
   }
 
+  if(opts->http2_no_priority) {
+    ret = curl_easy_setopt(data, CURLOPT_HTTP2_NO_PRIORITY, opts->http2_no_priority);
+    if(ret)
+      return ret;
+  }
+
   if(opts->ech) {
     ret = curl_easy_setopt(data, CURLOPT_ECH, opts->ech);
     if(ret)
@@ -525,12 +531,6 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
 
   if(opts->tls_use_new_alps_codepoint) {
     ret = curl_easy_setopt(data, CURLOPT_TLS_USE_NEW_ALPS_CODEPOINT, opts->tls_use_new_alps_codepoint);
-    if(ret)
-      return ret;
-  }
-
-  if(opts->use_firefox_tls13_ciphers) {
-    ret = curl_easy_setopt(data, CURLOPT_TLS_USE_FIREFOX_TLS13_CIPHERS, opts->use_firefox_tls13_ciphers);
     if(ret)
       return ret;
   }

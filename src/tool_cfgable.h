@@ -171,13 +171,13 @@ struct OperationConfig {
   long http2_stream_weight;
   long http2_stream_exclusive;
   char *http2_streams;
+  bool http2_no_priority;
   bool tls_grease;
   char *tls_extension_order;
   char *tls_delegated_credentials;
   long tls_record_size_limit;
   long tls_key_shares_limit;
   bool tls_use_new_alps_codepoint;
-  bool tls_use_firefox_tls13_ciphers;
   char *writeout;           /* %-styled format string to output */
   struct curl_slist *quote;
   struct curl_slist *postquote;

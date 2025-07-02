@@ -4629,10 +4629,6 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
     SSL_CTX_set_key_usage_check_enabled(octx->ssl_ctx, 1);
   }
 
-  if(data->set.tls_use_firefox_tls13_ciphers) {
-    SSL_CTX_set_use_firefox_tls13_ciphers(octx->ssl_ctx, 1);
-  }
-
   if(conn_config->cert_compression &&
      add_cert_compression(data,
                           octx->ssl_ctx,

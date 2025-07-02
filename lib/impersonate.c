@@ -977,7 +977,6 @@ const struct impersonate_opts impersonations[] = {
     .tls_grease = false,
     .tls_signed_cert_timestamps = false,
     .tls_key_shares_limit = 3,
-    .use_firefox_tls13_ciphers = true
   },
   {
     .target = "firefox135",
@@ -1042,7 +1041,6 @@ const struct impersonate_opts impersonations[] = {
     .tls_grease = false,
     .tls_signed_cert_timestamps = true,
     .tls_key_shares_limit = 3,
-    .use_firefox_tls13_ciphers = true
   },
   {
     .target = "okhttp4_android",
@@ -1610,6 +1608,130 @@ const struct impersonate_opts impersonations[] = {
     .tls_grease = true
   },
   {
+    .target = "safari260",
+    .alias = "safari26_0",
+    .httpversion = CURL_HTTP_VERSION_2_0,
+    .ssl_version = CURL_SSLVERSION_TLSv1_2 | CURL_SSLVERSION_MAX_DEFAULT,
+    .ciphers =
+      "TLS_AES_256_GCM_SHA384,"
+      "TLS_CHACHA20_POLY1305_SHA256,"
+      "TLS_AES_128_GCM_SHA256,"
+      "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,"
+      "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,"
+      "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,"
+      "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,"
+      "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,"
+      "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,"
+      "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,"
+      "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,"
+      "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,"
+      "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,"
+      "TLS_RSA_WITH_AES_256_GCM_SHA384,"
+      "TLS_RSA_WITH_AES_128_GCM_SHA256,"
+      "TLS_RSA_WITH_AES_256_CBC_SHA,"
+      "TLS_RSA_WITH_AES_128_CBC_SHA,"
+      "TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA,"
+      "TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,"
+      "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
+    .curves = "X25519MLKEM768:X25519:P-256:P-384:P-521",
+    .sig_hash_algs =
+      "ecdsa_secp256r1_sha256,"
+      "rsa_pss_rsae_sha256,"
+      "rsa_pkcs1_sha256,"
+      "ecdsa_secp384r1_sha384,"
+      "rsa_pss_rsae_sha384,"
+      "rsa_pss_rsae_sha384,"
+      "rsa_pkcs1_sha384,"
+      "rsa_pss_rsae_sha512,"
+      "rsa_pkcs1_sha512,"
+      "rsa_pkcs1_sha1",
+    .npn = false,
+    .alpn = true,
+    .alps = false,
+    .cert_compression = "zlib",
+    .http_headers = {
+      "sec-fetch-dest: document",
+      "user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15",
+      "accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "sec-fetch-site: none",
+      "sec-fetch-mode: navigate",
+      "accept-language: en-US,en;q=0.9",
+      "priority: u=0, i",
+      "accept-encoding: gzip, deflate, br, zstd"
+    },
+    .http2_settings = "2:0;3:100;4:2097152;9:1",
+    .http2_window_update = 10420225,
+    .http2_pseudo_headers_order = "msap",
+    .http2_no_priority = true,
+    .tls_session_ticket = true,
+    .tls_extension_order = NULL,
+    .tls_use_new_alps_codepoint = false,
+    .tls_signed_cert_timestamps = true,
+    .tls_grease = true
+  },
+  {
+    .target = "safari260_ios",
+    .alias = "safari26_0_ios",
+    .httpversion = CURL_HTTP_VERSION_2_0,
+    .ssl_version = CURL_SSLVERSION_TLSv1_2 | CURL_SSLVERSION_MAX_DEFAULT,
+    .ciphers =
+      "TLS_AES_128_GCM_SHA256,"
+      "TLS_AES_256_GCM_SHA384,"
+      "TLS_CHACHA20_POLY1305_SHA256,"
+      "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,"
+      "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,"
+      "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,"
+      "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,"
+      "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,"
+      "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,"
+      "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,"
+      "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,"
+      "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,"
+      "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,"
+      "TLS_RSA_WITH_AES_256_GCM_SHA384,"
+      "TLS_RSA_WITH_AES_128_GCM_SHA256,"
+      "TLS_RSA_WITH_AES_256_CBC_SHA,"
+      "TLS_RSA_WITH_AES_128_CBC_SHA,"
+      "TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA,"
+      "TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,"
+      "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
+    .curves = "X25519:P-256:P-384:P-521",
+    .sig_hash_algs =
+      "ecdsa_secp256r1_sha256,"
+      "rsa_pss_rsae_sha256,"
+      "rsa_pkcs1_sha256,"
+      "ecdsa_secp384r1_sha384,"
+      "rsa_pss_rsae_sha384,"
+      "rsa_pss_rsae_sha384,"
+      "rsa_pkcs1_sha384,"
+      "rsa_pss_rsae_sha512,"
+      "rsa_pkcs1_sha512,"
+      "rsa_pkcs1_sha1",
+    .npn = false,
+    .alpn = true,
+    .alps = false,
+    .cert_compression = "zlib",
+    .http_headers = {
+      "sec-fetch-dest: document",
+      "user-agent: Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1",
+      "accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "sec-fetch-site: none",
+      "sec-fetch-mode: navigate",
+      "accept-language: en-US,en;q=0.9",
+      "priority: u=0, i",
+      "accept-encoding: gzip, deflate, br, zstd"
+    },
+    .http2_settings = "2:0;3:100;4:2097152;9:1",
+    .http2_window_update = 10420225,
+    .http2_pseudo_headers_order = "msap",
+    .http2_no_priority = true,
+    .tls_session_ticket = true,
+    .tls_extension_order = NULL,
+    .tls_use_new_alps_codepoint = false,
+    .tls_signed_cert_timestamps = true,
+    .tls_grease = true
+  },
+  {
     .target = "tor145",  // tor 14.5, based on firefox 128
     .alias = "tor145",
     .httpversion = CURL_HTTP_VERSION_2_0,
@@ -1671,7 +1793,6 @@ const struct impersonate_opts impersonations[] = {
     .tls_grease = false,
     .tls_signed_cert_timestamps = true,
     .tls_key_shares_limit = 2,
-    .use_firefox_tls13_ciphers = true
   }
 };
 

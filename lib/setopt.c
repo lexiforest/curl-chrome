@@ -1364,6 +1364,9 @@ static CURLcode setopt_long(struct Curl_easy *data, CURLoption option,
       return CURLE_BAD_FUNCTION_ARGUMENT;
     data->set.http2_window_update = arg;
     break;
+  case CURLOPT_HTTP2_NO_PRIORITY:
+    data->set.http2_no_priority = arg;
+    break;
 #endif
   case CURLOPT_PATH_AS_IS:
     data->set.path_as_is = enabled;
@@ -1419,9 +1422,6 @@ static CURLcode setopt_long(struct Curl_easy *data, CURLoption option,
     break;
   case CURLOPT_TLS_USE_NEW_ALPS_CODEPOINT:
     data->set.tls_use_new_alps_codepoint = enabled;
-    break;
-  case CURLOPT_TLS_USE_FIREFOX_TLS13_CIPHERS:
-    data->set.tls_use_firefox_tls13_ciphers = enabled;
     break;
 
 #ifndef CURL_DISABLE_HSTS

@@ -2339,8 +2339,8 @@ typedef enum {
   /* curl-impersonate: Use the new ALPS code point */
   CURLOPT(CURLOPT_TLS_USE_NEW_ALPS_CODEPOINT, CURLOPTTYPE_LONG, 1020),
 
-  /* curl-impersonate: Use firefox tls13 cipher order */
-  CURLOPT(CURLOPT_TLS_USE_FIREFOX_TLS13_CIPHERS, CURLOPTTYPE_LONG, 1021),
+  /* curl-impersonate: Do not set the priority bit in http2 header frame */
+  CURLOPT(CURLOPT_HTTP2_NO_PRIORITY, CURLOPTTYPE_LONG, 1021),
 
   CURLOPT_LASTENTRY /* the last unused */
 } CURLoption;

@@ -179,6 +179,7 @@ static const struct LongShort aliases[]= {
   {"http1.0",                    ARG_NONE, '0', C_HTTP1_0},
   {"http1.1",                    ARG_NONE, ' ', C_HTTP1_1},
   {"http2",                      ARG_NONE, ' ', C_HTTP2},
+  {"http2-no-priority",          ARG_BOOL, ' ', C_HTTP2_NO_PRIORITY},  // curl-impersonate
   {"http2-prior-knowledge",      ARG_NONE, ' ', C_HTTP2_PRIOR_KNOWLEDGE},
   {"http2-pseudo-headers-order", ARG_STRG, ' ', C_HTTP2_PSEUDO_HEADERS_ORDER},  // curl-impersonate
   {"http2-settings",             ARG_STRG, ' ', C_HTTP2_SETTINGS},  // curl-impersonate
@@ -358,7 +359,6 @@ static const struct LongShort aliases[]= {
   {"tls-record-size-limit",      ARG_STRG, ' ', C_TLS_RECORD_SIZE_LIMIT},  // curl-impersonate
   {"tls-session-ticket",         ARG_BOOL, ' ', C_TLS_SESSION_TICKET},  // curl-impersonate
   {"tls-signed-cert-timestamps", ARG_BOOL, ' ', C_TLS_SIGNED_CERT_TIMESTAMPS}, // curl-impersonate
-  {"tls-use-firefox-tls13-ciphers", ARG_BOOL, ' ', C_TLS_USE_FIREFOX_TLS13_CIPHERS},  // curl-impersonate
   {"tls-use-new-alps-codepoint", ARG_BOOL, ' ', C_TLS_USE_NEW_ALPS_CODEPOINT},  // curl-impersonate
   {"tls13-ciphers",              ARG_STRG|ARG_TLS, ' ', C_TLS13_CIPHERS},
   {"tlsauthtype",                ARG_STRG|ARG_TLS, ' ', C_TLSAUTHTYPE},
@@ -1980,8 +1980,10 @@ static ParameterError opt_bool(struct GlobalConfig *global,
   case C_TLS_USE_NEW_ALPS_CODEPOINT: /* --tls-use-new-alps-codepoint curl-impersonate */
     config->tls_use_new_alps_codepoint = toggle;
     break;
-  case C_TLS_USE_FIREFOX_TLS13_CIPHERS: /* --tls-use-new-alps-codepoint curl-impersonate */
-    config->tls_use_firefox_tls13_ciphers = toggle;
+  case C_HTTP2_NO_PRIORITY:
+    if(!feature_http2)
+      return PARAM_LIBCURL_DOESNT_SUPPORT;
+    config->http2_no_priority = toggle;
     break;
   case C_SUPPRESS_CONNECT_HEADERS: /* --suppress-connect-headers */
     config->suppress_connect_headers = toggle;
