@@ -816,6 +816,9 @@ static CURLcode setopt_long(struct Curl_easy *data, CURLoption option,
     /* Update the current connection proxy_ssl_config. */
     Curl_ssl_conn_config_update(data, TRUE);
     break;
+  case CURLOPT_PROXY_CREDENTIAL_NO_REUSE:
+    data->set.proxy_credential_no_reuse = enabled;
+    break;
 #endif /* ! CURL_DISABLE_PROXY */
 
 #if defined(HAVE_GSSAPI) || defined(USE_WINDOWS_SSPI)

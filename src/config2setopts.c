@@ -835,6 +835,12 @@ static CURLcode proxy_setopts(struct GlobalConfig *global,
   if(config->haproxy_clientip)
     my_setopt_str(curl, CURLOPT_HAPROXY_CLIENT_IP, config->haproxy_clientip);
 
+
+  /* curl-impersonate */
+  if (config->proxy_credential_no_reuse) {
+    my_setopt(curl, CURLOPT_PROXY_CREDENTIAL_NO_REUSE, 1L);
+  }
+
   return CURLE_OK;
 }
 

@@ -652,6 +652,17 @@ proxy_info_matches(const struct proxy_info *data,
 
   return FALSE;
 }
+/* curl-impersonate: redefine function in case main curl function is modified in upcoming releases */
+static bool proxy_credential_matches(const struct proxy_info *data,
+                                     const struct proxy_info *needle)
+{
+  if(Curl_timestrcmp(data->user, needle->user) ||
+     Curl_timestrcmp(data->passwd, needle->passwd)) {
+      return FALSE;
+  }
+
+  return TRUE;
+}
 
 static bool
 socks_proxy_info_matches(const struct proxy_info *data,
@@ -997,6 +1008,15 @@ static bool url_match_proxy_use(struct connectdata *conn,
 
     if(!proxy_info_matches(&m->needle->http_proxy, &conn->http_proxy))
       return FALSE;
+
+    if(m->data->set.proxy_credential_no_reuse &&
+       !proxy_credential_matches(&m->needle->http_proxy, &conn->http_proxy)) {
+      DEBUGF(infof(m->data,
+                   "Connection #%" FMT_OFF_T
+                   " has different proxy credentials, cannot reuse",
+                   conn->connection_id));
+      return FALSE;
+    }
 
     if(IS_HTTPS_PROXY(m->needle->http_proxy.proxytype)) {
       /* https proxies come in different types, http/1.1, h2, ... */
@@ -1460,6 +1480,7 @@ static struct connectdata *allocate_conn(struct Curl_easy *data)
 
   conn->bits.proxy_user_passwd = !!data->state.aptr.proxyuser;
   conn->bits.tunnel_proxy = data->set.tunnel_thru_httpproxy;
+  conn->bits.proxy_credential_no_reuse = data->set.proxy_credential_no_reuse;
 #endif /* CURL_DISABLE_PROXY */
 
 #ifndef CURL_DISABLE_FTP

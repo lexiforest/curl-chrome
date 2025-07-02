@@ -261,6 +261,7 @@ static const struct LongShort aliases[]= {
   {"proxy-cert",                ARG_FILE|ARG_TLS|ARG_CLEAR, ' ', C_PROXY_CERT},
   {"proxy-cert-type",            ARG_STRG|ARG_TLS, ' ', C_PROXY_CERT_TYPE},
   {"proxy-ciphers",              ARG_STRG|ARG_TLS, ' ', C_PROXY_CIPHERS},
+  {"proxy-credential-no-reuse",  ARG_BOOL|ARG_TLS, ' ', C_PROXY_CREDENTIAL_NO_REUSE},
   {"proxy-crlfile",              ARG_FILE|ARG_TLS, ' ', C_PROXY_CRLFILE},
   {"proxy-digest",               ARG_BOOL, ' ', C_PROXY_DIGEST},
   {"proxy-header",               ARG_STRG, ' ', C_PROXY_HEADER},
@@ -2192,6 +2193,9 @@ static ParameterError opt_bool(struct GlobalConfig *global,
     break;
   case C_MPTCP: /* --mptcp */
     config->mptcp = toggle;
+    break;
+  case C_PROXY_CREDENTIAL_NO_REUSE: /*  --proxy-credential-no-reuse */
+    config->proxy_credential_no_reuse = toggle;
     break;
   default:
     return PARAM_OPTION_UNKNOWN;

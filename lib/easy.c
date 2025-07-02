@@ -353,7 +353,6 @@ CURLsslset curl_global_sslset(curl_sslbackend id, const char *name,
 }
 
 
-
 /*
  * curl-impersonate:
  * Actually call curl_easy_setopt() with all the needed options
@@ -547,6 +546,12 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
       return ret;
   }
 
+  if(opts->proxy_credential_no_reuse) {
+    ret = curl_easy_setopt(data, CURLOPT_PROXY_CREDENTIAL_NO_REUSE, opts->proxy_credential_no_reuse);
+    if(ret)
+      return ret;
+  }
+
   return CURLE_OK;
 }
 
@@ -625,7 +630,6 @@ CURLcode curl_easy_impersonate(CURL *data, const char *target,
 
   return CURLE_OK;
 }
-
 
 /*
  * curl_easy_init() is the external interface to alloc, setup and init an

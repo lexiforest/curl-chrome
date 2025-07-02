@@ -536,6 +536,30 @@ CURLcode Curl_ssl_peer_key_make(struct Curl_cfilter *cf,
     if(r)
       goto out;
   }
+#ifndef CURL_DISABLE_PROXY
+  // make sure SSL sessions started by one proxy are not resumed from a different one
+  if(cf->conn->bits.httpproxy && cf->conn->bits.proxy_credential_no_reuse) {
+    if(cf->conn->http_proxy.host.name) {
+      r = curlx_dyn_addf(&buf, ":PHOST-%s", cf->conn->http_proxy.host.name);
+      if(r)
+        goto out;
+    }
+    r = curlx_dyn_addf(&buf, ":PPORT-%d", (int)cf->conn->http_proxy.port);
+    if(r)
+      goto out;
+    if(cf->conn->http_proxy.user) {
+      r = curlx_dyn_addf(&buf, ":PUSER-%s", cf->conn->http_proxy.user);
+      if(r)
+        goto out;
+    }
+    if(cf->conn->http_proxy.passwd) {
+      // password should not be shared among users. but authless vs auth proxy should be treated separately.
+      r = curlx_dyn_add(&buf, ":PPW");
+      if(r)
+        goto out;
+    }
+  }
+#endif
   if(ssl->verifypeer) {
     r = cf_ssl_peer_key_add_path(&buf, "CA", ssl->CAfile, &is_local);
     if(r)

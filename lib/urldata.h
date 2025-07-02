@@ -465,6 +465,7 @@ struct ConnectBits {
                          proxies, but can also be enabled explicitly by
                          apps */
   BIT(proxy); /* if set, this transfer is done through a proxy - any type */
+  BIT(proxy_credential_no_reuse); /* no reuse of SSL sessions/connections via different proxy credentials */
 #endif
   /* always modify bits.close with the connclose() and connkeep() macros! */
   BIT(close); /* if set, we close the connection after this request */
@@ -1730,6 +1731,7 @@ struct UserDefined {
   BIT(get_filetime);     /* get the time and get of the remote file */
 #ifndef CURL_DISABLE_PROXY
   BIT(tunnel_thru_httpproxy); /* use CONNECT through an HTTP proxy */
+  BIT(proxy_credential_no_reuse); /* no reuse of SSL sessions/connections via different proxy credentials */
 #endif
   BIT(prefer_ascii);     /* ASCII rather than binary */
   BIT(remote_append);    /* append, not overwrite, on upload */

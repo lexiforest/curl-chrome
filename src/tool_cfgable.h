@@ -152,6 +152,7 @@ struct OperationConfig {
   char *proxy_key_type;
   char *key_passwd;
   char *proxy_key_passwd;
+  bool proxy_credential_no_reuse;
   char *pubkey;
   char *hostpubmd5;
   char *hostpubsha256;
