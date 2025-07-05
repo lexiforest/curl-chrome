@@ -353,6 +353,7 @@ CURLsslset curl_global_sslset(curl_sslbackend id, const char *name,
 }
 
 
+
 /*
  * curl-impersonate:
  * Actually call curl_easy_setopt() with all the needed options
@@ -630,6 +631,7 @@ CURLcode curl_easy_impersonate(CURL *data, const char *target,
 
   return CURLE_OK;
 }
+
 
 /*
  * curl_easy_init() is the external interface to alloc, setup and init an
