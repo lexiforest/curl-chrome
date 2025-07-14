@@ -2783,7 +2783,6 @@ CURLcode Curl_http(struct Curl_easy *data, bool *done)
   const char *httpstring;
   struct dynbuf req;
   char *altused = NULL;
-  const char *p_accept;      /* Accept: string */
   unsigned char httpversion;
 
   /* Always consider the DO phase done after this function call, even if there
@@ -2891,9 +2890,6 @@ CURLcode Curl_http(struct Curl_easy *data, bool *done)
   if(result)
     goto fail;
 
-  p_accept = Curl_checkheaders(data,
-                               STRCONST("Accept")) ? NULL : "Accept: */*\r\n";
-
   result = http_range(data, httpreq);
   if(result)
     goto fail;
@@ -2956,7 +2952,7 @@ CURLcode Curl_http(struct Curl_easy *data, bool *done)
                     *data->set.str[STRING_USERAGENT] &&
                     data->state.aptr.uagent) ?
                    data->state.aptr.uagent : "",
-                   p_accept ? p_accept : "",
+                   "", // Accept
                    data->state.aptr.te ? data->state.aptr.te : "",
                    (data->set.str[STRING_ENCODING] &&
                     *data->set.str[STRING_ENCODING] &&
