@@ -177,7 +177,7 @@ open(N, "nm $file|") ||
 my %exist;
 my %uses;
 my $file;
-while (<N>) {
+while(<N>) {
     my $l = $_;
     chomp $l;
 
