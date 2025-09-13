@@ -398,6 +398,7 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
       return ret;
   }
 
+  // TODO: remove npn, which has been deprecated by curl
   ret = curl_easy_setopt(data, CURLOPT_SSL_ENABLE_NPN, opts->npn ? 1 : 0);
   if(ret)
     return ret;

@@ -754,9 +754,10 @@ static CURLcode cf_h2_ctx_open(struct Curl_cfilter *cf,
   }
 
   // curl-impersonate: set stream priorities
-  result = http2_set_stream_priorities(cf, data);
-  if(result)
-    goto out;
+  // No popular browsers are doing this, so it's disabled.
+  // result = http2_set_stream_priorities(cf, data);
+  // if(result)
+  //   goto out;
 
   // #define FIREFOX_DEFAULT_STREAM_ID   (15)
   // nghttp2_session_set_next_stream_id(ctx->h2, FIREFOX_DEFAULT_STREAM_ID);

@@ -4809,7 +4809,7 @@ CURLcode Curl_http_req_to_h2(struct dynhds *h2_headers,
   result = h2_check_pseudo_header_order(order);
 
   /* curl-impersonate: add http2 pseudo headers according to the specified order. */
-  for(i = 0; !result && i < strlen(order); ++i) {
+  for(i = 0; !result && i < 4; ++i) {
     switch(order[i]) {
       case 'm':
         result = Curl_dynhds_add(h2_headers, STRCONST(HTTP_PSEUDO_METHOD),
