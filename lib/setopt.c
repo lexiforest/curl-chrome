@@ -1755,6 +1755,13 @@ static CURLcode setopt_cptr(struct Curl_easy *data, CURLoption option,
     else
       return CURLE_NOT_BUILT_IN;
   // curl-impersonate
+  case CURLOPT_IMPERSONATE:
+    result = Curl_setstropt(&data->set.str[STRING_IMPERSONATE], ptr);
+    if(result)
+      return result;
+    // for the master option, we simply call the easy_impersonate method here.
+    return curl_easy_impersonate(data, data->set.str[STRING_IMPERSONATE], true);
+    break;
   case CURLOPT_TLS_EXTENSION_ORDER:
     return Curl_setstropt(&data->set.str[STRING_TLS_EXTENSION_ORDER], ptr);
     break;

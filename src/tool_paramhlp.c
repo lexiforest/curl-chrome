@@ -718,8 +718,8 @@ CURLcode get_args(struct OperationConfig *config, const size_t i)
   if(!result && config->proxyuserpwd)
     result = checkpasswd("proxy", i, last, &config->proxyuserpwd);
 
-  /* Check if we have a user agent */
-  if(!result && !config->useragent) {
+  /* Check if we have a user agent, do not override impersonate value */
+  if(!result && !config->useragent && !config->impersonate) {
     config->useragent = my_useragent();
     if(!config->useragent) {
       errorf(config->global, "out of memory");

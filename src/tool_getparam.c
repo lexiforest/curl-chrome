@@ -188,6 +188,7 @@ static const struct LongShort aliases[]= {
   {"http3",                      ARG_NONE|ARG_TLS, ' ', C_HTTP3},
   {"http3-only",                 ARG_NONE|ARG_TLS, ' ', C_HTTP3_ONLY},
   {"ignore-content-length",      ARG_BOOL, ' ', C_IGNORE_CONTENT_LENGTH},
+  {"impersonate",                ARG_STRG, ' ', C_IMPERSONATE},
   {"include",                    ARG_BOOL, ' ', C_INCLUDE},
   {"insecure",                   ARG_BOOL, 'k', C_INSECURE},
   {"interface",                  ARG_STRG, ' ', C_INTERFACE},
@@ -2551,6 +2552,9 @@ static ParameterError opt_filestring(struct OperationConfig *config,
       err = PARAM_LIBCURL_DOESNT_SUPPORT;
     else
       err = getstr(&config->hsts, nextarg, ALLOW_BLANK);
+    break;
+  case C_IMPERSONATE: /* --impersonate */
+    err = getstr(&config->impersonate, nextarg, DENY_BLANK);
     break;
   case C_COOKIE: /* --cookie */
     if(strchr(nextarg, '=')) {

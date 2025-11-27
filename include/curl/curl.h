@@ -2249,6 +2249,9 @@ typedef enum {
   /* set TLS supported signature algorithms */
   CURLOPT(CURLOPT_SSL_SIGNATURE_ALGORITHMS, CURLOPTTYPE_STRINGPOINT, 328),
 
+  /* curl-impersonate: The master option for setting an impersonate target */
+  CURLOPT(CURLOPT_IMPERSONATE, CURLOPTTYPE_STRINGPOINT, 999),
+
   /* curl-impersonate: A list of headers used by the impersonated browser.
    * If given, merged with CURLOPT_HTTPHEADER. */
   CURLOPT(CURLOPT_HTTPBASEHEADER, CURLOPTTYPE_SLISTPOINT, 1000),

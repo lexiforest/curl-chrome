@@ -102,12 +102,13 @@ static void free_config_fields(struct OperationConfig *config)
   tool_safefree(config->proto_redir_str);
 
   // curl-impersonate
-  Curl_safefree(config->ssl_sig_hash_algs);
-  Curl_safefree(config->ssl_cert_compression);
-  Curl_safefree(config->http2_pseudo_headers_order);
-  Curl_safefree(config->http2_settings);
-  Curl_safefree(config->http2_streams);
-  Curl_safefree(config->tls_extension_order);
+  tool_safefree(config->ssl_sig_hash_algs);
+  tool_safefree(config->ssl_cert_compression);
+  tool_safefree(config->http2_pseudo_headers_order);
+  tool_safefree(config->http2_settings);
+  tool_safefree(config->http2_streams);
+  tool_safefree(config->tls_extension_order);
+  tool_safefree(config->impersonate);
 
   urlnode = config->url_list;
   while(urlnode) {

@@ -1246,6 +1246,7 @@ enum dupstring {
   STRING_SSL_CRLFILE,     /* crl file to check certificate */
   STRING_SSL_ISSUERCERT, /* issuer cert file to check certificate */
   STRING_SERVICE_NAME,    /* Service name */
+  STRING_IMPERSONATE,     /* curl-impersonate */
 #ifndef CURL_DISABLE_PROXY
   STRING_CERT_PROXY,      /* client certificate filename */
   STRING_CERT_TYPE_PROXY, /* format for certificate (default: PEM)*/
