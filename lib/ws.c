@@ -1587,7 +1587,7 @@ const struct Curl_handler Curl_handler_wss = {
   CURLPROTO_WSS,                        /* protocol */
   CURLPROTO_HTTP,                       /* family */
   PROTOPT_SSL | PROTOPT_CREDSPERREQUEST | /* flags */
-  PROTOPT_USERPWDCTRL
+  PROTOPT_USERPWDCTRL | PROTOPT_ALPN
 };
 #endif
 
