@@ -38,10 +38,16 @@
 #include "select.h"
 #include "cfilters.h"
 #include "connect.h"
+#include "cf-socket.h"
+#if defined(USE_NGTCP2) && defined(USE_NGHTTP3)
+#include "vquic/curl_ngtcp2.h"
+#endif
 #include "curlx/timeval.h"
 #include "socks.h"
 #include "multiif.h" /* for getsock macros */
+#include "curl_addrinfo.h"
 #include "curlx/inet_pton.h"
+#include "curlx/inet_ntop.h"
 #include "url.h"
 
 /* The last 3 #include files should be in this order */
@@ -89,6 +95,19 @@ struct socks_state {
   int remote_port;
   const char *proxy_user;
   const char *proxy_password;
+  size_t replylen;
+  struct Curl_cfilter *tcp_cf;
+  struct Curl_cfilter *udp_cf;
+  int udp_relay_family;
+  unsigned char udp_relay_addr[16];
+  int udp_relay_port;
+  int udp_dest_family;
+  unsigned char udp_dest_addr[16];
+  int udp_dest_port;
+  size_t udp_send_count;
+  size_t udp_recv_count;
+  BIT(udp_associate);
+  BIT(udp_dest_set);
 };
 
 #if defined(HAVE_GSSAPI) || defined(USE_WINDOWS_SSPI)
@@ -254,6 +273,50 @@ static CURLproxycode socks_state_recv(struct Curl_cfilter *cf,
   DEBUGASSERT(sx->outstanding >= nread);
   sx->outstanding -= nread;
   sx->outp += nread;
+  return CURLPX_OK;
+}
+
+static CURLproxycode socks5_set_udp_relay(struct socks_state *sx,
+                                          struct Curl_easy *data)
+{
+  const unsigned char *socksreq = sx->buffer;
+  const unsigned char *addrp = &socksreq[4];
+  size_t addrlen;
+  int atyp = socksreq[3];
+
+  if(sx->replylen < 6) {
+    failf(data, "SOCKS5 UDP associate reply too short");
+    return CURLPX_BAD_ADDRESS_TYPE;
+  }
+
+  switch(atyp) {
+  case 1:
+    addrlen = 4;
+    sx->udp_relay_family = AF_INET;
+    break;
+#ifdef USE_IPV6
+  case 4:
+    addrlen = 16;
+    sx->udp_relay_family = AF_INET6;
+    break;
+#endif
+  case 3:
+  default:
+    failf(data, "SOCKS5 UDP associate reply has wrong address type.");
+    return CURLPX_BAD_ADDRESS_TYPE;
+  }
+
+  if(4 + addrlen + 2 > sx->replylen) {
+    failf(data, "SOCKS5 UDP associate reply truncated");
+    return CURLPX_BAD_ADDRESS_TYPE;
+  }
+
+  memcpy(sx->udp_relay_addr, addrp, addrlen);
+  sx->udp_relay_port = (int)((addrp[addrlen] << 8) | addrp[addrlen + 1]);
+  /* Debug: record relay endpoint parsed from SOCKS5 reply. */
+  infof(data, "SOCKS5 UDP relay is %s:%d",
+        (sx->udp_relay_family == AF_INET6) ? "[v6]" : "v4",
+        sx->udp_relay_port);
   return CURLPX_OK;
 }
 
@@ -571,6 +634,8 @@ static CURLproxycode do_SOCKS5(struct Curl_cfilter *cf,
     if(conn->bits.httpproxy)
       infof(data, "SOCKS5: connecting to HTTP proxy %s port %d",
             sx->hostname, sx->remote_port);
+    if(sx->udp_associate)
+      infof(data, "SOCKS5: UDP associate mode enabled for QUIC");
 
     /* RFC1928 chapter 5 specifies max 255 chars for domain name in packet */
     if(!socks5_resolve_local && hostname_len > 255) {
@@ -769,6 +834,19 @@ CONNECT_AUTH_INIT:
     FALLTHROUGH();
   case CONNECT_REQ_INIT:
 CONNECT_REQ_INIT:
+    if(sx->udp_associate) {
+      result = Curl_resolv(data, sx->hostname, sx->remote_port,
+                           cf->conn->ip_version, TRUE, &dns);
+
+      if(result == CURLE_AGAIN) {
+        sxstate(sx, data, CONNECT_RESOLVING);
+        return CURLPX_OK;
+      }
+      else if(result)
+        return CURLPX_RESOLVE_HOST;
+      sxstate(sx, data, CONNECT_RESOLVED);
+      goto CONNECT_RESOLVED;
+    }
     if(socks5_resolve_local) {
       result = Curl_resolv(data, sx->hostname, sx->remote_port,
                            cf->conn->ip_version, TRUE, &dns);
@@ -819,42 +897,85 @@ CONNECT_RESOLVED:
 
     len = 0;
     socksreq[len++] = 5; /* version (SOCKS5) */
-    socksreq[len++] = 1; /* connect */
+    socksreq[len++] = (unsigned char)(sx->udp_associate ? 3 : 1);
     socksreq[len++] = 0; /* must be zero */
-    if(hp->ai_family == AF_INET) {
-      int i;
-      struct sockaddr_in *saddr_in;
-      socksreq[len++] = 1; /* ATYP: IPv4 = 1 */
+    if(!sx->udp_associate) {
+      if(hp->ai_family == AF_INET) {
+        int i;
+        struct sockaddr_in *saddr_in;
+        socksreq[len++] = 1; /* ATYP: IPv4 = 1 */
 
-      saddr_in = (struct sockaddr_in *)(void *)hp->ai_addr;
-      for(i = 0; i < 4; i++) {
-        socksreq[len++] = ((unsigned char *)&saddr_in->sin_addr.s_addr)[i];
+        saddr_in = (struct sockaddr_in *)(void *)hp->ai_addr;
+        for(i = 0; i < 4; i++) {
+          socksreq[len++] = ((unsigned char *)&saddr_in->sin_addr.s_addr)[i];
+        }
+
+        infof(data, "SOCKS5 connect to %s:%d (locally resolved)", dest,
+              sx->remote_port);
+      }
+#ifdef USE_IPV6
+      else if(hp->ai_family == AF_INET6) {
+        int i;
+        struct sockaddr_in6 *saddr_in6;
+        socksreq[len++] = 4; /* ATYP: IPv6 = 4 */
+
+        saddr_in6 = (struct sockaddr_in6 *)(void *)hp->ai_addr;
+        for(i = 0; i < 16; i++) {
+          socksreq[len++] =
+            ((unsigned char *)&saddr_in6->sin6_addr.s6_addr)[i];
+        }
+
+        infof(data, "SOCKS5 connect to [%s]:%d (locally resolved)", dest,
+              sx->remote_port);
+      }
+#endif
+      else {
+        hp = NULL; /* fail! */
+        failf(data, "SOCKS5 connection to %s not supported", dest);
       }
 
-      infof(data, "SOCKS5 connect to %s:%d (locally resolved)", dest,
-            sx->remote_port);
+      Curl_resolv_unlink(data, &dns); /* not used anymore from now on */
+      goto CONNECT_REQ_SEND;
+    }
+
+    if(hp->ai_family == AF_INET) {
+      struct sockaddr_in *saddr_in;
+      saddr_in = (struct sockaddr_in *)(void *)hp->ai_addr;
+      memcpy(sx->udp_dest_addr, &saddr_in->sin_addr, sizeof(struct in_addr));
+      sx->udp_dest_family = AF_INET;
     }
 #ifdef USE_IPV6
     else if(hp->ai_family == AF_INET6) {
-      int i;
       struct sockaddr_in6 *saddr_in6;
-      socksreq[len++] = 4; /* ATYP: IPv6 = 4 */
-
       saddr_in6 = (struct sockaddr_in6 *)(void *)hp->ai_addr;
-      for(i = 0; i < 16; i++) {
-        socksreq[len++] =
-          ((unsigned char *)&saddr_in6->sin6_addr.s6_addr)[i];
-      }
-
-      infof(data, "SOCKS5 connect to [%s]:%d (locally resolved)", dest,
-            sx->remote_port);
+      memcpy(sx->udp_dest_addr, &saddr_in6->sin6_addr,
+             sizeof(struct in6_addr));
+      sx->udp_dest_family = AF_INET6;
     }
 #endif
     else {
-      hp = NULL; /* fail! */
-      failf(data, "SOCKS5 connection to %s not supported", dest);
+      failf(data, "SOCKS5 UDP associate to %s not supported", dest);
+      return CURLPX_BAD_ADDRESS_TYPE;
+    }
+    sx->udp_dest_port = sx->remote_port;
+    sx->udp_dest_set = TRUE;
+
+    infof(data, "SOCKS5 UDP associate storing target %s:%d for UDP header",
+          dest, sx->udp_dest_port);
+
+    if(sx->udp_dest_family == AF_INET6) {
+      socksreq[len++] = 4; /* ATYP: IPv6 = 4 */
+      memset(&socksreq[len], 0, 16);
+      len += 16;
+    }
+    else {
+      socksreq[len++] = 1; /* ATYP: IPv4 = 1 */
+      memset(&socksreq[len], 0, 4);
+      len += 4;
     }
 
+    infof(data, "SOCKS5 UDP associate to %s:%d (locally resolved)", dest,
+          sx->remote_port);
     Curl_resolv_unlink(data, &dns); /* not used anymore from now on */
     goto CONNECT_REQ_SEND;
   }
@@ -863,8 +984,13 @@ CONNECT_RESOLVE_REMOTE:
     /* Authentication is complete, now specify destination to the proxy */
     len = 0;
     socksreq[len++] = 5; /* version (SOCKS5) */
-    socksreq[len++] = 1; /* connect */
+    socksreq[len++] = (unsigned char)(sx->udp_associate ? 3 : 1);
     socksreq[len++] = 0; /* must be zero */
+
+    if(sx->udp_associate) {
+      failf(data, "SOCKS5 UDP associate requires local resolve");
+      return CURLPX_BAD_ADDRESS_TYPE;
+    }
 
     if(!socks5_resolve_local) {
       /* ATYP: domain name = 3,
@@ -900,10 +1026,15 @@ CONNECT_RESOLVE_REMOTE:
 
   case CONNECT_REQ_SEND:
 CONNECT_REQ_SEND:
-    /* PORT MSB */
-    socksreq[len++] = (unsigned char)((sx->remote_port >> 8) & 0xff);
-    /* PORT LSB */
-    socksreq[len++] = (unsigned char)(sx->remote_port & 0xff);
+    {
+      int reqport = sx->udp_associate ? 0 : sx->remote_port;
+      if(sx->udp_associate)
+        infof(data, "SOCKS5 UDP associate request uses port 0 per RFC");
+      /* PORT MSB */
+      socksreq[len++] = (unsigned char)((reqport >> 8) & 0xff);
+      /* PORT LSB */
+      socksreq[len++] = (unsigned char)(reqport & 0xff);
+    }
 
 #if defined(HAVE_GSSAPI) || defined(USE_WINDOWS_SSPI)
     if(conn->socks5_gssapi_enctype) {
@@ -925,6 +1056,8 @@ CONNECT_REQ_SEND:
       /* remain in send state */
       return CURLPX_OK;
     }
+    if(sx->udp_associate)
+      infof(data, "SOCKS5 UDP associate request sent");
 #if defined(HAVE_GSSAPI) || defined(USE_WINDOWS_SSPI)
     if(conn->socks5_gssapi_enctype) {
       failf(data, "SOCKS5 GSS-API protection not yet implemented.");
@@ -1005,6 +1138,7 @@ CONNECT_REQ_SEND:
       failf(data, "SOCKS5 reply has wrong address type.");
       return CURLPX_BAD_ADDRESS_TYPE;
     }
+    sx->replylen = len;
 
     /* At this point we already read first 10 bytes */
 #if defined(HAVE_GSSAPI) || defined(USE_WINDOWS_SSPI)
@@ -1036,9 +1170,93 @@ CONNECT_REQ_SEND:
     }
     sxstate(sx, data, CONNECT_DONE);
   }
+  if(sx->udp_associate && !sx->udp_relay_family) {
+    presult = socks5_set_udp_relay(sx, data);
+    if(CURLPX_OK != presult)
+      return presult;
+    infof(data, "SOCKS5 UDP associate relay established");
+  }
   infof(data, "SOCKS5 request granted.");
 
   return CURLPX_OK; /* Proxy was successful! */
+}
+
+static void socks_proxy_discard_tcp(struct socks_state *sx,
+                                    struct Curl_easy *data)
+{
+  if(sx && sx->tcp_cf) {
+    sx->tcp_cf->cft->do_close(sx->tcp_cf, data);
+    Curl_conn_cf_discard_chain(&sx->tcp_cf, data);
+  }
+}
+
+static CURLcode socks_proxy_cf_udp_create(struct Curl_cfilter *cf,
+                                          struct socks_state *sx,
+                                          struct Curl_easy *data)
+{
+  struct Curl_cfilter *udp_cf = NULL;
+  struct Curl_addrinfo *ai = NULL;
+  CURLcode result;
+  char addrbuf[MAX_IPADR_LEN];
+  int transport = sx->udp_associate ? TRNSPRT_QUIC : TRNSPRT_UDP;
+  size_t addrlen;
+  bool relay_zero = TRUE;
+
+  if(!sx->udp_relay_family || !sx->udp_relay_port)
+    return CURLE_FAILED_INIT;
+  infof(data, "SOCKS5 UDP associate relay port=%d family=%s",
+        sx->udp_relay_port,
+        (sx->udp_relay_family == AF_INET6) ? "IPv6" : "IPv4");
+  addrlen = (sx->udp_relay_family == AF_INET6) ? 16 : 4;
+  for(size_t i = 0; i < addrlen; ++i) {
+    if(sx->udp_relay_addr[i]) {
+      relay_zero = FALSE;
+      break;
+    }
+  }
+  if(relay_zero && sx->tcp_cf) {
+    const struct Curl_sockaddr_ex *peer_addr = NULL;
+    if(!Curl_cf_socket_peek(sx->tcp_cf, data, NULL, &peer_addr, NULL) &&
+       peer_addr) {
+      if(peer_addr->family == AF_INET) {
+        struct sockaddr_in *saddr_in =
+          (struct sockaddr_in *)(void *)&peer_addr->curl_sa_addr;
+        memcpy(sx->udp_relay_addr, &saddr_in->sin_addr,
+               sizeof(struct in_addr));
+        sx->udp_relay_family = AF_INET;
+      }
+#ifdef USE_IPV6
+      else if(peer_addr->family == AF_INET6) {
+        struct sockaddr_in6 *saddr_in6 =
+          (struct sockaddr_in6 *)(void *)&peer_addr->curl_sa_addr;
+        memcpy(sx->udp_relay_addr, &saddr_in6->sin6_addr,
+               sizeof(struct in6_addr));
+        sx->udp_relay_family = AF_INET6;
+      }
+#endif
+    }
+    infof(data, "SOCKS5 UDP relay address was zero; using proxy host address");
+  }
+  if(!curlx_inet_ntop(sx->udp_relay_family, sx->udp_relay_addr,
+                      addrbuf, sizeof(addrbuf)))
+    return CURLE_FAILED_INIT;
+
+  ai = Curl_ip2addr(sx->udp_relay_family, sx->udp_relay_addr,
+                    addrbuf, sx->udp_relay_port);
+  if(!ai)
+    return CURLE_OUT_OF_MEMORY;
+
+  result = Curl_cf_udp_create(&udp_cf, data, cf->conn, ai, transport);
+  Curl_freeaddrinfo(ai);
+  if(result)
+    return result;
+
+  udp_cf->conn = cf->conn;
+  udp_cf->sockindex = cf->sockindex;
+  sx->udp_cf = udp_cf;
+  infof(data, "SOCKS5 UDP relay socket prepared for %s:%d",
+        addrbuf, sx->udp_relay_port);
+  return CURLE_OK;
 }
 
 static CURLcode connect_SOCKS(struct Curl_cfilter *cf,
@@ -1048,6 +1266,13 @@ static CURLcode connect_SOCKS(struct Curl_cfilter *cf,
   CURLcode result = CURLE_OK;
   CURLproxycode pxresult = CURLPX_OK;
   struct connectdata *conn = cf->conn;
+
+  if(sxstate->udp_associate &&
+     conn->socks_proxy.proxytype != CURLPROXY_SOCKS5) {
+    failf(data, "SOCKS: UDP associate only supported with SOCKS5");
+    data->info.pxcode = CURLPX_REPLY_COMMAND_NOT_SUPPORTED;
+    return CURLE_PROXY;
+  }
 
   switch(conn->socks_proxy.proxytype) {
   case CURLPROXY_SOCKS5:
@@ -1072,10 +1297,12 @@ static CURLcode connect_SOCKS(struct Curl_cfilter *cf,
   return result;
 }
 
-static void socks_proxy_cf_free(struct Curl_cfilter *cf)
+static void socks_proxy_cf_free(struct Curl_cfilter *cf,
+                                struct Curl_easy *data)
 {
   struct socks_state *sxstate = cf->ctx;
   if(sxstate) {
+    socks_proxy_discard_tcp(sxstate, data);
     free(sxstate);
     cf->ctx = NULL;
   }
@@ -1096,13 +1323,19 @@ static CURLcode socks_proxy_cf_connect(struct Curl_cfilter *cf,
   struct connectdata *conn = cf->conn;
   int sockindex = cf->sockindex;
   struct socks_state *sx = cf->ctx;
+  struct Curl_cfilter *tcp_cf = NULL;
 
   if(cf->connected) {
     *done = TRUE;
     return CURLE_OK;
   }
 
-  result = cf->next->cft->do_connect(cf->next, data, done);
+  if(sx && sx->tcp_cf)
+    tcp_cf = sx->tcp_cf;
+  else
+    tcp_cf = cf->next;
+
+  result = tcp_cf->cft->do_connect(tcp_cf, data, done);
   if(result || !*done)
     return result;
 
@@ -1132,17 +1365,177 @@ static CURLcode socks_proxy_cf_connect(struct Curl_cfilter *cf,
       conn->remote_port;
     sx->proxy_user = conn->socks_proxy.user;
     sx->proxy_password = conn->socks_proxy.passwd;
+    /* Use UDP associate for explicit HTTP/3-only or QUIC transport. */
+    sx->udp_associate =
+      (conn->transport_wanted == TRNSPRT_QUIC) ||
+      (data->state.http_neg.wanted == CURL_HTTP_V3x);
+    if(sx->udp_associate)
+      infof(data, "SOCKS5 UDP associate starting for HTTP/3 target");
   }
 
   result = connect_SOCKS(cf, sx, data);
   if(!result && sx->state == CONNECT_DONE) {
+    if(sx->udp_associate) {
+      if(!sx->udp_cf) {
+        result = socks_proxy_cf_udp_create(cf, sx, data);
+        if(result)
+          return result;
+        sx->tcp_cf = cf->next;
+        cf->next = sx->udp_cf;
+        infof(data, "SOCKS5 UDP associate switching to UDP relay socket");
+      }
+      result = sx->udp_cf->cft->do_connect(sx->udp_cf, data, done);
+      if(result || !*done)
+        return result;
+    }
     cf->connected = TRUE;
     Curl_verboseconnect(data, conn, cf->sockindex);
-    socks_proxy_cf_free(cf);
+    if(!sx->udp_associate)
+      socks_proxy_cf_free(cf, data);
   }
 
   *done = cf->connected;
   return result;
+}
+
+static CURLcode socks_proxy_cf_send(struct Curl_cfilter *cf,
+                                    struct Curl_easy *data,
+                                    const void *buf, size_t len, bool eos,
+                                    size_t *pnwritten)
+{
+  struct socks_state *sx = cf->ctx;
+
+  if(sx && sx->udp_associate && sx->udp_cf) {
+    size_t header_len;
+    size_t addrlen;
+    size_t nwritten = 0;
+    unsigned char atyp;
+    unsigned char *packet;
+    CURLcode result;
+
+    *pnwritten = 0;
+    if(!sx->udp_dest_set)
+      return CURLE_SEND_ERROR;
+
+    if(sx->udp_dest_family == AF_INET6) {
+      addrlen = 16;
+      atyp = 4;
+    }
+    else {
+      addrlen = 4;
+      atyp = 1;
+    }
+
+    header_len = 4 + addrlen + 2;
+    packet = malloc(header_len + len);
+    if(!packet)
+      return CURLE_OUT_OF_MEMORY;
+
+    packet[0] = 0;
+    packet[1] = 0;
+    packet[2] = 0;
+    packet[3] = atyp;
+    memcpy(&packet[4], sx->udp_dest_addr, addrlen);
+    packet[4 + addrlen] = (unsigned char)((sx->udp_dest_port >> 8) & 0xff);
+    packet[5 + addrlen] = (unsigned char)(sx->udp_dest_port & 0xff);
+    memcpy(&packet[header_len], buf, len);
+
+    infof(data, "SOCKS5 UDP send #%zu: payload=%zu header=%zu",
+          ++sx->udp_send_count, len, header_len);
+    result = cf->next->cft->do_send(cf->next, data, packet,
+                                    header_len + len, eos, &nwritten);
+    free(packet);
+    if(result) {
+      if(result == CURLE_AGAIN)
+        *pnwritten = 0;
+      return result;
+    }
+
+    if(nwritten != (header_len + len))
+      return CURLE_SEND_ERROR;
+
+    *pnwritten = len;
+    return CURLE_OK;
+  }
+
+  return Curl_cf_def_send(cf, data, buf, len, eos, pnwritten);
+}
+
+static CURLcode socks_proxy_cf_recv(struct Curl_cfilter *cf,
+                                    struct Curl_easy *data,
+                                    char *buf, size_t len, size_t *pnread)
+{
+  struct socks_state *sx = cf->ctx;
+
+  if(sx && sx->udp_associate && sx->udp_cf) {
+    size_t maxhdr = 4 + 1 + 255 + 2;
+    size_t pktlen = len + maxhdr;
+    unsigned char *packet = malloc(pktlen);
+    size_t nread = 0;
+    CURLcode result;
+
+    *pnread = 0;
+    if(!packet)
+      return CURLE_OUT_OF_MEMORY;
+
+    result = cf->next->cft->do_recv(cf->next, data, (char *)packet,
+                                    pktlen, &nread);
+    if(result) {
+      free(packet);
+      return result;
+    }
+
+    if(nread < 4) {
+      free(packet);
+      return CURLE_RECV_ERROR;
+    }
+    if(packet[0] || packet[1] || packet[2]) {
+      free(packet);
+      return CURLE_RECV_ERROR;
+    }
+    {
+      size_t addrlen;
+      size_t off = 4;
+      switch(packet[3]) {
+      case 1:
+        addrlen = 4;
+        break;
+      case 4:
+        addrlen = 16;
+        break;
+      case 3:
+        if(nread < 5) {
+          free(packet);
+          return CURLE_RECV_ERROR;
+        }
+        addrlen = 1 + packet[4];
+        break;
+      default:
+        free(packet);
+        return CURLE_RECV_ERROR;
+      }
+      if(nread < off + addrlen + 2) {
+        free(packet);
+        return CURLE_RECV_ERROR;
+      }
+      off += addrlen + 2;
+      if(nread > off) {
+        size_t payload = nread - off;
+        if(payload > len)
+          payload = len;
+        memcpy(buf, &packet[off], payload);
+        *pnread = payload;
+        infof(data, "SOCKS5 UDP recv #%zu: payload=%zu header=%zu",
+              ++sx->udp_recv_count, payload, off);
+      }
+      else
+        *pnread = 0;
+    }
+    free(packet);
+    return CURLE_OK;
+  }
+
+  return Curl_cf_def_recv(cf, data, buf, len, pnread);
 }
 
 static void socks_cf_adjust_pollset(struct Curl_cfilter *cf,
@@ -1176,15 +1569,14 @@ static void socks_proxy_cf_close(struct Curl_cfilter *cf,
 
   DEBUGASSERT(cf->next);
   cf->connected = FALSE;
-  socks_proxy_cf_free(cf);
+  socks_proxy_cf_free(cf, data);
   cf->next->cft->do_close(cf->next, data);
 }
 
 static void socks_proxy_cf_destroy(struct Curl_cfilter *cf,
                                    struct Curl_easy *data)
 {
-  (void)data;
-  socks_proxy_cf_free(cf);
+  socks_proxy_cf_free(cf, data);
 }
 
 static CURLcode socks_cf_query(struct Curl_cfilter *cf,
@@ -1218,13 +1610,24 @@ struct Curl_cftype Curl_cft_socks_proxy = {
   Curl_cf_def_shutdown,
   socks_cf_adjust_pollset,
   Curl_cf_def_data_pending,
-  Curl_cf_def_send,
-  Curl_cf_def_recv,
+  socks_proxy_cf_send,
+  socks_proxy_cf_recv,
   Curl_cf_def_cntrl,
   Curl_cf_def_conn_is_alive,
   Curl_cf_def_conn_keep_alive,
   socks_cf_query,
 };
+
+bool Curl_cf_socks_proxy_is_udp_associate(struct Curl_cfilter *cf)
+{
+  for(; cf; cf = cf->next) {
+    if(cf->cft == &Curl_cft_socks_proxy) {
+      struct socks_state *sx = cf->ctx;
+      return sx && sx->udp_associate;
+    }
+  }
+  return FALSE;
+}
 
 CURLcode Curl_cf_socks_proxy_insert_after(struct Curl_cfilter *cf_at,
                                           struct Curl_easy *data)

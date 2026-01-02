@@ -56,6 +56,7 @@
 #include "../cfilters.h"
 #include "../cf-socket.h"
 #include "../connect.h"
+#include "../socks.h"
 #include "../progress.h"
 #include "../strerror.h"
 #include "../curlx/dynbuf.h"
@@ -88,6 +89,23 @@
  * when we take things out of the buffer.
  * Chunk size is large enough to take a full DATA frame */
 #define H3_STREAM_WINDOW_SIZE (128 * 1024)
+
+static const struct alpn_spec ALPN_SPEC_H3 = {
+  { "h3", "h3-29" }, 2
+};
+
+static CURLcode cf_ngtcp2_peek_socket(struct Curl_cfilter *cf,
+                                      struct Curl_easy *data,
+                                      curl_socket_t *psock,
+                                      const struct Curl_sockaddr_ex **paddr,
+                                      struct ip_quadruple *pip)
+{
+  for(; cf; cf = cf->next) {
+    if(!Curl_cf_socket_peek(cf, data, psock, paddr, pip))
+      return CURLE_OK;
+  }
+  return CURLE_FAILED_INIT;
+}
 #define H3_STREAM_CHUNK_SIZE   (16 * 1024)
 #if H3_STREAM_CHUNK_SIZE < NGTCP2_MAX_UDP_PAYLOAD_SIZE
 #error H3_STREAM_CHUNK_SIZE smaller than NGTCP2_MAX_UDP_PAYLOAD_SIZE
@@ -2420,9 +2438,6 @@ static CURLcode cf_connect_start(struct Curl_cfilter *cf,
   CURLcode result;
   const struct Curl_sockaddr_ex *sockaddr = NULL;
   int qfd;
-static const struct alpn_spec ALPN_SPEC_H3 = {
-  { "h3", "h3-29" }, 2
-};
 
   DEBUGASSERT(ctx->initialized);
   ctx->dcid.datalen = NGTCP2_MAX_CIDLEN;
@@ -2443,7 +2458,7 @@ static const struct alpn_spec ALPN_SPEC_H3 = {
   if(result)
     return result;
 
-  Curl_cf_socket_peek(cf->next, data, &ctx->q.sockfd, &sockaddr, NULL);
+  cf_ngtcp2_peek_socket(cf->next, data, &ctx->q.sockfd, &sockaddr, NULL);
   if(!sockaddr)
     return CURLE_QUIC_CONNECT_ERROR;
   ctx->q.local_addrlen = sizeof(ctx->q.local_addr);
@@ -2578,7 +2593,7 @@ out:
   if(result) {
     struct ip_quadruple ip;
 
-    Curl_cf_socket_peek(cf->next, data, NULL, NULL, &ip);
+    cf_ngtcp2_peek_socket(cf->next, data, NULL, NULL, &ip);
     infof(data, "QUIC connect to %s port %u failed: %s",
           ip.remote_ip, ip.remote_port, curl_easy_strerror(result));
   }
@@ -2732,7 +2747,10 @@ CURLcode Curl_cf_ngtcp2_create(struct Curl_cfilter **pcf,
                                const struct Curl_addrinfo *ai)
 {
   struct cf_ngtcp2_ctx *ctx = NULL;
-  struct Curl_cfilter *cf = NULL, *udp_cf = NULL;
+  struct Curl_cfilter *cf = NULL;
+  struct Curl_cfilter *udp_cf = NULL;
+  struct Curl_cfilter *socks_cf = NULL;
+  struct Curl_cfilter *tcp_cf = NULL;
   CURLcode result;
 
   (void)data;
@@ -2747,20 +2765,40 @@ CURLcode Curl_cf_ngtcp2_create(struct Curl_cfilter **pcf,
   if(result)
     goto out;
 
-  result = Curl_cf_udp_create(&udp_cf, data, conn, ai, TRNSPRT_QUIC);
-  if(result)
-    goto out;
-
   cf->conn = conn;
-  udp_cf->conn = cf->conn;
-  udp_cf->sockindex = cf->sockindex;
-  cf->next = udp_cf;
+  if(conn->bits.socksproxy) {
+    result = Curl_cf_create(&socks_cf, &Curl_cft_socks_proxy, NULL);
+    if(result)
+      goto out;
+    socks_cf->conn = cf->conn;
+    socks_cf->sockindex = cf->sockindex;
+    result = Curl_cf_tcp_create(&tcp_cf, data, conn, ai, TRNSPRT_TCP);
+    if(result)
+      goto out;
+    tcp_cf->conn = cf->conn;
+    tcp_cf->sockindex = cf->sockindex;
+    socks_cf->next = tcp_cf;
+    cf->next = socks_cf;
+  }
+  else {
+    result = Curl_cf_udp_create(&udp_cf, data, conn, ai, TRNSPRT_QUIC);
+    if(result)
+      goto out;
+
+    udp_cf->conn = cf->conn;
+    udp_cf->sockindex = cf->sockindex;
+    cf->next = udp_cf;
+  }
 
 out:
   *pcf = (!result) ? cf : NULL;
   if(result) {
     if(udp_cf)
       Curl_conn_cf_discard_sub(cf, udp_cf, data, TRUE);
+    if(socks_cf)
+      Curl_conn_cf_discard_sub(cf, socks_cf, data, TRUE);
+    if(tcp_cf)
+      Curl_conn_cf_discard_sub(cf, tcp_cf, data, TRUE);
     Curl_safefree(cf);
     cf_ngtcp2_ctx_free(ctx);
   }

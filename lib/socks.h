@@ -30,7 +30,9 @@
 #define Curl_SOCKS4(a,b,c,d,e) CURLE_NOT_BUILT_IN
 #define Curl_SOCKS5(a,b,c,d,e,f) CURLE_NOT_BUILT_IN
 #define Curl_SOCKS_getsock(x,y,z) 0
+#define Curl_cf_socks_proxy_is_udp_associate(x) FALSE
 #else
+struct Curl_cfilter;
 /*
  * Helper read-from-socket functions. Does the same as Curl_read() but it
  * blocks until all bytes amount of buffersize will be read. No more, no less.
@@ -53,6 +55,8 @@ CURLcode Curl_SOCKS5_gssapi_negotiate(struct Curl_cfilter *cf,
 
 CURLcode Curl_cf_socks_proxy_insert_after(struct Curl_cfilter *cf_at,
                                           struct Curl_easy *data);
+
+bool Curl_cf_socks_proxy_is_udp_associate(struct Curl_cfilter *cf);
 
 extern struct Curl_cftype Curl_cft_socks_proxy;
 
