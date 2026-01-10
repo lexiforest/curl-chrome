@@ -56,6 +56,7 @@ CURLcode Curl_SOCKS5_gssapi_negotiate(struct Curl_cfilter *cf,
 CURLcode Curl_cf_socks_proxy_insert_after(struct Curl_cfilter *cf_at,
                                           struct Curl_easy *data);
 
+/* Query if a SOCKS filter in the chain is using UDP ASSOCIATE. */
 bool Curl_cf_socks_proxy_is_udp_associate(struct Curl_cfilter *cf);
 
 extern struct Curl_cftype Curl_cft_socks_proxy;

@@ -77,6 +77,12 @@ enum connect_t {
   CONNECT_DONE /* 17 connected fine to the remote or the SOCKS proxy */
 };
 
+enum socks5_atyp {
+  SOCKS5_ATYP_IPV4 = 1,
+  SOCKS5_ATYP_DOMAIN = 3,
+  SOCKS5_ATYP_IPV6 = 4
+};
+
 #define CURL_SOCKS_BUF_SIZE 600
 
 /* make sure we configure it not too low */
@@ -95,19 +101,29 @@ struct socks_state {
   int remote_port;
   const char *proxy_user;
   const char *proxy_password;
-  size_t replylen;
-  struct Curl_cfilter *tcp_cf;
-  struct Curl_cfilter *udp_cf;
-  int udp_relay_family;
-  unsigned char udp_relay_addr[16];
+
+  // See more in RFC 1928
+  size_t replylen;                  /* SOCKS5 reply length to read after fixed header */
+  struct Curl_cfilter *tcp_cf;      /* TCP control channel to the SOCKS proxy for UDP */
+  struct Curl_cfilter *udp_cf;      /* UDP data relay channel to the SOCKS proxy */
+
+  unsigned char udp_relay_addr[16]; /* relay address, port and family */
   int udp_relay_port;
-  int udp_dest_family;
-  unsigned char udp_dest_addr[16];
+  int udp_relay_family;
+  int udp_dest_atyp;                /* SOCKS5 ATYP for UDP destination */
+  unsigned char udp_dest_addr[16];  /* QUIC destination address, port and family */
   int udp_dest_port;
-  size_t udp_send_count;
+  int udp_dest_family;
+  unsigned char udp_dest_domain[256];
+  size_t udp_dest_domain_len;
+  struct Curl_sockaddr_ex udp_peer_addr;
+  BIT(udp_peer_set);
+
+  size_t udp_send_count;            /* UDP relay packet counters for debugging */
   size_t udp_recv_count;
-  BIT(udp_associate);
-  BIT(udp_dest_set);
+
+  BIT(udp_associate);               /* use SOCKS5 UDP ASSOCIATE instead of CONNECT */
+  BIT(udp_dest_set);                /* QUIC destination cached for UDP headers */
 };
 
 #if defined(HAVE_GSSAPI) || defined(USE_WINDOWS_SSPI)
@@ -276,47 +292,55 @@ static CURLproxycode socks_state_recv(struct Curl_cfilter *cf,
   return CURLPX_OK;
 }
 
+/* curl-impersonate: set up udp relay
+ * Parse the address in reply and store the relay address/port in socks_state.
+ * */
 static CURLproxycode socks5_set_udp_relay(struct socks_state *sx,
                                           struct Curl_easy *data)
 {
   const unsigned char *socksreq = sx->buffer;
-  const unsigned char *addrp = &socksreq[4];
+  const unsigned char *addrp = &socksreq[4]; /* First 4 bytes are VER, REP, RSV, ATYP */
   size_t addrlen;
-  int atyp = socksreq[3];
+  int atyp = socksreq[3]; /* ATYP from SOCKS5 reply */
 
-  if(sx->replylen < 6) {
+  if(sx->replylen < 6) { /* minimum: 4-byte header + 2-byte port */
     failf(data, "SOCKS5 UDP associate reply too short");
     return CURLPX_BAD_ADDRESS_TYPE;
   }
 
   switch(atyp) {
-  case 1:
-    addrlen = 4;
-    sx->udp_relay_family = AF_INET;
-    break;
+    case SOCKS5_ATYP_IPV4:
+      addrlen = 4;
+      sx->udp_relay_family = AF_INET;
+      break;
 #ifdef USE_IPV6
-  case 4:
-    addrlen = 16;
-    sx->udp_relay_family = AF_INET6;
-    break;
+    case SOCKS5_ATYP_IPV6:
+      addrlen = 16;
+      sx->udp_relay_family = AF_INET6;
+      break;
 #endif
-  case 3:
-  default:
-    failf(data, "SOCKS5 UDP associate reply has wrong address type.");
-    return CURLPX_BAD_ADDRESS_TYPE;
+    case SOCKS5_ATYP_DOMAIN:
+    default:
+      failf(data, "SOCKS5 UDP associate reply has wrong address type.");
+      return CURLPX_BAD_ADDRESS_TYPE;
   }
 
-  if(4 + addrlen + 2 > sx->replylen) {
+  if(4 + addrlen + 2 > sx->replylen) { /* header + addr + port */
     failf(data, "SOCKS5 UDP associate reply truncated");
     return CURLPX_BAD_ADDRESS_TYPE;
   }
 
   memcpy(sx->udp_relay_addr, addrp, addrlen);
+  /* Port is in network byte order in the last two bytes. */
   sx->udp_relay_port = (int)((addrp[addrlen] << 8) | addrp[addrlen + 1]);
-  /* Debug: record relay endpoint parsed from SOCKS5 reply. */
-  infof(data, "SOCKS5 UDP relay is %s:%d",
-        (sx->udp_relay_family == AF_INET6) ? "[v6]" : "v4",
-        sx->udp_relay_port);
+  {
+    char addrstr[MAX_IPADR_LEN] = "";
+    if(!curlx_inet_ntop(sx->udp_relay_family, sx->udp_relay_addr,
+                        addrstr, sizeof(addrstr)))
+      strcpy(addrstr, "unknown");
+    infof(data, "SOCKS5 UDP relay reply ATYP=%d BND.ADDR=%s BND.PORT=%d",
+          atyp, addrstr, sx->udp_relay_port);
+  }
   return CURLPX_OK;
 }
 
@@ -634,6 +658,7 @@ static CURLproxycode do_SOCKS5(struct Curl_cfilter *cf,
     if(conn->bits.httpproxy)
       infof(data, "SOCKS5: connecting to HTTP proxy %s port %d",
             sx->hostname, sx->remote_port);
+    /* curl-impersonate */
     if(sx->udp_associate)
       infof(data, "SOCKS5: UDP associate mode enabled for QUIC");
 
@@ -834,7 +859,10 @@ CONNECT_AUTH_INIT:
     FALLTHROUGH();
   case CONNECT_REQ_INIT:
 CONNECT_REQ_INIT:
+    /* curl-impersonate: init the UDP associate req by resolving DNS */
     if(sx->udp_associate) {
+      if(!socks5_resolve_local)
+        goto CONNECT_RESOLVE_REMOTE;
       result = Curl_resolv(data, sx->hostname, sx->remote_port,
                            cf->conn->ip_version, TRUE, &dns);
 
@@ -897,13 +925,13 @@ CONNECT_RESOLVED:
 
     len = 0;
     socksreq[len++] = 5; /* version (SOCKS5) */
-    socksreq[len++] = (unsigned char)(sx->udp_associate ? 3 : 1);
+    socksreq[len++] = sx->udp_associate ? 3 : 1; /* associate: 0x03, connect: 0x01 */
     socksreq[len++] = 0; /* must be zero */
     if(!sx->udp_associate) {
       if(hp->ai_family == AF_INET) {
         int i;
         struct sockaddr_in *saddr_in;
-        socksreq[len++] = 1; /* ATYP: IPv4 = 1 */
+        socksreq[len++] = SOCKS5_ATYP_IPV4;
 
         saddr_in = (struct sockaddr_in *)(void *)hp->ai_addr;
         for(i = 0; i < 4; i++) {
@@ -917,7 +945,7 @@ CONNECT_RESOLVED:
       else if(hp->ai_family == AF_INET6) {
         int i;
         struct sockaddr_in6 *saddr_in6;
-        socksreq[len++] = 4; /* ATYP: IPv6 = 4 */
+        socksreq[len++] = SOCKS5_ATYP_IPV6;
 
         saddr_in6 = (struct sockaddr_in6 *)(void *)hp->ai_addr;
         for(i = 0; i < 16; i++) {
@@ -943,6 +971,7 @@ CONNECT_RESOLVED:
       saddr_in = (struct sockaddr_in *)(void *)hp->ai_addr;
       memcpy(sx->udp_dest_addr, &saddr_in->sin_addr, sizeof(struct in_addr));
       sx->udp_dest_family = AF_INET;
+      sx->udp_dest_atyp = SOCKS5_ATYP_IPV4;
     }
 #ifdef USE_IPV6
     else if(hp->ai_family == AF_INET6) {
@@ -951,6 +980,7 @@ CONNECT_RESOLVED:
       memcpy(sx->udp_dest_addr, &saddr_in6->sin6_addr,
              sizeof(struct in6_addr));
       sx->udp_dest_family = AF_INET6;
+      sx->udp_dest_atyp = SOCKS5_ATYP_IPV6;
     }
 #endif
     else {
@@ -959,17 +989,47 @@ CONNECT_RESOLVED:
     }
     sx->udp_dest_port = sx->remote_port;
     sx->udp_dest_set = TRUE;
+    if(sx->udp_dest_atyp == SOCKS5_ATYP_IPV4 ||
+       sx->udp_dest_atyp == SOCKS5_ATYP_IPV6) {
+      memset(&sx->udp_peer_addr, 0, sizeof(sx->udp_peer_addr));
+      if(sx->udp_dest_atyp == SOCKS5_ATYP_IPV4) {
+        struct sockaddr_in *sa =
+          (struct sockaddr_in *)(void *)&sx->udp_peer_addr.curl_sa_addr;
+        sa->sin_family = AF_INET;
+        memcpy(&sa->sin_addr, sx->udp_dest_addr, sizeof(struct in_addr));
+        sa->sin_port = htons((unsigned short)sx->udp_dest_port);
+        sx->udp_peer_addr.family = AF_INET;
+        sx->udp_peer_addr.socktype = SOCK_DGRAM;
+        sx->udp_peer_addr.protocol = IPPROTO_UDP;
+        sx->udp_peer_addr.addrlen = sizeof(struct sockaddr_in);
+        sx->udp_peer_set = TRUE;
+      }
+#ifdef USE_IPV6
+      else {
+        struct sockaddr_in6 *sa6 =
+          (struct sockaddr_in6 *)(void *)&sx->udp_peer_addr.curl_sa_addr;
+        sa6->sin6_family = AF_INET6;
+        memcpy(&sa6->sin6_addr, sx->udp_dest_addr, sizeof(struct in6_addr));
+        sa6->sin6_port = htons((unsigned short)sx->udp_dest_port);
+        sx->udp_peer_addr.family = AF_INET6;
+        sx->udp_peer_addr.socktype = SOCK_DGRAM;
+        sx->udp_peer_addr.protocol = IPPROTO_UDP;
+        sx->udp_peer_addr.addrlen = sizeof(struct sockaddr_in6);
+        sx->udp_peer_set = TRUE;
+      }
+#endif
+    }
 
     infof(data, "SOCKS5 UDP associate storing target %s:%d for UDP header",
           dest, sx->udp_dest_port);
 
     if(sx->udp_dest_family == AF_INET6) {
-      socksreq[len++] = 4; /* ATYP: IPv6 = 4 */
+      socksreq[len++] = SOCKS5_ATYP_IPV6;
       memset(&socksreq[len], 0, 16);
       len += 16;
     }
     else {
-      socksreq[len++] = 1; /* ATYP: IPv4 = 1 */
+      socksreq[len++] = SOCKS5_ATYP_IPV4;
       memset(&socksreq[len], 0, 4);
       len += 4;
     }
@@ -984,12 +1044,80 @@ CONNECT_RESOLVE_REMOTE:
     /* Authentication is complete, now specify destination to the proxy */
     len = 0;
     socksreq[len++] = 5; /* version (SOCKS5) */
-    socksreq[len++] = (unsigned char)(sx->udp_associate ? 3 : 1);
+    socksreq[len++] = sx->udp_associate ? 3 : 1; /* associate: 0x03, connect: 0x01 */
     socksreq[len++] = 0; /* must be zero */
 
     if(sx->udp_associate) {
-      failf(data, "SOCKS5 UDP associate requires local resolve");
-      return CURLPX_BAD_ADDRESS_TYPE;
+      unsigned char ip4[4];
+#ifdef USE_IPV6
+      char ip6[16];
+#endif
+      if(hostname_len > 255) {
+        failf(data, "SOCKS5: the destination hostname is too long to be "
+              "resolved remotely by the proxy.");
+        return CURLPX_LONG_HOSTNAME;
+      }
+      /* Cache target port up front so cached peer info uses the right value. */
+      sx->udp_dest_port = sx->remote_port;
+      if(1 == curlx_inet_pton(AF_INET, sx->hostname, ip4)) {
+        memcpy(sx->udp_dest_addr, ip4, sizeof(ip4));
+        sx->udp_dest_family = AF_INET;
+        sx->udp_dest_atyp = SOCKS5_ATYP_IPV4;
+        memset(&sx->udp_peer_addr, 0, sizeof(sx->udp_peer_addr));
+        {
+          struct sockaddr_in *sa =
+            (struct sockaddr_in *)(void *)&sx->udp_peer_addr.curl_sa_addr;
+          sa->sin_family = AF_INET;
+          memcpy(&sa->sin_addr, sx->udp_dest_addr, sizeof(struct in_addr));
+          sa->sin_port = htons((unsigned short)sx->udp_dest_port);
+          sx->udp_peer_addr.family = AF_INET;
+          sx->udp_peer_addr.socktype = SOCK_DGRAM;
+          sx->udp_peer_addr.protocol = IPPROTO_UDP;
+          sx->udp_peer_addr.addrlen = sizeof(struct sockaddr_in);
+          sx->udp_peer_set = TRUE;
+        }
+      }
+#ifdef USE_IPV6
+      else if(1 == curlx_inet_pton(AF_INET6, sx->hostname, ip6)) {
+        memcpy(sx->udp_dest_addr, ip6, sizeof(ip6));
+        sx->udp_dest_family = AF_INET6;
+        sx->udp_dest_atyp = SOCKS5_ATYP_IPV6;
+        memset(&sx->udp_peer_addr, 0, sizeof(sx->udp_peer_addr));
+        {
+          struct sockaddr_in6 *sa6 =
+            (struct sockaddr_in6 *)(void *)&sx->udp_peer_addr.curl_sa_addr;
+          sa6->sin6_family = AF_INET6;
+          memcpy(&sa6->sin6_addr, sx->udp_dest_addr, sizeof(struct in6_addr));
+          sa6->sin6_port = htons((unsigned short)sx->udp_dest_port);
+          sx->udp_peer_addr.family = AF_INET6;
+          sx->udp_peer_addr.socktype = SOCK_DGRAM;
+          sx->udp_peer_addr.protocol = IPPROTO_UDP;
+          sx->udp_peer_addr.addrlen = sizeof(struct sockaddr_in6);
+          sx->udp_peer_set = TRUE;
+        }
+      }
+#endif
+      else {
+        sx->udp_dest_atyp = SOCKS5_ATYP_DOMAIN;
+        memcpy(sx->udp_dest_domain, sx->hostname, hostname_len);
+        sx->udp_dest_domain_len = hostname_len;
+      }
+      sx->udp_dest_set = TRUE;
+
+      if(data->set.ipver == CURL_IPRESOLVE_V6) {
+        socksreq[len++] = SOCKS5_ATYP_IPV6;
+        memset(&socksreq[len], 0, 16);
+        len += 16;
+      }
+      else {
+        socksreq[len++] = SOCKS5_ATYP_IPV4;
+        memset(&socksreq[len], 0, 4);
+        len += 4;
+      }
+
+      infof(data, "SOCKS5 UDP associate to %s:%d (remotely resolved)",
+            sx->hostname, sx->remote_port);
+      goto CONNECT_REQ_SEND;
     }
 
     if(!socks5_resolve_local) {
@@ -1002,19 +1130,19 @@ CONNECT_RESOLVE_REMOTE:
         char ip6[16];
         if(1 != curlx_inet_pton(AF_INET6, sx->hostname, ip6))
           return CURLPX_BAD_ADDRESS_TYPE;
-        socksreq[len++] = 4;
+        socksreq[len++] = SOCKS5_ATYP_IPV6;
         memcpy(&socksreq[len], ip6, sizeof(ip6));
         len += sizeof(ip6);
       }
       else
 #endif
       if(1 == curlx_inet_pton(AF_INET, sx->hostname, ip4)) {
-        socksreq[len++] = 1;
+        socksreq[len++] = SOCKS5_ATYP_IPV4;
         memcpy(&socksreq[len], ip4, sizeof(ip4));
         len += sizeof(ip4);
       }
       else {
-        socksreq[len++] = 3;
+        socksreq[len++] = SOCKS5_ATYP_DOMAIN;
         socksreq[len++] = (unsigned char) hostname_len; /* one byte length */
         memcpy(&socksreq[len], sx->hostname, hostname_len); /* w/o NULL */
         len += hostname_len;
@@ -1195,9 +1323,11 @@ static CURLcode socks_proxy_cf_udp_create(struct Curl_cfilter *cf,
                                           struct Curl_easy *data)
 {
   struct Curl_cfilter *udp_cf = NULL;
+  struct Curl_cfilter *tcp_cf = sx->tcp_cf ? sx->tcp_cf : cf->next;
   struct Curl_addrinfo *ai = NULL;
   CURLcode result;
   char addrbuf[MAX_IPADR_LEN];
+  /* QUIC needs a connected UDP socket when using UDP ASSOCIATE. */
   int transport = sx->udp_associate ? TRNSPRT_QUIC : TRNSPRT_UDP;
   size_t addrlen;
   bool relay_zero = TRUE;
@@ -1214,9 +1344,10 @@ static CURLcode socks_proxy_cf_udp_create(struct Curl_cfilter *cf,
       break;
     }
   }
-  if(relay_zero && sx->tcp_cf) {
+  /* If the relay address is 0.0.0.0/::, reuse the proxy's TCP peer. */
+  if(relay_zero && tcp_cf) {
     const struct Curl_sockaddr_ex *peer_addr = NULL;
-    if(!Curl_cf_socket_peek(sx->tcp_cf, data, NULL, &peer_addr, NULL) &&
+    if(!Curl_cf_socket_peek(tcp_cf, data, NULL, &peer_addr, NULL) &&
        peer_addr) {
       if(peer_addr->family == AF_INET) {
         struct sockaddr_in *saddr_in =
@@ -1268,7 +1399,8 @@ static CURLcode connect_SOCKS(struct Curl_cfilter *cf,
   struct connectdata *conn = cf->conn;
 
   if(sxstate->udp_associate &&
-     conn->socks_proxy.proxytype != CURLPROXY_SOCKS5) {
+     conn->socks_proxy.proxytype != CURLPROXY_SOCKS5 &&
+     conn->socks_proxy.proxytype != CURLPROXY_SOCKS5_HOSTNAME) {
     failf(data, "SOCKS: UDP associate only supported with SOCKS5");
     data->info.pxcode = CURLPX_REPLY_COMMAND_NOT_SUPPORTED;
     return CURLE_PROXY;
@@ -1380,6 +1512,7 @@ static CURLcode socks_proxy_cf_connect(struct Curl_cfilter *cf,
         result = socks_proxy_cf_udp_create(cf, sx, data);
         if(result)
           return result;
+        /* Keep TCP control channel and switch data path to UDP relay. */
         sx->tcp_cf = cf->next;
         cf->next = sx->udp_cf;
         infof(data, "SOCKS5 UDP associate switching to UDP relay socket");
@@ -1406,6 +1539,7 @@ static CURLcode socks_proxy_cf_send(struct Curl_cfilter *cf,
   struct socks_state *sx = cf->ctx;
 
   if(sx && sx->udp_associate && sx->udp_cf) {
+    /* Wrap outgoing QUIC datagrams in SOCKS5 UDP headers. */
     size_t header_len;
     size_t addrlen;
     size_t nwritten = 0;
@@ -1417,13 +1551,22 @@ static CURLcode socks_proxy_cf_send(struct Curl_cfilter *cf,
     if(!sx->udp_dest_set)
       return CURLE_SEND_ERROR;
 
-    if(sx->udp_dest_family == AF_INET6) {
+    switch(sx->udp_dest_atyp) {
+    case SOCKS5_ATYP_IPV6:
       addrlen = 16;
-      atyp = 4;
-    }
-    else {
+      atyp = SOCKS5_ATYP_IPV6;
+      break;
+    case SOCKS5_ATYP_DOMAIN:
+      if(!sx->udp_dest_domain_len)
+        return CURLE_SEND_ERROR;
+      addrlen = 1 + sx->udp_dest_domain_len;
+      atyp = SOCKS5_ATYP_DOMAIN;
+      break;
+    case SOCKS5_ATYP_IPV4:
+    default:
       addrlen = 4;
-      atyp = 1;
+      atyp = SOCKS5_ATYP_IPV4;
+      break;
     }
 
     header_len = 4 + addrlen + 2;
@@ -1435,13 +1578,33 @@ static CURLcode socks_proxy_cf_send(struct Curl_cfilter *cf,
     packet[1] = 0;
     packet[2] = 0;
     packet[3] = atyp;
-    memcpy(&packet[4], sx->udp_dest_addr, addrlen);
+    if(atyp == SOCKS5_ATYP_DOMAIN) {
+      packet[4] = (unsigned char)sx->udp_dest_domain_len;
+      memcpy(&packet[5], sx->udp_dest_domain, sx->udp_dest_domain_len);
+    }
+    else
+      memcpy(&packet[4], sx->udp_dest_addr, addrlen);
     packet[4 + addrlen] = (unsigned char)((sx->udp_dest_port >> 8) & 0xff);
     packet[5 + addrlen] = (unsigned char)(sx->udp_dest_port & 0xff);
     memcpy(&packet[header_len], buf, len);
 
-    infof(data, "SOCKS5 UDP send #%zu: payload=%zu header=%zu",
-          ++sx->udp_send_count, len, header_len);
+    infof(data, "SOCKS5 UDP send #%zu: payload=%zu header=%zu atyp=%d",
+          ++sx->udp_send_count, len, header_len, atyp);
+    if(atyp == SOCKS5_ATYP_DOMAIN) {
+      infof(data, "SOCKS5 UDP header: domain_len=%zu domain=%.*s port=%d",
+            sx->udp_dest_domain_len,
+            (int)sx->udp_dest_domain_len, sx->udp_dest_domain,
+            sx->udp_dest_port);
+      /* Debug: print first 30 bytes of header in hex */
+      infof(data, "SOCKS5 UDP hex: %02x %02x %02x %02x %02x %02x %02x %02x "
+            "%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x "
+            "%02x %02x %02x %02x %02x %02x",
+            packet[0], packet[1], packet[2], packet[3], packet[4], packet[5],
+            packet[6], packet[7], packet[8], packet[9], packet[10], packet[11],
+            packet[12], packet[13], packet[14], packet[15], packet[16],
+            packet[17], packet[18], packet[19], packet[20], packet[21],
+            packet[22], packet[23], packet[24], packet[25]);
+    }
     result = cf->next->cft->do_send(cf->next, data, packet,
                                     header_len + len, eos, &nwritten);
     free(packet);
@@ -1468,6 +1631,7 @@ static CURLcode socks_proxy_cf_recv(struct Curl_cfilter *cf,
   struct socks_state *sx = cf->ctx;
 
   if(sx && sx->udp_associate && sx->udp_cf) {
+    /* Strip SOCKS5 UDP headers before passing QUIC payload upward. */
     size_t maxhdr = 4 + 1 + 255 + 2;
     size_t pktlen = len + maxhdr;
     unsigned char *packet = malloc(pktlen);
@@ -1514,11 +1678,52 @@ static CURLcode socks_proxy_cf_recv(struct Curl_cfilter *cf,
         free(packet);
         return CURLE_RECV_ERROR;
       }
-      if(nread < off + addrlen + 2) {
-        free(packet);
-        return CURLE_RECV_ERROR;
+    if(nread < off + addrlen + 2) {
+      free(packet);
+      return CURLE_RECV_ERROR;
+    }
+    /* For socks5h:// with domain names (udp_dest_atyp == SOCKS5_ATYP_DOMAIN),
+     * do NOT set udp_peer_set from received packets. This ensures that
+     * CF_QUERY_REMOTE_ADDR consistently returns the relay address throughout
+     * the connection. The relay address is what QUIC should use as the "peer"
+     * since that's what we're actually communicating with on the network.
+     * TLS verification uses the hostname (not IP) for SNI/certificate checks.
+     * For socks5:// (local DNS) or IP literals, udp_peer_set is already TRUE
+     * from initialization, so we can update udp_peer_addr here. */
+    if((packet[3] == SOCKS5_ATYP_IPV4 || packet[3] == SOCKS5_ATYP_IPV6) &&
+       sx->udp_dest_atyp != SOCKS5_ATYP_DOMAIN) {
+      const unsigned char *addrbytes = &packet[4];
+      int port = (int)((packet[4 + addrlen] << 8) |
+                       packet[5 + addrlen]);
+      memset(&sx->udp_peer_addr, 0, sizeof(sx->udp_peer_addr));
+      if(packet[3] == SOCKS5_ATYP_IPV4) {
+        struct sockaddr_in *sa =
+          (struct sockaddr_in *)(void *)&sx->udp_peer_addr.curl_sa_addr;
+        sa->sin_family = AF_INET;
+        memcpy(&sa->sin_addr, addrbytes, sizeof(struct in_addr));
+        sa->sin_port = htons((unsigned short)port);
+        sx->udp_peer_addr.family = AF_INET;
+        sx->udp_peer_addr.socktype = SOCK_DGRAM;
+        sx->udp_peer_addr.protocol = IPPROTO_UDP;
+        sx->udp_peer_addr.addrlen = sizeof(struct sockaddr_in);
+        sx->udp_peer_set = TRUE;
       }
-      off += addrlen + 2;
+#ifdef USE_IPV6
+      else {
+        struct sockaddr_in6 *sa6 =
+          (struct sockaddr_in6 *)(void *)&sx->udp_peer_addr.curl_sa_addr;
+        sa6->sin6_family = AF_INET6;
+        memcpy(&sa6->sin6_addr, addrbytes, sizeof(struct in6_addr));
+        sa6->sin6_port = htons((unsigned short)port);
+        sx->udp_peer_addr.family = AF_INET6;
+        sx->udp_peer_addr.socktype = SOCK_DGRAM;
+        sx->udp_peer_addr.protocol = IPPROTO_UDP;
+        sx->udp_peer_addr.addrlen = sizeof(struct sockaddr_in6);
+        sx->udp_peer_set = TRUE;
+      }
+#endif
+    }
+    off += addrlen + 2;
       if(nread > off) {
         size_t payload = nread - off;
         if(payload > len)
@@ -1587,6 +1792,12 @@ static CURLcode socks_cf_query(struct Curl_cfilter *cf,
 
   if(sx) {
     switch(query) {
+    case CF_QUERY_REMOTE_ADDR:
+      if(sx->udp_associate && sx->udp_peer_set) {
+        *((const struct Curl_sockaddr_ex **)pres2) = &sx->udp_peer_addr;
+        return CURLE_OK;
+      }
+      break;
     case CF_QUERY_HOST_PORT:
       *pres1 = sx->remote_port;
       *((const char **)pres2) = sx->hostname;

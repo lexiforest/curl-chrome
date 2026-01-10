@@ -94,14 +94,34 @@ static const struct alpn_spec ALPN_SPEC_H3 = {
   { "h3", "h3-29" }, 2
 };
 
+/* Walk the filter chain to find the active socket for QUIC logging. */
 static CURLcode cf_ngtcp2_peek_socket(struct Curl_cfilter *cf,
                                       struct Curl_easy *data,
                                       curl_socket_t *psock,
                                       const struct Curl_sockaddr_ex **paddr,
                                       struct ip_quadruple *pip)
 {
+  bool got_sock = FALSE;
+  bool got_addr = FALSE;
+  bool got_ip = FALSE;
+  int dummy = 0;
+
   for(; cf; cf = cf->next) {
-    if(!Curl_cf_socket_peek(cf, data, psock, paddr, pip))
+    if(!got_sock && (psock || pip)) {
+      if(!Curl_cf_socket_peek(cf, data, psock, NULL, pip)) {
+        got_sock = (psock != NULL);
+        got_ip = (pip != NULL);
+      }
+    }
+    if(paddr && !got_addr) {
+      const struct Curl_sockaddr_ex *addr = NULL;
+      if(!cf->cft->query(cf, data, CF_QUERY_REMOTE_ADDR, &dummy, &addr) &&
+         addr) {
+        *paddr = addr;
+        got_addr = TRUE;
+      }
+    }
+    if((!psock || got_sock) && (!paddr || got_addr) && (!pip || got_ip))
       return CURLE_OK;
   }
   return CURLE_FAILED_INIT;
@@ -2767,6 +2787,7 @@ CURLcode Curl_cf_ngtcp2_create(struct Curl_cfilter **pcf,
 
   cf->conn = conn;
   if(conn->bits.socksproxy) {
+    /* Build SOCKS->TCP chain for the proxy control channel. */
     result = Curl_cf_create(&socks_cf, &Curl_cft_socks_proxy, NULL);
     if(result)
       goto out;

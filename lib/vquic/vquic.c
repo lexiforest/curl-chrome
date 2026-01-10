@@ -70,6 +70,7 @@ static CURLcode vquic_peek_socket(struct Curl_cfilter *cf,
   return CURLE_FAILED_INIT;
 }
 
+/* curl-impersonate: Use the filter I/O path when a SOCKS UDP ASSOCIATE is active. */
 static bool vquic_use_cfilter_io(struct Curl_cfilter *cf,
                                  struct Curl_easy *data)
 {
@@ -77,15 +78,18 @@ static bool vquic_use_cfilter_io(struct Curl_cfilter *cf,
   return Curl_cf_socks_proxy_is_udp_associate(cf->next);
 }
 
+/* Resolve the relay address from the active socket for recv callbacks. */
 static bool vquic_get_remote_addr(struct Curl_cfilter *cf,
                                   struct Curl_easy *data,
                                   struct sockaddr_storage *remote_addr,
                                   socklen_t *remote_addrlen)
 {
   const struct Curl_sockaddr_ex *peer_addr = NULL;
+  int dummy = 0;
 
   for(; cf; cf = cf->next) {
-    if(!Curl_cf_socket_peek(cf, data, NULL, &peer_addr, NULL) && peer_addr) {
+    if(!cf->cft->query(cf, data, CF_QUERY_REMOTE_ADDR, &dummy,
+                       &peer_addr) && peer_addr) {
       memset(remote_addr, 0, sizeof(*remote_addr));
       memcpy(remote_addr, &peer_addr->curl_sa_addr, peer_addr->addrlen);
       *remote_addrlen = (socklen_t)peer_addr->addrlen;
@@ -293,6 +297,7 @@ static CURLcode vquic_send_packets(struct Curl_cfilter *cf,
     const uint8_t *p = pkt;
     size_t pktstep = gsolen ? gsolen : pktlen;
 
+    /* SOCKS UDP ASSOCIATE needs per-packet encapsulation in the filter. */
     infof(data, "QUIC over SOCKS UDP send: bytes=%zu gso=%zu",
           pktlen, gsolen);
     qctx->no_gso = TRUE;
@@ -693,10 +698,8 @@ CURLcode vquic_recv_packets(struct Curl_cfilter *cf,
     size_t pkts = 0;
 
     result = CURLE_OK;
+    /* SOCKS UDP ASSOCIATE recv path goes through the filter chain. */
     infof(data, "QUIC over SOCKS UDP recv: max_pkts=%zu", max_pkts);
-    if(!vquic_get_remote_addr(cf->next, data, &remote_addr, &remote_addrlen))
-      return CURLE_FAILED_INIT;
-
     for(pkts = 0, total_nread = 0; pkts < max_pkts;) {
       size_t nread = 0;
       result = Curl_conn_cf_recv(cf->next, data, (char *)buf, sizeof(buf),
@@ -716,6 +719,9 @@ CURLcode vquic_recv_packets(struct Curl_cfilter *cf,
         return result;
       }
 
+      if(!vquic_get_remote_addr(cf->next, data, &remote_addr,
+                                &remote_addrlen))
+        return CURLE_FAILED_INIT;
       ++pkts;
       total_nread += nread;
       result = recv_cb(buf, nread, &remote_addr, remote_addrlen, 0, userp);

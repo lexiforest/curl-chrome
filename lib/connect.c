@@ -1292,6 +1292,7 @@ connect_sub_chain:
   /* sub-chain connected, do we need to add more? */
 #ifndef CURL_DISABLE_PROXY
   if(ctx->state < CF_SETUP_CNNCT_SOCKS && cf->conn->bits.socksproxy) {
+    /* curl-impersonate: for QUIC transport, update the state here. */
     if(ctx->transport == TRNSPRT_QUIC) {
       ctx->state = CF_SETUP_CNNCT_SOCKS;
     }
