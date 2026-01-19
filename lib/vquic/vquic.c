@@ -70,14 +70,6 @@ static CURLcode vquic_peek_socket(struct Curl_cfilter *cf,
   return CURLE_FAILED_INIT;
 }
 
-/* curl-impersonate: Use the filter I/O path when a SOCKS UDP ASSOCIATE is active. */
-static bool vquic_use_cfilter_io(struct Curl_cfilter *cf,
-                                 struct Curl_easy *data)
-{
-  (void)data;
-  return Curl_cf_socks_proxy_is_udp_associate(cf->next);
-}
-
 /* Resolve the relay address from the active socket for recv callbacks. */
 static bool vquic_get_remote_addr(struct Curl_cfilter *cf,
                                   struct Curl_easy *data,
@@ -291,7 +283,7 @@ static CURLcode vquic_send_packets(struct Curl_cfilter *cf,
                                    const uint8_t *pkt, size_t pktlen,
                                    size_t gsolen, size_t *psent)
 {
-  if(vquic_use_cfilter_io(cf, data)) {
+  if(Curl_cf_socks_proxy_is_udp_associate(cf->next)) {
     CURLcode result;
     size_t sent_total = 0;
     const uint8_t *p = pkt;
@@ -690,7 +682,7 @@ CURLcode vquic_recv_packets(struct Curl_cfilter *cf,
 {
   CURLcode result;
 
-  if(vquic_use_cfilter_io(cf, data)) {
+  if(Curl_cf_socks_proxy_is_udp_associate(cf->next)) {
     uint8_t buf[64*1024];
     struct sockaddr_storage remote_addr;
     socklen_t remote_addrlen = 0;
@@ -741,7 +733,7 @@ CURLcode vquic_recv_packets(struct Curl_cfilter *cf,
 #else
   result = recvfrom_packets(cf, data, qctx, max_pkts, recv_cb, userp);
 #endif
-  if(vquic_use_cfilter_io(cf, data)) {
+  if(Curl_cf_socks_proxy_is_udp_associate(cf->next)) {
     if(!result) {
       if(!qctx->got_first_byte) {
         qctx->got_first_byte = TRUE;
