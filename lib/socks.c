@@ -335,6 +335,8 @@ static CURLproxycode socks5_set_udp_relay(struct socks_state *sx,
   memcpy(sx->udp_relay_addr, addrp, addrlen);
   /* Port is in network byte order in the last two bytes. */
   sx->udp_relay_port = (int)((addrp[addrlen] << 8) | addrp[addrlen + 1]);
+
+  /* Log the udp relay info */
   {
     char addrstr[MAX_IPADR_LEN] = "";
     if(!curlx_inet_ntop(sx->udp_relay_family, sx->udp_relay_addr,
@@ -660,9 +662,6 @@ static CURLproxycode do_SOCKS5(struct Curl_cfilter *cf,
     if(conn->bits.httpproxy)
       infof(data, "SOCKS5: connecting to HTTP proxy %s port %d",
             sx->hostname, sx->remote_port);
-    /* curl-impersonate */
-    if(sx->udp_associate)
-      infof(data, "SOCKS5: UDP associate mode enabled for QUIC");
 
     /* RFC1928 chapter 5 specifies max 255 chars for domain name in packet */
     if(!socks5_resolve_local && hostname_len > 255) {
@@ -1597,15 +1596,6 @@ static CURLcode socks_proxy_cf_send(struct Curl_cfilter *cf,
             sx->udp_dest_domain_len,
             (int)sx->udp_dest_domain_len, sx->udp_dest_domain,
             sx->udp_dest_port);
-      /* Debug: print first 30 bytes of header in hex */
-      infof(data, "SOCKS5 UDP hex: %02x %02x %02x %02x %02x %02x %02x %02x "
-            "%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x "
-            "%02x %02x %02x %02x %02x %02x",
-            packet[0], packet[1], packet[2], packet[3], packet[4], packet[5],
-            packet[6], packet[7], packet[8], packet[9], packet[10], packet[11],
-            packet[12], packet[13], packet[14], packet[15], packet[16],
-            packet[17], packet[18], packet[19], packet[20], packet[21],
-            packet[22], packet[23], packet[24], packet[25]);
     }
     result = cf->next->cft->do_send(cf->next, data, packet,
                                     header_len + len, eos, &nwritten);
