@@ -444,14 +444,14 @@ static CURLcode recvmmsg_packets(struct Curl_cfilter *cf,
   size_t pktlen;
   size_t offset, to;
   char *sockbuf = NULL;
-  uint8_t (*bufs)[64*1024] = NULL;
+  uint8_t (*bufs)[NW_CHUNK_SIZE] = NULL;
 
   DEBUGASSERT(max_pkts > 0);
   result = Curl_multi_xfer_sockbuf_borrow(data, MMSG_NUM * sizeof(bufs[0]),
                                           &sockbuf);
   if(result)
     goto out;
-  bufs = (uint8_t (*)[64*1024])sockbuf;
+  bufs = (uint8_t (*)[NW_CHUNK_SIZE])sockbuf;
 
   total_nread = 0;
   while(pkts < max_pkts) {
@@ -536,7 +536,7 @@ static CURLcode recvmsg_packets(struct Curl_cfilter *cf,
 {
   struct iovec msg_iov;
   struct msghdr msg;
-  uint8_t buf[64*1024];
+  uint8_t buf[NW_CHUNK_SIZE];
   struct sockaddr_storage remote_addr;
   size_t total_nread, pkts;
   ssize_t nread;
@@ -622,7 +622,7 @@ static CURLcode recvfrom_packets(struct Curl_cfilter *cf,
                                  size_t max_pkts,
                                  vquic_recv_pkt_cb *recv_cb, void *userp)
 {
-  uint8_t buf[64*1024];
+  uint8_t buf[NW_CHUNK_SIZE];
   int bufsize = (int)sizeof(buf);
   struct sockaddr_storage remote_addr;
   socklen_t remote_addrlen = sizeof(remote_addr);
@@ -683,7 +683,7 @@ CURLcode vquic_recv_packets(struct Curl_cfilter *cf,
   CURLcode result;
 
   if(Curl_cf_socks_proxy_is_udp_associate(cf->next)) {
-    uint8_t buf[64*1024];
+    uint8_t buf[NW_CHUNK_SIZE];
     struct sockaddr_storage remote_addr;
     socklen_t remote_addrlen = 0;
     size_t total_nread = 0;
@@ -733,16 +733,6 @@ CURLcode vquic_recv_packets(struct Curl_cfilter *cf,
 #else
   result = recvfrom_packets(cf, data, qctx, max_pkts, recv_cb, userp);
 #endif
-  if(Curl_cf_socks_proxy_is_udp_associate(cf->next)) {
-    if(!result) {
-      if(!qctx->got_first_byte) {
-        qctx->got_first_byte = TRUE;
-        qctx->first_byte_at = qctx->last_op;
-      }
-      qctx->last_io = qctx->last_op;
-    }
-    return result;
-  }
   if(!result) {
     if(!qctx->got_first_byte) {
       qctx->got_first_byte = TRUE;
