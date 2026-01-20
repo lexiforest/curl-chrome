@@ -83,6 +83,11 @@ enum socks5_atyp {
   SOCKS5_ATYP_IPV6 = 4
 };
 
+#define SOCKS5_REPLY_HEADER_LEN 4
+#define SOCKS5_PORT_LEN 2
+#define SOCKS5_IPV4_ADDR_LEN 4
+#define SOCKS5_IPV6_ADDR_LEN 16
+
 #define CURL_SOCKS_BUF_SIZE 600
 
 /* make sure we configure it not too low */
@@ -290,28 +295,29 @@ static CURLproxycode socks_state_recv(struct Curl_cfilter *cf,
 
 /* curl-impersonate: set up udp relay
  * Parse the address in reply and store the relay address/port in socks_state.
- * */
+ */
 static CURLproxycode socks5_set_udp_relay(struct socks_state *sx,
                                           struct Curl_easy *data)
 {
   const unsigned char *socksreq = sx->buffer;
-  const unsigned char *addrp = &socksreq[4]; /* First 4 bytes are VER, REP, RSV, ATYP */
+  const unsigned char *addrp =
+    &socksreq[SOCKS5_REPLY_HEADER_LEN]; /* First bytes are VER, REP, RSV, ATYP */
   size_t addrlen;
   int atyp = socksreq[3]; /* ATYP from SOCKS5 reply */
 
-  if(sx->replylen < 6) { /* minimum: 4-byte header + 2-byte port */
+  if(sx->replylen < (SOCKS5_REPLY_HEADER_LEN + SOCKS5_PORT_LEN)) {
     failf(data, "SOCKS5 UDP associate reply too short");
     return CURLPX_BAD_ADDRESS_TYPE;
   }
 
   switch(atyp) {
     case SOCKS5_ATYP_IPV4:
-      addrlen = 4;
+      addrlen = SOCKS5_IPV4_ADDR_LEN;
       sx->udp_relay_family = AF_INET;
       break;
 #ifdef USE_IPV6
     case SOCKS5_ATYP_IPV6:
-      addrlen = 16;
+      addrlen = SOCKS5_IPV6_ADDR_LEN;
       sx->udp_relay_family = AF_INET6;
       break;
 #endif
@@ -321,7 +327,7 @@ static CURLproxycode socks5_set_udp_relay(struct socks_state *sx,
       return CURLPX_BAD_ADDRESS_TYPE;
   }
 
-  if(4 + addrlen + 2 > sx->replylen) { /* header + addr + port */
+  if(SOCKS5_REPLY_HEADER_LEN + addrlen + SOCKS5_PORT_LEN > sx->replylen) {
     failf(data, "SOCKS5 UDP associate reply truncated");
     return CURLPX_BAD_ADDRESS_TYPE;
   }
