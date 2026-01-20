@@ -118,10 +118,6 @@ struct socks_state {
   size_t udp_dest_domain_len;
   struct Curl_sockaddr_ex udp_peer_addr;
   BIT(udp_peer_set);
-
-  size_t udp_send_count;            /* UDP relay packet counters for debugging */
-  size_t udp_recv_count;
-
   BIT(udp_associate);               /* use SOCKS5 UDP ASSOCIATE instead of CONNECT */
   BIT(udp_dest_set);                /* QUIC destination cached for UDP headers */
 };
@@ -1588,8 +1584,8 @@ static CURLcode socks_proxy_cf_send(struct Curl_cfilter *cf,
     packet[5 + addrlen] = (unsigned char)(sx->udp_dest_port & 0xff);
     memcpy(&packet[header_len], buf, len);
 
-    infof(data, "SOCKS5 UDP send #%zu: payload=%zu header=%zu atyp=%d",
-          ++sx->udp_send_count, len, header_len, atyp);
+    infof(data, "SOCKS5 UDP send: payload=%zu header=%zu atyp=%d",
+          len, header_len, atyp);
     if(atyp == SOCKS5_ATYP_DOMAIN) {
       infof(data, "SOCKS5 UDP header: domain_len=%zu domain=%.*s port=%d",
             sx->udp_dest_domain_len,
@@ -1730,8 +1726,8 @@ static CURLcode socks_proxy_cf_recv(struct Curl_cfilter *cf,
           payload = len;
         memcpy(buf, &packet[off], payload);
         *pnread = payload;
-        infof(data, "SOCKS5 UDP recv #%zu: payload=%zu header=%zu",
-              ++sx->udp_recv_count, payload, off);
+        infof(data, "SOCKS5 UDP recv: payload=%zu header=%zu",
+              payload, off);
       }
       else
         *pnread = 0;
