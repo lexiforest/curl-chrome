@@ -1292,12 +1292,18 @@ connect_sub_chain:
   /* sub-chain connected, do we need to add more? */
 #ifndef CURL_DISABLE_PROXY
   if(ctx->state < CF_SETUP_CNNCT_SOCKS && cf->conn->bits.socksproxy) {
-    result = Curl_cf_socks_proxy_insert_after(cf, data);
-    if(result)
-      return result;
-    ctx->state = CF_SETUP_CNNCT_SOCKS;
-    if(!cf->next || !cf->next->connected)
-      goto connect_sub_chain;
+    /* curl-impersonate: for QUIC transport, update the state here. */
+    if(ctx->transport == TRNSPRT_QUIC) {
+      ctx->state = CF_SETUP_CNNCT_SOCKS;
+    }
+    else {
+      result = Curl_cf_socks_proxy_insert_after(cf, data);
+      if(result)
+        return result;
+      ctx->state = CF_SETUP_CNNCT_SOCKS;
+      if(!cf->next || !cf->next->connected)
+        goto connect_sub_chain;
+    }
   }
 
   if(ctx->state < CF_SETUP_CNNCT_HTTP_PROXY && cf->conn->bits.httpproxy) {
