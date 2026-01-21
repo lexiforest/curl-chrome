@@ -928,115 +928,114 @@ CONNECT_RESOLVED:
     socksreq[len++] = 5; /* version (SOCKS5) */
     socksreq[len++] = sx->udp_associate ? 3 : 1; /* associate: 0x03, connect: 0x01 */
     socksreq[len++] = 0; /* must be zero */
-    if(!sx->udp_associate) {
+    if(sx->udp_associate) {
       if(hp->ai_family == AF_INET) {
-        int i;
         struct sockaddr_in *saddr_in;
-        socksreq[len++] = SOCKS5_ATYP_IPV4;
-
         saddr_in = (struct sockaddr_in *)(void *)hp->ai_addr;
-        for(i = 0; i < 4; i++) {
-          socksreq[len++] = ((unsigned char *)&saddr_in->sin_addr.s_addr)[i];
-        }
-
-        infof(data, "SOCKS5 connect to %s:%d (locally resolved)", dest,
-              sx->remote_port);
+        memcpy(sx->udp_dest_addr, &saddr_in->sin_addr, sizeof(struct in_addr));
+        sx->udp_dest_family = AF_INET;
+        sx->udp_dest_atyp = SOCKS5_ATYP_IPV4;
       }
 #ifdef USE_IPV6
       else if(hp->ai_family == AF_INET6) {
-        int i;
         struct sockaddr_in6 *saddr_in6;
-        socksreq[len++] = SOCKS5_ATYP_IPV6;
-
         saddr_in6 = (struct sockaddr_in6 *)(void *)hp->ai_addr;
-        for(i = 0; i < 16; i++) {
-          socksreq[len++] =
-            ((unsigned char *)&saddr_in6->sin6_addr.s6_addr)[i];
-        }
-
-        infof(data, "SOCKS5 connect to [%s]:%d (locally resolved)", dest,
-              sx->remote_port);
+        memcpy(sx->udp_dest_addr, &saddr_in6->sin6_addr,
+               sizeof(struct in6_addr));
+        sx->udp_dest_family = AF_INET6;
+        sx->udp_dest_atyp = SOCKS5_ATYP_IPV6;
       }
 #endif
       else {
-        hp = NULL; /* fail! */
-        failf(data, "SOCKS5 connection to %s not supported", dest);
+        failf(data, "SOCKS5 UDP associate to %s not supported", dest);
+        return CURLPX_BAD_ADDRESS_TYPE;
+      }
+      sx->udp_dest_port = sx->remote_port;
+      sx->udp_dest_set = TRUE;
+      if(sx->udp_dest_atyp == SOCKS5_ATYP_IPV4 ||
+         sx->udp_dest_atyp == SOCKS5_ATYP_IPV6) {
+        memset(&sx->udp_peer_addr, 0, sizeof(sx->udp_peer_addr));
+        if(sx->udp_dest_atyp == SOCKS5_ATYP_IPV4) {
+          struct sockaddr_in *sa =
+            (struct sockaddr_in *)(void *)&sx->udp_peer_addr.curl_sa_addr;
+          sa->sin_family = AF_INET;
+          memcpy(&sa->sin_addr, sx->udp_dest_addr, sizeof(struct in_addr));
+          sa->sin_port = htons((unsigned short)sx->udp_dest_port);
+          sx->udp_peer_addr.family = AF_INET;
+          sx->udp_peer_addr.socktype = SOCK_DGRAM;
+          sx->udp_peer_addr.protocol = IPPROTO_UDP;
+          sx->udp_peer_addr.addrlen = sizeof(struct sockaddr_in);
+          sx->udp_peer_set = TRUE;
+        }
+#ifdef USE_IPV6
+        else {
+          struct sockaddr_in6 *sa6 =
+            (struct sockaddr_in6 *)(void *)&sx->udp_peer_addr.curl_sa_addr;
+          sa6->sin6_family = AF_INET6;
+          memcpy(&sa6->sin6_addr, sx->udp_dest_addr, sizeof(struct in6_addr));
+          sa6->sin6_port = htons((unsigned short)sx->udp_dest_port);
+          sx->udp_peer_addr.family = AF_INET6;
+          sx->udp_peer_addr.socktype = SOCK_DGRAM;
+          sx->udp_peer_addr.protocol = IPPROTO_UDP;
+          sx->udp_peer_addr.addrlen = sizeof(struct sockaddr_in6);
+          sx->udp_peer_set = TRUE;
+        }
+#endif
       }
 
+      infof(data, "SOCKS5 UDP associate storing target %s:%d for UDP header",
+            dest, sx->udp_dest_port);
+
+      if(sx->udp_dest_family == AF_INET6) {
+        socksreq[len++] = SOCKS5_ATYP_IPV6;
+        memset(&socksreq[len], 0, 16);
+        len += 16;
+      }
+      else {
+        socksreq[len++] = SOCKS5_ATYP_IPV4;
+        memset(&socksreq[len], 0, 4);
+        len += 4;
+      }
+
+      infof(data, "SOCKS5 UDP associate to %s:%d (locally resolved)", dest,
+            sx->remote_port);
       Curl_resolv_unlink(data, &dns); /* not used anymore from now on */
       goto CONNECT_REQ_SEND;
     }
-
     if(hp->ai_family == AF_INET) {
+      int i;
       struct sockaddr_in *saddr_in;
+      socksreq[len++] = SOCKS5_ATYP_IPV4;
+
       saddr_in = (struct sockaddr_in *)(void *)hp->ai_addr;
-      memcpy(sx->udp_dest_addr, &saddr_in->sin_addr, sizeof(struct in_addr));
-      sx->udp_dest_family = AF_INET;
-      sx->udp_dest_atyp = SOCKS5_ATYP_IPV4;
+      for(i = 0; i < 4; i++) {
+        socksreq[len++] = ((unsigned char *)&saddr_in->sin_addr.s_addr)[i];
+      }
+
+      infof(data, "SOCKS5 connect to %s:%d (locally resolved)", dest,
+            sx->remote_port);
     }
 #ifdef USE_IPV6
     else if(hp->ai_family == AF_INET6) {
+      int i;
       struct sockaddr_in6 *saddr_in6;
-      saddr_in6 = (struct sockaddr_in6 *)(void *)hp->ai_addr;
-      memcpy(sx->udp_dest_addr, &saddr_in6->sin6_addr,
-             sizeof(struct in6_addr));
-      sx->udp_dest_family = AF_INET6;
-      sx->udp_dest_atyp = SOCKS5_ATYP_IPV6;
-    }
-#endif
-    else {
-      failf(data, "SOCKS5 UDP associate to %s not supported", dest);
-      return CURLPX_BAD_ADDRESS_TYPE;
-    }
-    sx->udp_dest_port = sx->remote_port;
-    sx->udp_dest_set = TRUE;
-    if(sx->udp_dest_atyp == SOCKS5_ATYP_IPV4 ||
-       sx->udp_dest_atyp == SOCKS5_ATYP_IPV6) {
-      memset(&sx->udp_peer_addr, 0, sizeof(sx->udp_peer_addr));
-      if(sx->udp_dest_atyp == SOCKS5_ATYP_IPV4) {
-        struct sockaddr_in *sa =
-          (struct sockaddr_in *)(void *)&sx->udp_peer_addr.curl_sa_addr;
-        sa->sin_family = AF_INET;
-        memcpy(&sa->sin_addr, sx->udp_dest_addr, sizeof(struct in_addr));
-        sa->sin_port = htons((unsigned short)sx->udp_dest_port);
-        sx->udp_peer_addr.family = AF_INET;
-        sx->udp_peer_addr.socktype = SOCK_DGRAM;
-        sx->udp_peer_addr.protocol = IPPROTO_UDP;
-        sx->udp_peer_addr.addrlen = sizeof(struct sockaddr_in);
-        sx->udp_peer_set = TRUE;
-      }
-#ifdef USE_IPV6
-      else {
-        struct sockaddr_in6 *sa6 =
-          (struct sockaddr_in6 *)(void *)&sx->udp_peer_addr.curl_sa_addr;
-        sa6->sin6_family = AF_INET6;
-        memcpy(&sa6->sin6_addr, sx->udp_dest_addr, sizeof(struct in6_addr));
-        sa6->sin6_port = htons((unsigned short)sx->udp_dest_port);
-        sx->udp_peer_addr.family = AF_INET6;
-        sx->udp_peer_addr.socktype = SOCK_DGRAM;
-        sx->udp_peer_addr.protocol = IPPROTO_UDP;
-        sx->udp_peer_addr.addrlen = sizeof(struct sockaddr_in6);
-        sx->udp_peer_set = TRUE;
-      }
-#endif
-    }
-
-    infof(data, "SOCKS5 UDP associate storing target %s:%d for UDP header",
-          dest, sx->udp_dest_port);
-
-    if(sx->udp_dest_family == AF_INET6) {
       socksreq[len++] = SOCKS5_ATYP_IPV6;
-      memset(&socksreq[len], 0, 16);
-      len += 16;
+
+      saddr_in6 = (struct sockaddr_in6 *)(void *)hp->ai_addr;
+      for(i = 0; i < 16; i++) {
+        socksreq[len++] =
+          ((unsigned char *)&saddr_in6->sin6_addr.s6_addr)[i];
+      }
+
+      infof(data, "SOCKS5 connect to [%s]:%d (locally resolved)", dest,
+            sx->remote_port);
     }
+#endif
     else {
-      socksreq[len++] = SOCKS5_ATYP_IPV4;
-      memset(&socksreq[len], 0, 4);
-      len += 4;
+      hp = NULL; /* fail! */
+      failf(data, "SOCKS5 connection to %s not supported", dest);
     }
 
-    infof(data, "SOCKS5 UDP associate to %s:%d (locally resolved)", dest,
-          sx->remote_port);
     Curl_resolv_unlink(data, &dns); /* not used anymore from now on */
     goto CONNECT_REQ_SEND;
   }
