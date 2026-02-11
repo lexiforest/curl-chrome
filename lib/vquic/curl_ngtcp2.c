@@ -59,6 +59,7 @@
 #include "../socks.h"
 #include "../progress.h"
 #include "../strerror.h"
+#include "../strcase.h"
 #include "../curlx/dynbuf.h"
 #include "../http1.h"
 #include "../select.h"
@@ -454,12 +455,16 @@ static void qlog_callback(void *user_data, uint32_t flags,
 
 }
 
-static void quic_settings(struct cf_ngtcp2_ctx *ctx,
-                          struct Curl_easy *data,
-                          struct pkt_io_ctx *pktx)
+static CURLcode quic_transport_params_from_string(ngtcp2_transport_params *t,
+                                                  struct Curl_easy *data);
+
+static CURLcode quic_settings(struct cf_ngtcp2_ctx *ctx,
+                              struct Curl_easy *data,
+                              struct pkt_io_ctx *pktx)
 {
   ngtcp2_settings *s = &ctx->settings;
   ngtcp2_transport_params *t = &ctx->transport_params;
+  CURLcode result;
 
   ngtcp2_settings_default(s);
   ngtcp2_transport_params_default(t);
@@ -469,7 +474,6 @@ static void quic_settings(struct cf_ngtcp2_ctx *ctx,
   s->log_printf = NULL;
 #endif
 
-  (void)data;
   s->initial_ts = pktx->ts;
   s->handshake_timeout = QUIC_HANDSHAKE_TIMEOUT;
   s->max_window = 100 * ctx->max_stream_window;
@@ -485,6 +489,238 @@ static void quic_settings(struct cf_ngtcp2_ctx *ctx,
   if(ctx->qlogfd != -1) {
     s->qlog_write = qlog_callback;
   }
+  result = quic_transport_params_from_string(t, data);
+  if(result)
+    return result;
+
+  return CURLE_OK;
+}
+
+// https://www.iana.org/assignments/quic/quic.xhtml
+static CURLcode quic_apply_transport_param(ngtcp2_transport_params *t,
+                                           unsigned long id,
+                                           uint64_t value,
+                                           bool has_value,
+                                           struct Curl_easy *data)
+{
+  switch(id) {
+  case 0x00: /* original_destination_connection_id (server only) */
+  case 0x02: /* stateless_reset_token (server only) */
+  case 0x0d: /* preferred_address (server only) */
+  case 0x10: /* retry_source_connection_id (server only) */
+  case 0x11: /* version_information (server only) */
+    failf(data, "QUIC transport param %lu is server-only", id);
+    return CURLE_BAD_FUNCTION_ARGUMENT;
+  case 0x0f: /* initial_source_connection_id (set by library) */
+    failf(data, "QUIC transport param %lu is managed by the library", id);
+    return CURLE_BAD_FUNCTION_ARGUMENT;
+  case 0x01: /* max_idle_timeout (milliseconds) */
+    if(!has_value)
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    t->max_idle_timeout = (ngtcp2_duration)value * NGTCP2_MILLISECONDS;
+    break;
+  case 0x03: /* max_udp_payload_size */
+    if(!has_value)
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    t->max_udp_payload_size = value;
+    break;
+  case 0x04: /* initial_max_data */
+    if(!has_value)
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    t->initial_max_data = value;
+    break;
+  case 0x05: /* initial_max_stream_data_bidi_local */
+    if(!has_value)
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    t->initial_max_stream_data_bidi_local = value;
+    break;
+  case 0x06: /* initial_max_stream_data_bidi_remote */
+    if(!has_value)
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    t->initial_max_stream_data_bidi_remote = value;
+    break;
+  case 0x07: /* initial_max_stream_data_uni */
+    if(!has_value)
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    t->initial_max_stream_data_uni = value;
+    break;
+  case 0x08: /* initial_max_streams_bidi */
+    if(!has_value)
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    t->initial_max_streams_bidi = value;
+    break;
+  case 0x09: /* initial_max_streams_uni */
+    if(!has_value)
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    t->initial_max_streams_uni = value;
+    break;
+  case 0x0a: /* ack_delay_exponent */
+    if(!has_value)
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    t->ack_delay_exponent = value;
+    break;
+  case 0x0b: /* max_ack_delay (milliseconds) */
+    if(!has_value)
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    t->max_ack_delay = (ngtcp2_duration)value * NGTCP2_MILLISECONDS;
+    break;
+  case 0x0c: /* disable_active_migration */
+    t->disable_active_migration = (uint8_t)(!has_value || value);
+    break;
+  case 0x0e: /* active_connection_id_limit */
+    if(!has_value)
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    t->active_connection_id_limit = value;
+    break;
+  case 0x20: /* max_datagram_frame_size */
+    if(!has_value)
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    t->max_datagram_frame_size = value;
+    break;
+  case 0x2ab2: /* grease_quic_bit */
+    t->grease_quic_bit = (uint8_t)(!has_value || value);
+    break;
+  default:
+    infof(data, "QUIC transport param %lu not supported, ignored", id);
+    break;
+  }
+
+  return CURLE_OK;
+}
+
+static CURLcode quic_transport_params_from_string(ngtcp2_transport_params *t,
+                                                  struct Curl_easy *data)
+{
+  const char *params = data->set.str[STRING_QUIC_TRANSPORT_PARAMETERS];
+  char *tmp;
+  char *setting;
+
+  if(!params || !*params)
+    return CURLE_OK;
+
+  tmp = strdup(params);
+  if(!tmp)
+    return CURLE_OUT_OF_MEMORY;
+
+  setting = strtok(tmp, ";");
+  while(setting) {
+    char *colon = strchr(setting, ':');
+    char *end = NULL;
+    unsigned long id;
+    uint64_t value = 0;
+    bool has_value = FALSE;
+    CURLcode result;
+
+    if(curl_strequal(setting, "GREASE")) {
+      result = quic_apply_transport_param(t, 0x2ab2, 1, FALSE, data);
+      if(result) {
+        free(tmp);
+        return result;
+      }
+      setting = strtok(NULL, ";");
+      continue;
+    }
+
+    if(colon) {
+      *colon = '\0';
+      has_value = TRUE;
+      value = strtoull(colon + 1, &end, 10);
+      if(!*(colon + 1) || (end && *end)) {
+        free(tmp);
+        return CURLE_BAD_FUNCTION_ARGUMENT;
+      }
+    }
+
+    id = strtoul(setting, &end, 10);
+    if(!*setting || (end && *end)) {
+      free(tmp);
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    }
+
+    result = quic_apply_transport_param(t, id, value, has_value, data);
+    if(result) {
+      free(tmp);
+      return result;
+    }
+
+    setting = strtok(NULL, ";");
+  }
+
+  free(tmp);
+  return CURLE_OK;
+}
+
+static void h3_apply_setting(nghttp3_settings *settings,
+                             unsigned long id, uint64_t value)
+{
+  switch(id) {
+  case 1: /* SETTINGS_QPACK_MAX_TABLE_CAPACITY */
+    if(value > SIZE_T_MAX)
+      value = SIZE_T_MAX;
+    settings->qpack_max_dtable_capacity = (size_t)value;
+    settings->qpack_encoder_max_dtable_capacity = (size_t)value;
+    break;
+  case 6: /* SETTINGS_MAX_FIELD_SECTION_SIZE */
+    settings->max_field_section_size = value;
+    break;
+  case 7: /* SETTINGS_QPACK_BLOCKED_STREAMS */
+    if(value > SIZE_T_MAX)
+      value = SIZE_T_MAX;
+    settings->qpack_blocked_streams = (size_t)value;
+    break;
+  case 8: /* SETTINGS_ENABLE_CONNECT_PROTOCOL */
+    settings->enable_connect_protocol = (uint8_t)(value ? 1 : 0);
+    break;
+  case 51: /* SETTINGS_H3_DATAGRAM */
+    settings->h3_datagram = (uint8_t)(value ? 1 : 0);
+    break;
+  default:
+    break;
+  }
+}
+
+static void h3_settings_from_string(nghttp3_settings *settings,
+                                    struct Curl_easy *data)
+{
+  const char *h3_settings = data->set.str[STRING_HTTP3_SETTINGS];
+  char *tmp;
+  char *setting;
+
+  if(!h3_settings || !*h3_settings)
+    return;
+
+  tmp = strdup(h3_settings);
+  if(!tmp)
+    return;
+
+  setting = strtok(tmp, ";");
+  while(setting) {
+    char *colon = strchr(setting, ':');
+    char *end = NULL;
+    unsigned long id;
+    unsigned long long value;
+
+    if(!colon) {
+      setting = strtok(NULL, ";");
+      continue;
+    }
+    *colon = '\0';
+    id = strtoul(setting, &end, 10);
+    if(!*setting || (end && *end)) {
+      setting = strtok(NULL, ";");
+      continue;
+    }
+    value = strtoull(colon + 1, &end, 10);
+    if(!*(colon + 1) || (end && *end)) {
+      setting = strtok(NULL, ";");
+      continue;
+    }
+
+    h3_apply_setting(settings, id, (uint64_t)value);
+    setting = strtok(NULL, ";");
+  }
+
+  free(tmp);
 }
 
 static CURLcode init_ngh3_conn(struct Curl_cfilter *cf,
@@ -1236,6 +1472,7 @@ static CURLcode init_ngh3_conn(struct Curl_cfilter *cf,
   }
 
   nghttp3_settings_default(&ctx->h3settings);
+  h3_settings_from_string(&ctx->h3settings, data);
 
   rc = nghttp3_conn_client_new(&ctx->h3conn,
                                &ngh3_callbacks,
@@ -2472,7 +2709,9 @@ static CURLcode cf_connect_start(struct Curl_cfilter *cf,
 
   (void)Curl_qlogdir(data, ctx->scid.data, NGTCP2_MAX_CIDLEN, &qfd);
   ctx->qlogfd = qfd; /* -1 if failure above */
-  quic_settings(ctx, data, pktx);
+  result = quic_settings(ctx, data, pktx);
+  if(result)
+    return result;
 
   result = vquic_ctx_init(&ctx->q);
   if(result)

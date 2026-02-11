@@ -473,6 +473,27 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
       return ret;
   }
 
+  if(opts->http3_pseudo_headers_order) {
+    ret = curl_easy_setopt(data,
+                           CURLOPT_HTTP3_PSEUDO_HEADERS_ORDER,
+                           opts->http3_pseudo_headers_order);
+    if(ret)
+      return ret;
+  }
+
+  if(opts->http3_settings) {
+    ret = curl_easy_setopt(data, CURLOPT_HTTP3_SETTINGS, opts->http3_settings);
+    if(ret)
+      return ret;
+  }
+
+  if(opts->quic_transport_parameters) {
+    ret = curl_easy_setopt(data, CURLOPT_QUIC_TRANSPORT_PARAMETERS,
+                           opts->quic_transport_parameters);
+    if(ret)
+      return ret;
+  }
+
   if(opts->http2_window_update) {
     ret = curl_easy_setopt(data, CURLOPT_HTTP2_WINDOW_UPDATE, opts->http2_window_update);
     if(ret)

@@ -589,6 +589,21 @@ static CURLcode http_setopts(struct OperationConfig *config,
     my_setopt_str(curl,
                   CURLOPT_HTTP2_STREAMS,
                   config->http2_streams);
+
+  if(config->http3_pseudo_headers_order)
+    my_setopt_str(curl,
+                  CURLOPT_HTTP3_PSEUDO_HEADERS_ORDER,
+                  config->http3_pseudo_headers_order);
+
+  if(config->http3_settings)
+    my_setopt_str(curl,
+                  CURLOPT_HTTP3_SETTINGS,
+                  config->http3_settings);
+
+  if(config->quic_transport_parameters)
+    my_setopt_str(curl,
+                  CURLOPT_QUIC_TRANSPORT_PARAMETERS,
+                  config->quic_transport_parameters);
   /* end of curl-impersonate */
 
   /* new in 7.47.0 */

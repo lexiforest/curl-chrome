@@ -4802,7 +4802,11 @@ CURLcode Curl_http_req_to_h2(struct dynhds *h2_headers,
   Curl_dynhds_set_opts(h2_headers, DYNHDS_OPT_LOWERCASE);
 
   /* curl-impersonate: order of pseudo headers is different from the default */
-  if(data->set.str[STRING_HTTP2_PSEUDO_HEADERS_ORDER]) {
+  if(data->conn && data->conn->alpn == CURL_HTTP_VERSION_3 &&
+     data->set.str[STRING_HTTP3_PSEUDO_HEADERS_ORDER]) {
+    order = data->set.str[STRING_HTTP3_PSEUDO_HEADERS_ORDER];
+  }
+  else if(data->set.str[STRING_HTTP2_PSEUDO_HEADERS_ORDER]) {
     order = data->set.str[STRING_HTTP2_PSEUDO_HEADERS_ORDER];
   }
 
