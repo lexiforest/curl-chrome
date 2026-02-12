@@ -2336,6 +2336,9 @@ typedef enum {
   /* curl-impersonate: Do not reuse TLS sessions or connections from different proxy credentials */
   CURLOPT(CURLOPT_PROXY_CREDENTIAL_NO_REUSE, CURLOPTTYPE_LONG, 1022),
 
+  /* curl-impersonate: Split cookies into separate Cookie headers */
+  CURLOPT(CURLOPT_SPLIT_COOKIES, CURLOPTTYPE_LONG, 1023),
+
   CURLOPT_LASTENTRY /* the last unused */
 } CURLoption;
 

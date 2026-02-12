@@ -2565,47 +2565,110 @@ static CURLcode http_cookies(struct Curl_easy *data,
                                secure_context, &list);
       Curl_share_unlock(data, CURL_LOCK_DATA_COOKIE);
     }
-    if(!rc) {
-      struct Curl_llist_node *n;
-      size_t clen = 8; /* hold the size of the generated Cookie: header */
+    if(!data->set.split_cookies) {
+      if(!rc) {
+        struct Curl_llist_node *n;
+        size_t clen = 8; /* hold the size of the generated Cookie: header */
 
-      /* loop through all cookies that matched */
-      for(n = Curl_llist_head(&list); n; n = Curl_node_next(n)) {
-        struct Cookie *co = Curl_node_elem(n);
-        if(co->value) {
-          size_t add;
-          if(!count) {
-            result = curlx_dyn_addn(r, STRCONST("Cookie: "));
+        /* loop through all cookies that matched */
+        for(n = Curl_llist_head(&list); n; n = Curl_node_next(n)) {
+          struct Cookie *co = Curl_node_elem(n);
+          if(co->value) {
+            size_t add;
+            if(!count) {
+              result = curlx_dyn_addn(r, STRCONST("Cookie: "));
+              if(result)
+                break;
+            }
+            add = strlen(co->name) + strlen(co->value) + 1;
+            if(clen + add >= MAX_COOKIE_HEADER_LEN) {
+              infof(data, "Restricted outgoing cookies due to header size, "
+                    "'%s' not sent", co->name);
+              linecap = TRUE;
+              break;
+            }
+            result = curlx_dyn_addf(r, "%s%s=%s", count ? "; " : "",
+                                    co->name, co->value);
             if(result)
               break;
+            clen += add + (count ? 2 : 0);
+            count++;
           }
-          add = strlen(co->name) + strlen(co->value) + 1;
-          if(clen + add >= MAX_COOKIE_HEADER_LEN) {
-            infof(data, "Restricted outgoing cookies due to header size, "
-                  "'%s' not sent", co->name);
-            linecap = TRUE;
-            break;
-          }
-          result = curlx_dyn_addf(r, "%s%s=%s", count ? "; " : "",
-                                  co->name, co->value);
-          if(result)
-            break;
-          clen += add + (count ? 2 : 0);
+        }
+        Curl_llist_destroy(&list, NULL);
+      }
+      if(addcookies && !result && !linecap) {
+        if(!count)
+          result = curlx_dyn_addn(r, STRCONST("Cookie: "));
+        if(!result) {
+          result = curlx_dyn_addf(r, "%s%s", count ? "; " : "", addcookies);
           count++;
         }
       }
-      Curl_llist_destroy(&list, NULL);
+      if(count && !result)
+        result = curlx_dyn_addn(r, STRCONST("\r\n"));
     }
-    if(addcookies && !result && !linecap) {
-      if(!count)
-        result = curlx_dyn_addn(r, STRCONST("Cookie: "));
-      if(!result) {
-        result = curlx_dyn_addf(r, "%s%s", count ? "; " : "", addcookies);
-        count++;
+    else {
+      if(!rc) {
+        struct Curl_llist_node *n;
+
+        /* one cookie per header line */
+        for(n = Curl_llist_head(&list); n; n = Curl_node_next(n)) {
+          struct Cookie *co = Curl_node_elem(n);
+          if(co->value) {
+            size_t add = strlen(co->name) + strlen(co->value) + 1;
+            if(add + 8 >= MAX_COOKIE_HEADER_LEN) {
+              infof(data, "Restricted outgoing cookies due to header size, "
+                    "'%s' not sent", co->name);
+              linecap = TRUE;
+              break;
+            }
+            result = curlx_dyn_addf(r, "Cookie: %s=%s\r\n", co->name,
+                                    co->value);
+            if(result)
+              break;
+            count++;
+          }
+        }
+        Curl_llist_destroy(&list, NULL);
+      }
+      if(addcookies && !result && !linecap) {
+        const char *p = addcookies;
+
+        while(*p) {
+          const char *start;
+          const char *end;
+          size_t add;
+
+          while(ISBLANK(*p) || (*p == ';'))
+            p++;
+          if(!*p)
+            break;
+          start = p;
+          while(*p && (*p != ';'))
+            p++;
+          end = p;
+          while((end > start) && ISBLANK(end[-1]))
+            end--;
+
+          if(end == start)
+            continue;
+
+          add = (size_t)(end - start);
+          if(add + 8 >= MAX_COOKIE_HEADER_LEN) {
+            infof(data, "Restricted outgoing cookies due to header size, "
+                  "'%.*s' not sent", (int)add, start);
+            linecap = TRUE;
+            break;
+          }
+
+          result = curlx_dyn_addf(r, "Cookie: %.*s\r\n", (int)add, start);
+          if(result)
+            break;
+          count++;
+        }
       }
     }
-    if(count && !result)
-      result = curlx_dyn_addn(r, STRCONST("\r\n"));
 
     if(result)
       return result;

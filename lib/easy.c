@@ -549,6 +549,11 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
       return ret;
   }
 
+  ret = curl_easy_setopt(data, CURLOPT_SPLIT_COOKIES,
+                         opts->split_cookies ? 1L : 0L);
+  if(ret)
+    return ret;
+
   return CURLE_OK;
 }
 

@@ -1209,6 +1209,8 @@ CURLcode config2setopts(struct OperationConfig *config,
   /* curl-impersonate */
   if(config->impersonate)
     my_setopt_str(curl, CURLOPT_IMPERSONATE, config->impersonate);
+  if(config->split_cookies >= 0)
+    my_setopt_long(curl, CURLOPT_SPLIT_COOKIES, config->split_cookies);
 
   return result;
 }

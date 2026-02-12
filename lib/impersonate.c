@@ -52,7 +52,8 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
+    .split_cookies = true,
   },
   {
     .target = "chrome101",
@@ -101,7 +102,8 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
+    .split_cookies = true,
   },
   {
     .target = "chrome104",
@@ -150,7 +152,8 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
+    .split_cookies = true,
   },
   {
     .target = "chrome107",
@@ -199,7 +202,8 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
+    .split_cookies = true,
   },
   {
     .target = "chrome110",
@@ -249,7 +253,8 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
+    .split_cookies = true,
   },
   {
     .target = "chrome116",
@@ -299,7 +304,8 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
+    .split_cookies = true,
   },
   {
     .target = "chrome119",
@@ -350,7 +356,8 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
+    .split_cookies = true,
   },
   {
     .target = "chrome120",
@@ -401,7 +408,8 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
+    .split_cookies = true,
   },
   {
     .target = "chrome123",
@@ -452,7 +460,8 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
+    .split_cookies = true,
   },
   {
     .target = "chrome124",
@@ -505,7 +514,8 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
+    .split_cookies = true,
   },
   {
     .target = "chrome131",
@@ -558,7 +568,8 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
+    .split_cookies = true,
   },
   {
     .target = "chrome131_android",
@@ -611,7 +622,8 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
+    .split_cookies = true,
   },
   {
     .target = "chrome133a",
@@ -664,7 +676,8 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = true,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
+    .split_cookies = true,
   },
   {
     .target = "chrome136",
@@ -717,7 +730,8 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = true,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
+    .split_cookies = true,
   },
   {
     .target = "chrome142",
@@ -770,7 +784,8 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = true,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
+    .split_cookies = true,
   },
   {
     .target = "chrome99",
@@ -819,7 +834,8 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
+    .split_cookies = true,
   },
   {
     .target = "chrome99_android",
@@ -868,7 +884,8 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
+    .split_cookies = true,
   },
   {
     .target = "edge101",

@@ -172,6 +172,7 @@ struct OperationConfig {
   long http2_stream_exclusive;
   char *http2_streams;
   char *impersonate;
+  int split_cookies; /* -1: unset, 0: merge, 1: split */
   bool http2_no_priority;
   bool tls_grease;
   char *tls_extension_order;
