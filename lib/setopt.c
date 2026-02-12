@@ -659,6 +659,9 @@ static CURLcode setopt_long(struct Curl_easy *data, CURLoption option,
      */
     data->set.cookiesession = enabled;
     break;
+  case CURLOPT_SPLIT_COOKIES:
+    data->set.split_cookies = enabled;
+    break;
 #endif
   case CURLOPT_AUTOREFERER:
     /*

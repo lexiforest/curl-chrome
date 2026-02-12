@@ -325,6 +325,7 @@ static const struct LongShort aliases[]= {
   {"socks5-hostname",            ARG_STRG, ' ', C_SOCKS5_HOSTNAME},
   {"speed-limit",                ARG_STRG, 'Y', C_SPEED_LIMIT},
   {"speed-time",                 ARG_STRG, 'y', C_SPEED_TIME},
+  {"split-cookies",              ARG_BOOL, ' ', C_SPLIT_COOKIES},
   {"ssl",                        ARG_BOOL|ARG_TLS, ' ', C_SSL},
   {"ssl-allow-beast",            ARG_BOOL|ARG_TLS, ' ', C_SSL_ALLOW_BEAST},
   {"ssl-auto-client-cert",       ARG_BOOL|ARG_TLS, ' ',
@@ -2099,6 +2100,9 @@ static ParameterError opt_bool(struct OperationConfig *config,
     break;
   case C_JUNK_SESSION_COOKIES: /* --junk-session-cookies */
     config->cookiesession = toggle;
+    break;
+  case C_SPLIT_COOKIES: /* --split-cookies */
+    config->split_cookies = toggle;
     break;
   case C_HEAD: /* --head */
     config->no_body = toggle;

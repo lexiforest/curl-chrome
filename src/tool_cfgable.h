@@ -265,6 +265,7 @@ struct OperationConfig {
   BIT(remote_name_all);   /* --remote-name-all */
   BIT(remote_time);
   BIT(cookiesession);       /* new session? */
+  BIT(split_cookies);       /* split cookies into separate Cookie headers */
   BIT(encoding);            /* Accept-Encoding please */
   BIT(tr_encoding);         /* Transfer-Encoding please */
   BIT(use_resume);

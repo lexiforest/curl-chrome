@@ -477,6 +477,9 @@ CURLcode Curl_init_userdefined(struct Curl_easy *data)
   set->tls_use_new_alps_codepoint = FALSE;
   set->expect_100_timeout = 1000L; /* Wait for a second by default. */
   set->sep_headers = TRUE; /* separated header lists by default */
+#ifndef CURL_DISABLE_COOKIES
+  set->split_cookies = FALSE; /* use a single Cookie header by default */
+#endif
   set->buffer_size = READBUFFER_SIZE;
   set->upload_buffer_size = UPLOADBUFFER_DEFAULT;
   set->happy_eyeballs_timeout = CURL_HET_DEFAULT;

@@ -47,6 +47,8 @@ struct impersonate_opts {
   int http2_stream_exclusive;
   bool http2_no_priority;  // disable http2 priority in header frame
   bool proxy_credential_no_reuse;  // do not reuse TLS sessions or connections from different proxy credentials
+  bool split_cookies;  // split cookies into one Cookie header per pair
+
   /* Other TLS options will come here in the future once they are
    * configurable through curl_easy_setopt() */
 };
