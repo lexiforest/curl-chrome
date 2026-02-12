@@ -934,7 +934,7 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
     .split_cookies = true,
   },
   {
@@ -984,7 +984,7 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
     .split_cookies = true,
   },
   {
@@ -1242,7 +1242,7 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
     .split_cookies = true,
   },
   {
@@ -1308,7 +1308,7 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
     .split_cookies = true,
   },
   {
@@ -1369,7 +1369,7 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
     .split_cookies = true,
   },
   {
@@ -1433,7 +1433,7 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
     .split_cookies = true,
   },
   {
@@ -1497,7 +1497,7 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
     .split_cookies = true,
   },
   {
@@ -1561,7 +1561,7 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
     .split_cookies = true,
   },
   {
@@ -1625,7 +1625,7 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
     .split_cookies = true,
   },
   {
@@ -1689,7 +1689,7 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
     .split_cookies = true,
   },
   {
@@ -1753,7 +1753,7 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
     .split_cookies = true,
   },
   {
@@ -1816,7 +1816,7 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
     .split_cookies = true,
   },
   {
@@ -1879,7 +1879,7 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
     .split_cookies = true,
   },
   {
@@ -1942,7 +1942,7 @@ const struct impersonate_opts impersonations[] = {
     .tls_extension_order = NULL,
     .tls_use_new_alps_codepoint = false,
     .tls_signed_cert_timestamps = true,
-    .tls_grease = true
+    .tls_grease = true,
     .split_cookies = true,
   },
   {
