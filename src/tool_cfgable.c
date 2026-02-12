@@ -48,7 +48,6 @@ struct OperationConfig *config_alloc(struct GlobalConfig *global)
   config->http09_allowed = FALSE;
   config->ftp_skip_ip = TRUE;
   config->file_clobber_mode = CLOBBER_DEFAULT;
-  config->split_cookies = -1;
   config->upload_flags = CURLULFLAG_SEEN;
   curlx_dyn_init(&config->postdata, MAX_FILE2MEMORY);
   return config;

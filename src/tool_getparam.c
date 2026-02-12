@@ -2102,7 +2102,7 @@ static ParameterError opt_bool(struct OperationConfig *config,
     config->cookiesession = toggle;
     break;
   case C_SPLIT_COOKIES: /* --split-cookies */
-    config->split_cookies = toggle ? 1 : 0;
+    config->split_cookies = toggle;
     break;
   case C_HEAD: /* --head */
     config->no_body = toggle;
