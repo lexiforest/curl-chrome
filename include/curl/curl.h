@@ -2339,6 +2339,9 @@ typedef enum {
   /* curl-impersonate: Split cookies into separate Cookie headers */
   CURLOPT(CURLOPT_SPLIT_COOKIES, CURLOPTTYPE_LONG, 1023),
 
+  /* curl-impersonate: Set multipart/form-data boundary style */
+  CURLOPT(CURLOPT_FORM_BOUNDARY, CURLOPTTYPE_STRINGPOINT, 1024),
+
   CURLOPT_LASTENTRY /* the last unused */
 } CURLoption;
 

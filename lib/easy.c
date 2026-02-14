@@ -554,6 +554,13 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
   if(ret)
     return ret;
 
+  if(opts->form_boundary) {
+    ret = curl_easy_setopt(data, CURLOPT_FORM_BOUNDARY,
+                           opts->form_boundary);
+    if(ret)
+      return ret;
+  }
+
   return CURLE_OK;
 }
 

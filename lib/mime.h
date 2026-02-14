@@ -28,6 +28,10 @@
 
 #define MIME_BOUNDARY_DASHES            24  /* leading boundary dashes */
 #define MIME_RAND_BOUNDARY_CHARS        22  /* Nb. of random boundary chars. */
+#define MIME_WEBKIT_BOUNDARY_PREFIX "------WebKitFormBoundary"
+#define MIME_WEBKIT_BOUNDARY_CHARS      16
+#define MIME_FIREFOX_BOUNDARY_PREFIX "------geckoformboundary"
+#define MIME_FIREFOX_BOUNDARY_CHARS     32
 #define MAX_ENCODED_LINE_LENGTH         76  /* Maximum encoded line length. */
 #define ENCODING_BUFFER_SIZE            256 /* Encoding temp buffers size. */
 
@@ -95,7 +99,8 @@ struct mime_state {
 };
 
 /* Boundary string length. */
-#define MIME_BOUNDARY_LEN (MIME_BOUNDARY_DASHES + MIME_RAND_BOUNDARY_CHARS)
+#define MIME_BOUNDARY_LEN (sizeof(MIME_FIREFOX_BOUNDARY_PREFIX) - 1 + \
+                           MIME_FIREFOX_BOUNDARY_CHARS)
 
 /* A mime multipart. */
 struct curl_mime {
@@ -151,6 +156,7 @@ CURLcode Curl_mime_prepare_headers(struct Curl_easy *data,
                                    const char *contenttype,
                                    const char *disposition,
                                    enum mimestrategy strategy);
+CURLcode Curl_mime_set_form_boundary(struct Curl_easy *easy, curl_mime *mime);
 size_t Curl_mime_read(char *buffer, size_t size, size_t nitems,
                       void *instream);
 const char *Curl_mime_contenttype(const char *filename);
@@ -168,6 +174,7 @@ CURLcode Curl_creader_set_mime(struct Curl_easy *data, curl_mimepart *part);
 #define Curl_mime_duppart(x,y,z) CURLE_OK /* Nothing to duplicate. Succeed */
 #define Curl_mime_set_subparts(a,b,c) CURLE_NOT_BUILT_IN
 #define Curl_mime_prepare_headers(a,b,c,d,e) CURLE_NOT_BUILT_IN
+#define Curl_mime_set_form_boundary(a,b) CURLE_NOT_BUILT_IN
 #define Curl_mime_read NULL
 #define Curl_creader_set_mime(x,y) ((void)x, CURLE_NOT_BUILT_IN)
 #endif
