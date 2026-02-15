@@ -1208,8 +1208,11 @@ CURLcode config2setopts(struct OperationConfig *config,
     my_setopt_long(curl, CURLOPT_UPLOAD_FLAGS, config->upload_flags);
 
   /* curl-impersonate */
-  if(config->impersonate)
-    my_setopt_str(curl, CURLOPT_IMPERSONATE, config->impersonate);
+  if(config->impersonate) {
+    result = my_setopt_str(curl, CURLOPT_IMPERSONATE, config->impersonate);
+    if(result)
+      return result;
+  }
 
   return result;
 }
