@@ -2004,49 +2004,19 @@ static CURLcode http_host(struct Curl_easy *data, struct connectdata *conn)
     data->state.first_remote_protocol = conn->handler->protocol;
   }
   Curl_safefree(aptr->host);
+#ifndef CURL_DISABLE_COOKIES
+  /* Cookies are matched against the URL host, not a custom Host: header. */
+  Curl_safefree(aptr->cookiehost);
+#endif
 
   ptr = Curl_checkheaders(data, STRCONST("Host"));
   if(ptr && (!data->state.this_is_a_follow ||
              curl_strequal(data->state.first_host, conn->host.name))) {
-#if !defined(CURL_DISABLE_COOKIES)
-    /* If we have a given custom Host: header, we extract the hostname in
-       order to possibly use it for cookie reasons later on. We only allow the
-       custom Host: header if this is NOT a redirect, as setting Host: in the
-       redirected request is being out on thin ice. Except if the hostname
-       is the same as the first one! */
-    char *cookiehost = Curl_copy_header_value(ptr);
-    if(!cookiehost)
-      return CURLE_OUT_OF_MEMORY;
-    if(!*cookiehost)
-      /* ignore empty data */
-      free(cookiehost);
-    else {
-      /* If the host begins with '[', we start searching for the port after
-         the bracket has been closed */
-      if(*cookiehost == '[') {
-        char *closingbracket;
-        /* since the 'cookiehost' is an allocated memory area that will be
-           freed later we cannot simply increment the pointer */
-        memmove(cookiehost, cookiehost + 1, strlen(cookiehost) - 1);
-        closingbracket = strchr(cookiehost, ']');
-        if(closingbracket)
-          *closingbracket = 0;
-      }
-      else {
-        int startsearch = 0;
-        char *colon = strchr(cookiehost + startsearch, ':');
-        if(colon)
-          *colon = 0; /* The host must not include an embedded port number */
-      }
-      free(aptr->cookiehost);
-      aptr->cookiehost = cookiehost;
-    }
-#endif
-
     if(!curl_strequal("Host:", ptr)) {
-      aptr->host = aprintf("Host:%s\r\n", &ptr[5]);
-      if(!aptr->host)
-        return CURLE_OUT_OF_MEMORY;
+      /* Keep custom Host: in the user header list path so it is emitted
+         in the same relative order as other user-provided headers.
+         Cookie matching follows the URL host. */
+      aptr->host = NULL;
     }
   }
   else {
