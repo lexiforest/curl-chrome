@@ -1,8 +1,9 @@
 #!/bin/sh
 
-# wcurl - a simple wrapper around curl to easily download files.
+# wcurl-impersonate - a simple wrapper around curl-impersonate to easily
+# download files.
 #
-# Requires curl >= 7.46.0 (2015)
+# Requires curl-impersonate >= 7.46.0 (2015)
 #
 # Copyright (C) Samuel Henrique <samueloph@debian.org>, Sergio Durigan
 # Junior <sergiodj@debian.org> and many contributors, see the AUTHORS
@@ -46,7 +47,7 @@ _EOF_
 usage()
 {
     cat << _EOF_
-${PROGRAM_NAME} -- a simple wrapper around curl to easily download files.
+${PROGRAM_NAME} -- a simple wrapper around curl-impersonate to easily download files.
 
 Usage: ${PROGRAM_NAME} <URL>...
        ${PROGRAM_NAME} [--curl-options <CURL_OPTIONS>]... [--no-decode-filename] [-o|-O|--output <PATH>] [--dry-run] [--] <URL>...
@@ -56,29 +57,33 @@ Usage: ${PROGRAM_NAME} <URL>...
 
 Options:
 
-  --curl-options <CURL_OPTIONS>: Specify extra options to be passed when invoking curl. May be
-                                 specified more than once.
+  --curl-options <CURL_OPTIONS>: Specify extra options to be passed when invoking
+                                 curl-impersonate. May be specified more than once.
 
   -o, -O, --output <PATH>: Use the provided output path instead of getting it from the URL. If
                            multiple URLs are provided, resulting files share the same name with a
-                           number appended to the end (curl >= 7.83.0). If this option is provided
-                           multiple times, only the last value is considered.
+                           number appended to the end (curl-impersonate >= 7.83.0).
+                           If this option is provided multiple times, only the last
+                           value is considered.
 
-  --no-decode-filename: Don't percent-decode the output filename, even if the percent-encoding in
-                        the URL was done by wcurl, e.g.: The URL contained whitespaces.
+  --no-decode-filename: Don't percent-decode the output filename, even if the
+                        percent-encoding in the URL was done by
+                        ${PROGRAM_NAME}, e.g.: The URL contained whitespaces.
 
-  --dry-run: Don't actually execute curl, just print what would be invoked.
+  --dry-run: Don't actually execute curl-impersonate, just print what would be invoked.
 
   -V, --version: Print version information.
 
   -h, --help: Print this usage message.
 
-  <CURL_OPTIONS>: Any option supported by curl can be set here. This is not used by wcurl; it is
-                 instead forwarded to the curl invocation.
+  <CURL_OPTIONS>: Any option supported by curl-impersonate can be set here. This
+                 is not used by ${PROGRAM_NAME}; it is instead forwarded to the
+                 curl-impersonate invocation.
 
   <URL>: URL to be downloaded. Anything that is not a parameter is considered
-         an URL. Whitespaces are percent-encoded and the URL is passed to curl, which
-         then performs the parsing. May be specified more than once.
+         an URL. Whitespaces are percent-encoded and the URL is passed to
+         curl-impersonate, which then performs the parsing. May be specified
+         more than once.
 _EOF_
 }
 
@@ -89,7 +94,7 @@ error()
     exit 1
 }
 
-# Extra curl options provided by the user.
+# Extra curl-impersonate options provided by the user.
 # This is set per-URL for every URL provided.
 # Some options are global, but we are erroring on the side of needlesly setting
 # them multiple times instead of causing issues with parameters that needs to
@@ -104,7 +109,7 @@ URLS=""
 OUTPUT_PATH=""
 HAS_USER_SET_OUTPUT="false"
 
-# The parameters that are passed per-URL to curl.
+# The parameters that are passed per-URL to curl-impersonate.
 readonly PER_URL_PARAMETERS="\
     --fail \
     --globoff \
@@ -113,7 +118,7 @@ readonly PER_URL_PARAMETERS="\
     --remote-time \
     --retry 5 "
 
-# Whether to invoke curl or not.
+# Whether to invoke curl-impersonate or not.
 DRY_RUN="false"
 
 # Sanitize parameters.
@@ -176,10 +181,10 @@ get_url_filename()
     # No slash means there was just a hostname and no path; return empty string.
 }
 
-# Execute curl with the list of URLs provided by the user.
+# Execute curl-impersonate with the list of URLs provided by the user.
 exec_curl()
 {
-    CMD="curl "
+    CMD="curl-impersonate "
 
     # Store version to check if it supports --no-clobber and --parallel.
     curl_version=$($CMD --version | cut -f2 -d' ' | head -n1)

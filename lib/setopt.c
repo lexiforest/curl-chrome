@@ -109,6 +109,12 @@ CURLcode Curl_setstropt(char **charp, const char *s)
   return CURLE_OK;
 }
 
+static bool setopt_valid_form_boundary(const char *value)
+{
+  return curl_strequal(value, "webkit") ||
+         curl_strequal(value, "firefox");
+}
+
 CURLcode Curl_setblobopt(struct curl_blob **blobp,
                          const struct curl_blob *blob)
 {
@@ -658,6 +664,9 @@ static CURLcode setopt_long(struct Curl_easy *data, CURLoption option,
      * previous session.
      */
     data->set.cookiesession = enabled;
+    break;
+  case CURLOPT_SPLIT_COOKIES:
+    data->set.split_cookies = enabled;
     break;
 #endif
   case CURLOPT_AUTOREFERER:
@@ -1620,6 +1629,9 @@ static CURLcode setopt_pointers(struct Curl_easy *data, CURLoption option,
     result = Curl_mime_set_subparts(&data->set.mimepost,
                                     va_arg(param, curl_mime *),
                                     FALSE);
+    if(!result && data->set.str[STRING_FORM_BOUNDARY]) {
+      result = Curl_mime_set_form_boundary(data, (curl_mime *) data->set.mimepost.arg);
+    }
     if(!result) {
       data->set.method = HTTPREQ_POST_MIME;
       data->set.opt_no_body = FALSE; /* this is implied */
@@ -1761,6 +1773,14 @@ static CURLcode setopt_cptr(struct Curl_easy *data, CURLoption option,
       return result;
     // for the master option, we simply call the easy_impersonate method here.
     return curl_easy_impersonate(data, data->set.str[STRING_IMPERSONATE], true);
+    break;
+  case CURLOPT_FORM_BOUNDARY:
+    if(ptr && !setopt_valid_form_boundary(ptr))
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    result = Curl_setstropt(&data->set.str[STRING_FORM_BOUNDARY], ptr);
+    if(result)
+      return result;
+    return Curl_mime_set_form_boundary(data, (curl_mime *) data->set.mimepost.arg);
     break;
   case CURLOPT_TLS_EXTENSION_ORDER:
     return Curl_setstropt(&data->set.str[STRING_TLS_EXTENSION_ORDER], ptr);

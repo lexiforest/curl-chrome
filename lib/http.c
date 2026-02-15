@@ -2004,49 +2004,19 @@ static CURLcode http_host(struct Curl_easy *data, struct connectdata *conn)
     data->state.first_remote_protocol = conn->handler->protocol;
   }
   Curl_safefree(aptr->host);
+#ifndef CURL_DISABLE_COOKIES
+  /* Cookies are matched against the URL host, not a custom Host: header. */
+  Curl_safefree(aptr->cookiehost);
+#endif
 
   ptr = Curl_checkheaders(data, STRCONST("Host"));
   if(ptr && (!data->state.this_is_a_follow ||
              curl_strequal(data->state.first_host, conn->host.name))) {
-#if !defined(CURL_DISABLE_COOKIES)
-    /* If we have a given custom Host: header, we extract the hostname in
-       order to possibly use it for cookie reasons later on. We only allow the
-       custom Host: header if this is NOT a redirect, as setting Host: in the
-       redirected request is being out on thin ice. Except if the hostname
-       is the same as the first one! */
-    char *cookiehost = Curl_copy_header_value(ptr);
-    if(!cookiehost)
-      return CURLE_OUT_OF_MEMORY;
-    if(!*cookiehost)
-      /* ignore empty data */
-      free(cookiehost);
-    else {
-      /* If the host begins with '[', we start searching for the port after
-         the bracket has been closed */
-      if(*cookiehost == '[') {
-        char *closingbracket;
-        /* since the 'cookiehost' is an allocated memory area that will be
-           freed later we cannot simply increment the pointer */
-        memmove(cookiehost, cookiehost + 1, strlen(cookiehost) - 1);
-        closingbracket = strchr(cookiehost, ']');
-        if(closingbracket)
-          *closingbracket = 0;
-      }
-      else {
-        int startsearch = 0;
-        char *colon = strchr(cookiehost + startsearch, ':');
-        if(colon)
-          *colon = 0; /* The host must not include an embedded port number */
-      }
-      free(aptr->cookiehost);
-      aptr->cookiehost = cookiehost;
-    }
-#endif
-
     if(!curl_strequal("Host:", ptr)) {
-      aptr->host = aprintf("Host:%s\r\n", &ptr[5]);
-      if(!aptr->host)
-        return CURLE_OUT_OF_MEMORY;
+      /* Keep custom Host: in the user header list path so it is emitted
+         in the same relative order as other user-provided headers.
+         Cookie matching follows the URL host. */
+      aptr->host = NULL;
     }
   }
   else {
@@ -2565,47 +2535,110 @@ static CURLcode http_cookies(struct Curl_easy *data,
                                secure_context, &list);
       Curl_share_unlock(data, CURL_LOCK_DATA_COOKIE);
     }
-    if(!rc) {
-      struct Curl_llist_node *n;
-      size_t clen = 8; /* hold the size of the generated Cookie: header */
+    if(!data->set.split_cookies) {
+      if(!rc) {
+        struct Curl_llist_node *n;
+        size_t clen = 8; /* hold the size of the generated Cookie: header */
 
-      /* loop through all cookies that matched */
-      for(n = Curl_llist_head(&list); n; n = Curl_node_next(n)) {
-        struct Cookie *co = Curl_node_elem(n);
-        if(co->value) {
-          size_t add;
-          if(!count) {
-            result = curlx_dyn_addn(r, STRCONST("Cookie: "));
+        /* loop through all cookies that matched */
+        for(n = Curl_llist_head(&list); n; n = Curl_node_next(n)) {
+          struct Cookie *co = Curl_node_elem(n);
+          if(co->value) {
+            size_t add;
+            if(!count) {
+              result = curlx_dyn_addn(r, STRCONST("Cookie: "));
+              if(result)
+                break;
+            }
+            add = strlen(co->name) + strlen(co->value) + 1;
+            if(clen + add >= MAX_COOKIE_HEADER_LEN) {
+              infof(data, "Restricted outgoing cookies due to header size, "
+                    "'%s' not sent", co->name);
+              linecap = TRUE;
+              break;
+            }
+            result = curlx_dyn_addf(r, "%s%s=%s", count ? "; " : "",
+                                    co->name, co->value);
             if(result)
               break;
+            clen += add + (count ? 2 : 0);
+            count++;
           }
-          add = strlen(co->name) + strlen(co->value) + 1;
-          if(clen + add >= MAX_COOKIE_HEADER_LEN) {
-            infof(data, "Restricted outgoing cookies due to header size, "
-                  "'%s' not sent", co->name);
-            linecap = TRUE;
-            break;
-          }
-          result = curlx_dyn_addf(r, "%s%s=%s", count ? "; " : "",
-                                  co->name, co->value);
-          if(result)
-            break;
-          clen += add + (count ? 2 : 0);
+        }
+        Curl_llist_destroy(&list, NULL);
+      }
+      if(addcookies && !result && !linecap) {
+        if(!count)
+          result = curlx_dyn_addn(r, STRCONST("Cookie: "));
+        if(!result) {
+          result = curlx_dyn_addf(r, "%s%s", count ? "; " : "", addcookies);
           count++;
         }
       }
-      Curl_llist_destroy(&list, NULL);
+      if(count && !result)
+        result = curlx_dyn_addn(r, STRCONST("\r\n"));
     }
-    if(addcookies && !result && !linecap) {
-      if(!count)
-        result = curlx_dyn_addn(r, STRCONST("Cookie: "));
-      if(!result) {
-        result = curlx_dyn_addf(r, "%s%s", count ? "; " : "", addcookies);
-        count++;
+    else {
+      if(!rc) {
+        struct Curl_llist_node *n;
+
+        /* one cookie per header line */
+        for(n = Curl_llist_head(&list); n; n = Curl_node_next(n)) {
+          struct Cookie *co = Curl_node_elem(n);
+          if(co->value) {
+            size_t add = strlen(co->name) + strlen(co->value) + 1;
+            if(add + 8 >= MAX_COOKIE_HEADER_LEN) {
+              infof(data, "Restricted outgoing cookies due to header size, "
+                    "'%s' not sent", co->name);
+              linecap = TRUE;
+              break;
+            }
+            result = curlx_dyn_addf(r, "Cookie: %s=%s\r\n", co->name,
+                                    co->value);
+            if(result)
+              break;
+            count++;
+          }
+        }
+        Curl_llist_destroy(&list, NULL);
+      }
+      if(addcookies && !result && !linecap) {
+        const char *p = addcookies;
+
+        while(*p) {
+          const char *start;
+          const char *end;
+          size_t add;
+
+          while(ISBLANK(*p) || (*p == ';'))
+            p++;
+          if(!*p)
+            break;
+          start = p;
+          while(*p && (*p != ';'))
+            p++;
+          end = p;
+          while((end > start) && ISBLANK(end[-1]))
+            end--;
+
+          if(end == start)
+            continue;
+
+          add = (size_t)(end - start);
+          if(add + 8 >= MAX_COOKIE_HEADER_LEN) {
+            infof(data, "Restricted outgoing cookies due to header size, "
+                  "'%.*s' not sent", (int)add, start);
+            linecap = TRUE;
+            break;
+          }
+
+          result = curlx_dyn_addf(r, "Cookie: %.*s\r\n", (int)add, start);
+          if(result)
+            break;
+          count++;
+        }
       }
     }
-    if(count && !result)
-      result = curlx_dyn_addn(r, STRCONST("\r\n"));
 
     if(result)
       return result;

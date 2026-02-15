@@ -2336,6 +2336,12 @@ typedef enum {
   /* curl-impersonate: Do not reuse TLS sessions or connections from different proxy credentials */
   CURLOPT(CURLOPT_PROXY_CREDENTIAL_NO_REUSE, CURLOPTTYPE_LONG, 1022),
 
+  /* curl-impersonate: Split cookies into separate Cookie headers */
+  CURLOPT(CURLOPT_SPLIT_COOKIES, CURLOPTTYPE_LONG, 1023),
+
+  /* curl-impersonate: Set multipart/form-data boundary style */
+  CURLOPT(CURLOPT_FORM_BOUNDARY, CURLOPTTYPE_STRINGPOINT, 1024),
+
   /*
    * curl-impersonate:
    * Set the order of the HTTP/3 pseudo headers. The value must contain
@@ -2345,13 +2351,13 @@ typedef enum {
    *
    * This is very similar to the http/2 option.
    */
-  CURLOPT(CURLOPT_HTTP3_PSEUDO_HEADERS_ORDER, CURLOPTTYPE_STRINGPOINT, 1023),
+  CURLOPT(CURLOPT_HTTP3_PSEUDO_HEADERS_ORDER, CURLOPTTYPE_STRINGPOINT, 1025),
 
   /* curl-impersonate: HTTP3 settings frame keys and values, format: 1:v;6:v;7:v */
-  CURLOPT(CURLOPT_HTTP3_SETTINGS, CURLOPTTYPE_STRINGPOINT, 1024),
+  CURLOPT(CURLOPT_HTTP3_SETTINGS, CURLOPTTYPE_STRINGPOINT, 1026),
 
   /* curl-impersonate: QUIC transport parameters, format: id:value;id:value */
-  CURLOPT(CURLOPT_QUIC_TRANSPORT_PARAMETERS, CURLOPTTYPE_STRINGPOINT, 1025),
+  CURLOPT(CURLOPT_QUIC_TRANSPORT_PARAMETERS, CURLOPTTYPE_STRINGPOINT, 1027),
 
   CURLOPT_LASTENTRY /* the last unused */
 } CURLoption;

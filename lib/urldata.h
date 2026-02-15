@@ -1247,6 +1247,7 @@ enum dupstring {
   STRING_SSL_ISSUERCERT, /* issuer cert file to check certificate */
   STRING_SERVICE_NAME,    /* Service name */
   STRING_IMPERSONATE,     /* curl-impersonate */
+  STRING_FORM_BOUNDARY,   /* CURLOPT_FORM_BOUNDARY */
 #ifndef CURL_DISABLE_PROXY
   STRING_CERT_PROXY,      /* client certificate filename */
   STRING_CERT_TYPE_PROXY, /* format for certificate (default: PEM)*/
@@ -1611,6 +1612,7 @@ struct UserDefined {
   BIT(sep_headers);     /* handle host and proxy headers separately */
 #ifndef CURL_DISABLE_COOKIES
   BIT(cookiesession);   /* new cookie session? */
+  BIT(split_cookies);   /* split cookies into one Cookie header per pair */
 #endif
   BIT(crlf);            /* convert crlf on ftp upload(?) */
 #ifdef USE_SSH

@@ -655,6 +655,7 @@ static CURLcode cookie_setopts(struct OperationConfig *config, CURL *curl)
 
   /* new in libcurl 7.9.7 */
   my_setopt_long(curl, CURLOPT_COOKIESESSION, config->cookiesession);
+  my_setopt_long(curl, CURLOPT_SPLIT_COOKIES, config->split_cookies);
 
   return result;
 }
@@ -1222,8 +1223,11 @@ CURLcode config2setopts(struct OperationConfig *config,
     my_setopt_long(curl, CURLOPT_UPLOAD_FLAGS, config->upload_flags);
 
   /* curl-impersonate */
-  if(config->impersonate)
-    my_setopt_str(curl, CURLOPT_IMPERSONATE, config->impersonate);
+  if(config->impersonate) {
+    result = my_setopt_str(curl, CURLOPT_IMPERSONATE, config->impersonate);
+    if(result)
+      return result;
+  }
 
   return result;
 }

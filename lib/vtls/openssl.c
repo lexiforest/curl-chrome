@@ -4033,6 +4033,9 @@ static CURLcode ossl_init_ech(struct ossl_ctx *octx,
   size_t ech_config_len = 0;
   char *outername = data->set.str[STRING_ECH_PUBLIC];
   int trying_ech_now = 0;
+  int fallback_grease = ((data->set.tls_ech & CURLECH_ENABLE) &&
+                         !(data->set.tls_ech & CURLECH_HARD) &&
+                         !(data->set.tls_ech & CURLECH_CLA_CFG));
   CURLcode result;
 
   if(!ECH_ENABLED(data))
@@ -4098,7 +4101,15 @@ static CURLcode ossl_init_ech(struct ossl_ctx *octx,
                               cf->conn->ip_version);
     if(!dns) {
       infof(data, "ECH: requested but no DNS info available");
-      if(data->set.tls_ech & CURLECH_HARD)
+      if(fallback_grease) {
+        infof(data, "ECH: falling back to GREASE");
+# if defined(OPENSSL_IS_BORINGSSL) || defined(OPENSSL_IS_AWSLC)
+        SSL_set_enable_ech_grease(octx->ssl, 1);
+# else
+        SSL_set_options(octx->ssl, SSL_OP_ECH_GREASE);
+# endif
+      }
+      else if(data->set.tls_ech & CURLECH_HARD)
         return CURLE_SSL_CONNECT_ERROR;
     }
     else {
@@ -4114,6 +4125,14 @@ static CURLcode ossl_init_ech(struct ossl_ctx *octx,
           infof(data, "ECH: SSL_set1_ech_config_list failed");
           if(data->set.tls_ech & CURLECH_HARD)
             return CURLE_SSL_CONNECT_ERROR;
+          if(fallback_grease) {
+            infof(data, "ECH: falling back to GREASE");
+# if defined(OPENSSL_IS_BORINGSSL) || defined(OPENSSL_IS_AWSLC)
+            SSL_set_enable_ech_grease(octx->ssl, 1);
+# else
+            SSL_set_options(octx->ssl, SSL_OP_ECH_GREASE);
+# endif
+          }
         }
         else {
           trying_ech_now = 1;
@@ -4122,7 +4141,15 @@ static CURLcode ossl_init_ech(struct ossl_ctx *octx,
       }
       else {
         infof(data, "ECH: requested but no ECHConfig available");
-        if(data->set.tls_ech & CURLECH_HARD)
+        if(fallback_grease) {
+          infof(data, "ECH: falling back to GREASE");
+# if defined(OPENSSL_IS_BORINGSSL) || defined(OPENSSL_IS_AWSLC)
+          SSL_set_enable_ech_grease(octx->ssl, 1);
+# else
+          SSL_set_options(octx->ssl, SSL_OP_ECH_GREASE);
+# endif
+        }
+        else if(data->set.tls_ech & CURLECH_HARD)
           return CURLE_SSL_CONNECT_ERROR;
       }
       Curl_resolv_unlink(data, &dns);
@@ -4146,11 +4173,18 @@ static CURLcode ossl_init_ech(struct ossl_ctx *octx,
     }
   }
 # endif  /* OPENSSL_IS_BORINGSSL || OPENSSL_IS_AWSLC */
+  /*
+   * BoringSSL/AWS-LC handle ECH's TLS version rules internally between
+   * ClientHelloInner/Outer. Do not force a global TLS minimum here so the
+   * outer behavior can match browsers.
+   */
+#if !defined(OPENSSL_IS_BORINGSSL) && !defined(OPENSSL_IS_AWSLC)
   if(trying_ech_now
      && SSL_set_min_proto_version(octx->ssl, TLS1_3_VERSION) != 1) {
     infof(data, "ECH: cannot force TLSv1.3 [ERROR]");
     return CURLE_SSL_CONNECT_ERROR;
   }
+#endif
 
   return CURLE_OK;
 }
