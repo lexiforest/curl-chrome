@@ -697,6 +697,7 @@ CURLcode get_args(struct OperationConfig *config, const size_t i)
 {
   CURLcode result = CURLE_OK;
   bool last = (config->next ? FALSE : TRUE);
+  char *env_target = NULL;
 
   if(config->jsoned) {
     ParameterError err = PARAM_OK;
@@ -718,14 +719,18 @@ CURLcode get_args(struct OperationConfig *config, const size_t i)
   if(!result && config->proxyuserpwd)
     result = checkpasswd("proxy", i, last, &config->proxyuserpwd);
 
+  env_target = curl_getenv("CURL_IMPERSONATE");
+
   /* Check if we have a user agent, do not override impersonate value */
-  if(!result && !config->useragent && !config->impersonate) {
+  if(!result && !config->useragent &&
+     !config->impersonate && !env_target) {
     config->useragent = my_useragent();
     if(!config->useragent) {
       errorf(config->global, "out of memory");
       result = CURLE_OUT_OF_MEMORY;
     }
   }
+  curl_free(env_target);
 
   return result;
 }
