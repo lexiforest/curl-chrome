@@ -679,19 +679,53 @@ static void h3_apply_setting(nghttp3_settings *settings,
   }
 }
 
-static void h3_settings_from_string(nghttp3_settings *settings,
-                                    struct Curl_easy *data)
+static bool h3_setting_supported(unsigned long id)
+{
+  switch(id) {
+  case 1:
+  case 6:
+  case 7:
+  case 8:
+  case 51:
+    return TRUE;
+  default:
+    return FALSE;
+  }
+}
+
+static size_t h3_settings_count(const char *h3_settings)
+{
+  size_t count = 0;
+
+  if(h3_settings && *h3_settings) {
+    const char *p;
+
+    count = 1;
+    for(p = h3_settings; *p; ++p) {
+      if(*p == ';')
+        ++count;
+    }
+  }
+
+  return count;
+}
+
+static size_t populate_h3_settings(nghttp3_settings_entry *iv,
+                                   size_t ivlen,
+                                   nghttp3_settings *settings,
+                                   struct Curl_easy *data)
 {
   const char *h3_settings = data->set.str[STRING_HTTP3_SETTINGS];
   char *tmp;
   char *setting;
+  size_t i = 0;
 
   if(!h3_settings || !*h3_settings)
-    return;
+    return 0;
 
   tmp = strdup(h3_settings);
   if(!tmp)
-    return;
+    return 0;
 
   setting = strtok(tmp, ";");
   while(setting) {
@@ -716,11 +750,22 @@ static void h3_settings_from_string(nghttp3_settings *settings,
       continue;
     }
 
+    if(!h3_setting_supported(id)) {
+      setting = strtok(NULL, ";");
+      continue;
+    }
+
     h3_apply_setting(settings, id, (uint64_t)value);
+    if(iv && (i < ivlen)) {
+      iv[i].id = id;
+      iv[i].value = (uint64_t)value;
+      ++i;
+    }
     setting = strtok(NULL, ";");
   }
 
   free(tmp);
+  return i;
 }
 
 static CURLcode init_ngh3_conn(struct Curl_cfilter *cf,
@@ -1464,6 +1509,10 @@ static CURLcode init_ngh3_conn(struct Curl_cfilter *cf,
 {
   struct cf_ngtcp2_ctx *ctx = cf->ctx;
   int64_t ctrl_stream_id, qpack_enc_stream_id, qpack_dec_stream_id;
+  const char *h3_settings = data->set.str[STRING_HTTP3_SETTINGS];
+  nghttp3_settings_entry *h3iv = NULL;
+  size_t h3ivalloc = 0;
+  size_t h3ivlen = 0;
   int rc;
 
   if(ngtcp2_conn_get_streams_uni_left(ctx->qconn) < 3) {
@@ -1471,8 +1520,15 @@ static CURLcode init_ngh3_conn(struct Curl_cfilter *cf,
     return CURLE_QUIC_CONNECT_ERROR;
   }
 
+  h3ivalloc = h3_settings_count(h3_settings);
+  if(h3ivalloc) {
+    h3iv = malloc(h3ivalloc * sizeof(*h3iv));
+    if(!h3iv)
+      return CURLE_OUT_OF_MEMORY;
+  }
+
   nghttp3_settings_default(&ctx->h3settings);
-  h3_settings_from_string(&ctx->h3settings, data);
+  h3ivlen = populate_h3_settings(h3iv, h3ivalloc, &ctx->h3settings, data);
 
   rc = nghttp3_conn_client_new(&ctx->h3conn,
                                &ngh3_callbacks,
@@ -1480,9 +1536,22 @@ static CURLcode init_ngh3_conn(struct Curl_cfilter *cf,
                                nghttp3_mem_default(),
                                cf);
   if(rc) {
+    free(h3iv);
     failf(data, "error creating nghttp3 connection instance");
     return CURLE_OUT_OF_MEMORY;
   }
+
+  if(h3ivlen) {
+    rc = nghttp3_conn_submit_settings(ctx->h3conn, 0, h3iv, h3ivlen);
+    free(h3iv);
+    if(rc) {
+      failf(data, "error submitting HTTP/3 settings: %s",
+            nghttp3_strerror(rc));
+      return CURLE_QUIC_CONNECT_ERROR;
+    }
+  }
+  else
+    free(h3iv);
 
   rc = ngtcp2_conn_open_uni_stream(ctx->qconn, &ctrl_stream_id, NULL);
   if(rc) {
