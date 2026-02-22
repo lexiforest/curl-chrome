@@ -1791,6 +1791,15 @@ static CURLcode setopt_cptr(struct Curl_easy *data, CURLoption option,
   case CURLOPT_HTTP2_SETTINGS:
     return Curl_setstropt(&data->set.str[STRING_HTTP2_SETTINGS], ptr);
     break;
+  case CURLOPT_HTTP3_PSEUDO_HEADERS_ORDER:
+    return Curl_setstropt(&data->set.str[STRING_HTTP3_PSEUDO_HEADERS_ORDER], ptr);
+    break;
+  case CURLOPT_HTTP3_SETTINGS:
+    return Curl_setstropt(&data->set.str[STRING_HTTP3_SETTINGS], ptr);
+    break;
+  case CURLOPT_QUIC_TRANSPORT_PARAMETERS:
+    return Curl_setstropt(&data->set.str[STRING_QUIC_TRANSPORT_PARAMETERS], ptr);
+    break;
   case CURLOPT_HTTP2_STREAMS:
     return Curl_setstropt(&data->set.str[STRING_HTTP2_STREAMS], ptr);
     break;

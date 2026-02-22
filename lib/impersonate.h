@@ -34,11 +34,15 @@ struct impersonate_opts {
   const char *http2_settings;
   int http2_window_update;
   const char *http2_streams;
+  const char *http3_pseudo_headers_order;
+  const char *http3_settings;
+  const char *quic_transport_parameters;
   bool tls_permute_extensions;
   bool tls_use_new_alps_codepoint;
   bool tls_signed_cert_timestamps;
   const char *ech;
   const char *tls_extension_order;
+  const char *http3_tls_extension_order;
   const char *tls_delegated_credentials;
   int tls_record_size_limit;
   int tls_key_shares_limit;  // for firefox key_shares extension

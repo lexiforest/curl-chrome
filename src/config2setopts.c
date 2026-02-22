@@ -589,6 +589,21 @@ static CURLcode http_setopts(struct OperationConfig *config,
     my_setopt_str(curl,
                   CURLOPT_HTTP2_STREAMS,
                   config->http2_streams);
+
+  if(config->http3_pseudo_headers_order)
+    my_setopt_str(curl,
+                  CURLOPT_HTTP3_PSEUDO_HEADERS_ORDER,
+                  config->http3_pseudo_headers_order);
+
+  if(config->http3_settings)
+    my_setopt_str(curl,
+                  CURLOPT_HTTP3_SETTINGS,
+                  config->http3_settings);
+
+  if(config->quic_transport_parameters)
+    my_setopt_str(curl,
+                  CURLOPT_QUIC_TRANSPORT_PARAMETERS,
+                  config->quic_transport_parameters);
   /* end of curl-impersonate */
 
   /* new in 7.47.0 */
@@ -1212,6 +1227,23 @@ CURLcode config2setopts(struct OperationConfig *config,
     result = my_setopt_str(curl, CURLOPT_IMPERSONATE, config->impersonate);
     if(result)
       return result;
+
+    if(use_proto == proto_http || use_proto == proto_https) {
+      /* Let explicit --http* selections override impersonation defaults. */
+      if(config->httpversion)
+        my_setopt_enum(curl, CURLOPT_HTTP_VERSION, config->httpversion);
+
+      /* Let explicit TLS version selections override impersonation defaults.
+         For explicit HTTP/3 requests, require TLS >= 1.3 unless the user
+         supplied an explicit TLS version constraint. */
+      if(config->ssl_version || config->ssl_version_max)
+        my_setopt_SSLVERSION(curl, CURLOPT_SSLVERSION,
+                             config->ssl_version | config->ssl_version_max);
+      else if(config->httpversion == CURL_HTTP_VERSION_3 ||
+              config->httpversion == CURL_HTTP_VERSION_3ONLY)
+        my_setopt_SSLVERSION(curl, CURLOPT_SSLVERSION,
+                             CURL_SSLVERSION_TLSv1_3);
+    }
   }
 
   return result;

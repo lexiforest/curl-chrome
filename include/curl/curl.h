@@ -2342,6 +2342,23 @@ typedef enum {
   /* curl-impersonate: Set multipart/form-data boundary style */
   CURLOPT(CURLOPT_FORM_BOUNDARY, CURLOPTTYPE_STRINGPOINT, 1024),
 
+  /*
+   * curl-impersonate:
+   * Set the order of the HTTP/3 pseudo headers. The value must contain
+   * the letters 'm', 'a', 's', 'p' representing the pseudo-headers
+   * ":method", ":authority", ":scheme", ":path" in the desired order of
+   * appearance in the HTTP/3 HEADERS frame.
+   *
+   * This is very similar to the http/2 option.
+   */
+  CURLOPT(CURLOPT_HTTP3_PSEUDO_HEADERS_ORDER, CURLOPTTYPE_STRINGPOINT, 1025),
+
+  /* curl-impersonate: HTTP3 settings frame keys and values, format: 1:v;6:v;7:v */
+  CURLOPT(CURLOPT_HTTP3_SETTINGS, CURLOPTTYPE_STRINGPOINT, 1026),
+
+  /* curl-impersonate: QUIC transport parameters, format: id:value;id:value */
+  CURLOPT(CURLOPT_QUIC_TRANSPORT_PARAMETERS, CURLOPTTYPE_STRINGPOINT, 1027),
+
   CURLOPT_LASTENTRY /* the last unused */
 } CURLoption;
 

@@ -171,6 +171,9 @@ struct OperationConfig {
   long http2_stream_weight;
   long http2_stream_exclusive;
   char *http2_streams;
+  char *http3_pseudo_headers_order;
+  char *http3_settings;
+  char *quic_transport_parameters;
   char *impersonate;
   bool http2_no_priority;
   bool tls_grease;

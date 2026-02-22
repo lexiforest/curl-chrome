@@ -187,6 +187,8 @@ static const struct LongShort aliases[]= {
   {"http2-window-update",        ARG_STRG, ' ', C_HTTP2_WINDOW_UPDATE},  // curl-impersonate
   {"http3",                      ARG_NONE|ARG_TLS, ' ', C_HTTP3},
   {"http3-only",                 ARG_NONE|ARG_TLS, ' ', C_HTTP3_ONLY},
+  {"http3-pseudo-headers-order", ARG_STRG, ' ', C_HTTP3_PSEUDO_HEADERS_ORDER},  // curl-impersonate
+  {"http3-settings",             ARG_STRG, ' ', C_HTTP3_SETTINGS},  // curl-impersonate
   {"ignore-content-length",      ARG_BOOL, ' ', C_IGNORE_CONTENT_LENGTH},
   {"impersonate",                ARG_STRG, ' ', C_IMPERSONATE},
   {"include",                    ARG_BOOL, ' ', C_INCLUDE},
@@ -286,6 +288,7 @@ static const struct LongShort aliases[]= {
   {"proxy1.0",                   ARG_STRG, ' ', C_PROXY1_0},
   {"proxytunnel",                ARG_BOOL, 'p', C_PROXYTUNNEL},
   {"pubkey",                     ARG_STRG, ' ', C_PUBKEY},
+  {"quic-transport-params",      ARG_STRG|ARG_TLS, ' ', C_QUIC_TRANSPORT_PARAMETERS},  // curl-impersonate
   {"quote",                      ARG_STRG, 'Q', C_QUOTE},
   {"random-file",                ARG_FILE|ARG_DEPR, ' ', C_RANDOM_FILE},
   {"range",                      ARG_STRG, 'r', C_RANGE},
@@ -2518,6 +2521,21 @@ static ParameterError opt_filestring(struct OperationConfig *config,
     if(!feature_http2)
       return PARAM_LIBCURL_DOESNT_SUPPORT;
     err = getstr(&config->http2_streams, nextarg, ALLOW_BLANK);
+    break;
+  case C_HTTP3_PSEUDO_HEADERS_ORDER: /* --http3-pseudo-headers-order curl-impersonate */
+    if(!feature_http3)
+      return PARAM_LIBCURL_DOESNT_SUPPORT;
+    err = getstr(&config->http3_pseudo_headers_order, nextarg, ALLOW_BLANK);
+    break;
+  case C_HTTP3_SETTINGS:  /* --http3-settings curl-impersonate */
+    if(!feature_http3)
+      return PARAM_LIBCURL_DOESNT_SUPPORT;
+    err = getstr(&config->http3_settings, nextarg, ALLOW_BLANK);
+    break;
+  case C_QUIC_TRANSPORT_PARAMETERS:  /* --quic-transport-params curl-impersonate */
+    if(!feature_http3)
+      return PARAM_LIBCURL_DOESNT_SUPPORT;
+    err = getstr(&config->quic_transport_parameters, nextarg, ALLOW_BLANK);
     break;
   case C_CERT_COMPRESSION:  /* --cert-compression curl-impersonate */
     err = getstr(&config->ssl_cert_compression, nextarg, ALLOW_BLANK);
