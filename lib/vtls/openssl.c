@@ -4200,6 +4200,7 @@ static CURLcode ossl_init_ssl(struct ossl_ctx *octx,
                               Curl_ossl_init_session_reuse_cb *sess_reuse_cb)
 {
   struct ssl_connect_data *connssl = cf->ctx;
+  const struct alpn_spec *alps = NULL;
 
   /* Let's make an SSL structure */
   if(octx->ssl)
@@ -4213,7 +4214,13 @@ static CURLcode ossl_init_ssl(struct ossl_ctx *octx,
   SSL_set_app_data(octx->ssl, ssl_user_data);
 
 #ifdef HAS_ALPN_OPENSSL
-  if(connssl->alps) {
+  if(data->set.ssl_enable_alps) {
+    if(peer->transport == TRNSPRT_QUIC)
+      alps = alpns_requested;
+    else
+      alps = connssl->alps;
+  }
+  if(alps) {
     size_t i;
     struct alpn_proto_buf proto;
 
@@ -4222,15 +4229,15 @@ static CURLcode ossl_init_ssl(struct ossl_ctx *octx,
       SSL_set_alps_use_new_codepoint(octx->ssl, 1);
     }
 
-    for(i = 0; i < connssl->alps->count; ++i) {
+    for(i = 0; i < alps->count; ++i) {
       /* curl-impersonate: Add the ALPS extension (17513) like Chrome does. */
       // XXX: Firefox does not enable this.
-      SSL_add_application_settings(octx->ssl, connssl->alps->entries[i],
-                                   strlen(connssl->alps->entries[i]), NULL,
+      SSL_add_application_settings(octx->ssl, alps->entries[i],
+                                   strlen(alps->entries[i]), NULL,
                                    0);
     }
 
-    Curl_alpn_to_proto_str(&proto, connssl->alps);
+    Curl_alpn_to_proto_str(&proto, alps);
     infof(data, VTLS_INFOF_ALPS_OFFER_1STR, proto.data);
   }
 #endif
@@ -4664,10 +4671,11 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
    * and SSLClientSocketImpl::Init()
    * in the Chromium's source code. */
 
-  /* curl-impersonate: Enable TLS GREASE. */
-  if(data->set.tls_grease) {
+  /* curl-impersonate: Disable TLS GREASE for HTTP/3 (QUIC). */
+  if(peer->transport == TRNSPRT_QUIC)
+    SSL_CTX_set_grease_enabled(octx->ssl_ctx, 0);
+  else if(data->set.tls_grease)
     SSL_CTX_set_grease_enabled(octx->ssl_ctx, 1);
-  }
 
   /*
    * curl-impersonate: Enable TLS extension permutation, enabled by default

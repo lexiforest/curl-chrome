@@ -174,7 +174,7 @@ else()
   set(CURL_OS "\"${CMAKE_SYSTEM_NAME}\"")
 endif()
 
-set(LIB_NAME "libcurl")
+set(LIB_NAME "libcurl-impersonate")
 
 set_property(DIRECTORY APPEND PROPERTY INCLUDE_DIRECTORIES "${PROJECT_SOURCE_DIR}/include")
 

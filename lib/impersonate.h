@@ -42,6 +42,7 @@ struct impersonate_opts {
   bool tls_signed_cert_timestamps;
   const char *ech;
   const char *tls_extension_order;
+  const char *http3_tls_extension_order;
   const char *tls_delegated_credentials;
   int tls_record_size_limit;
   int tls_key_shares_limit;  // for firefox key_shares extension

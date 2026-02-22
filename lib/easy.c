@@ -74,6 +74,7 @@
 #include "http_digest.h"
 #include "system_win32.h"
 #include "http2.h"
+#include "rand.h"
 #include "curlx/dynbuf.h"
 #include "altsvc.h"
 #include "hsts.h"
@@ -353,19 +354,123 @@ CURLsslset curl_global_sslset(curl_sslbackend id, const char *name,
  * curl-impersonate:
  * Actually call curl_easy_setopt() with all the needed options
  * */
+static CURLcode permute_extension_order(struct Curl_easy *data,
+                                        const char *order,
+                                        char **porder)
+{
+  CURLcode result = CURLE_OK;
+  char *tmp;
+  char *p;
+  char *start;
+  char **tokens = NULL;
+  size_t ntokens = 0;
+  size_t talloc = 0;
+  size_t i;
+  size_t outlen;
+  char *out;
+
+  DEBUGASSERT(porder);
+  *porder = NULL;
+
+  if(!order || !*order)
+    return CURLE_OK;
+
+  tmp = strdup(order);
+  if(!tmp)
+    return CURLE_OUT_OF_MEMORY;
+
+  start = tmp;
+  p = tmp;
+  while(1) {
+    char **newtokens;
+    size_t newalloc;
+    if(*p && (*p != '-')) {
+      ++p;
+      continue;
+    }
+    if(ntokens == talloc) {
+      newalloc = talloc ? (talloc * 2) : 8;
+      newtokens = realloc(tokens, newalloc * sizeof(*tokens));
+      if(!newtokens) {
+        result = CURLE_OUT_OF_MEMORY;
+        goto out;
+      }
+      tokens = newtokens;
+      talloc = newalloc;
+    }
+    tokens[ntokens++] = start;
+    if(!*p)
+      break;
+    *p = '\0';
+    start = p + 1;
+    ++p;
+  }
+
+  if(ntokens < 2)
+    goto out;
+
+  for(i = ntokens - 1; i > 0; --i) {
+    uint64_t r;
+    size_t j;
+    char *swp;
+    result = Curl_rand(data, (unsigned char *)&r, sizeof(r));
+    if(result)
+      goto out;
+    j = (size_t)(r % (i + 1));
+    if(i == j)
+      continue;
+    swp = tokens[i];
+    tokens[i] = tokens[j];
+    tokens[j] = swp;
+  }
+
+  outlen = strlen(order);
+  out = malloc(outlen + 1);
+  if(!out) {
+    result = CURLE_OUT_OF_MEMORY;
+    goto out;
+  }
+
+  p = out;
+  for(i = 0; i < ntokens; ++i) {
+    size_t len = strlen(tokens[i]);
+    memcpy(p, tokens[i], len);
+    p += len;
+    if((i + 1) < ntokens)
+      *p++ = '-';
+  }
+  *p = '\0';
+  *porder = out;
+
+out:
+  free(tokens);
+  free(tmp);
+  return result;
+}
+
 static CURLcode _do_impersonate(struct Curl_easy *data,
                         const struct impersonate_opts *opts,
                         int default_headers)
 {
+  bool use_http3;
   int i;
   int ret;
   struct curl_slist *headers = NULL;
+  const char *tls_extension_order;
 
   if(opts->target == NULL) {
     DEBUGF(fprintf(stderr, "Error: unknown impersonation target '%s'\n",
                    opts->target));
     return CURLE_BAD_FUNCTION_ARGUMENT;
   }
+
+  use_http3 = (data->set.httpwant == CURL_HTTP_VERSION_3 ||
+               data->set.httpwant == CURL_HTTP_VERSION_3ONLY ||
+               opts->httpversion == CURL_HTTP_VERSION_3 ||
+               opts->httpversion == CURL_HTTP_VERSION_3ONLY);
+  tls_extension_order = opts->tls_extension_order;
+  if(use_http3 && opts->http3_tls_extension_order)
+    tls_extension_order = opts->http3_tls_extension_order;
 
   if(opts->httpversion != CURL_HTTP_VERSION_NONE) {
     ret = curl_easy_setopt(data, CURLOPT_HTTP_VERSION, opts->httpversion);
@@ -522,8 +627,20 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
   if(ret)
     return ret;
 
-  if(opts->tls_extension_order) {
-    ret = curl_easy_setopt(data, CURLOPT_TLS_EXTENSION_ORDER, opts->tls_extension_order);
+  if(tls_extension_order) {
+    char *permuted_order = NULL;
+    const char *order_to_set = tls_extension_order;
+    if(opts->tls_permute_extensions) {
+      ret = permute_extension_order(data, tls_extension_order,
+                                    &permuted_order);
+      if(ret)
+        return ret;
+      if(permuted_order)
+        order_to_set = permuted_order;
+    }
+    ret = curl_easy_setopt(data, CURLOPT_TLS_EXTENSION_ORDER,
+                           order_to_set);
+    free(permuted_order);
     if(ret)
       return ret;
   }
@@ -650,7 +767,10 @@ CURLcode curl_easy_impersonate(CURL *data, const char *target,
   }
 
   if(opts == NULL) {
-    DEBUGF(fprintf(stderr, "Error: unknown impersonation target '%s'\n", target));
+    failf(_data, "Unknown impersonation target '%s'. "
+          "Use a valid --impersonate target such as firefox147.", target);
+    DEBUGF(fprintf(stderr, "Error: unknown impersonation target '%s'\n",
+                   target));
     return CURLE_BAD_FUNCTION_ARGUMENT;
   }
 
