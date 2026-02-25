@@ -329,6 +329,12 @@ static CURLcode setopt_HTTP_VERSION(struct Curl_easy *data, long arg)
     return CURLE_UNSUPPORTED_PROTOCOL;
   }
   data->set.httpwant = (unsigned char)arg;
+#ifdef USE_HTTP3
+  if((arg == CURL_HTTP_VERSION_3) || (arg == CURL_HTTP_VERSION_3ONLY)) {
+    data->set.ssl.primary.version = CURL_SSLVERSION_TLSv1_3;
+    data->set.ssl.primary.version_max = CURL_SSLVERSION_MAX_NONE;
+  }
+#endif
   return CURLE_OK;
 }
 #endif /* ! CURL_DISABLE_HTTP */
@@ -1766,14 +1772,34 @@ static CURLcode setopt_cptr(struct Curl_easy *data, CURLoption option,
     }
     else
       return CURLE_NOT_BUILT_IN;
-  // curl-impersonate
-  case CURLOPT_IMPERSONATE:
+  case CURLOPT_IMPERSONATE: {
+    bool default_headers = TRUE;
+    char *p;
+    char *suffix;
     result = Curl_setstropt(&data->set.str[STRING_IMPERSONATE], ptr);
     if(result)
       return result;
-    // for the master option, we simply call the easy_impersonate method here.
-    return curl_easy_impersonate(data, data->set.str[STRING_IMPERSONATE], true);
-    break;
+    p = data->set.str[STRING_IMPERSONATE];
+    if(!p || !*p)
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    suffix = strchr(p, ':');
+    if(suffix) {
+      if((suffix == p) || !suffix[1] || strchr(suffix + 1, ':'))
+        return CURLE_BAD_FUNCTION_ARGUMENT;
+      if(!strcmp(suffix + 1, "yes"))
+        default_headers = TRUE;
+      else if(!strcmp(suffix + 1, "no"))
+        default_headers = FALSE;
+      else
+        return CURLE_BAD_FUNCTION_ARGUMENT;
+      *suffix = '\0';
+      result = curl_easy_impersonate(data, p, default_headers);
+      *suffix = ':';
+      return result;
+    }
+    return curl_easy_impersonate(data, p, TRUE);
+  }
+  // curl-impersonate
   case CURLOPT_FORM_BOUNDARY:
     if(ptr && !setopt_valid_form_boundary(ptr))
       return CURLE_BAD_FUNCTION_ARGUMENT;

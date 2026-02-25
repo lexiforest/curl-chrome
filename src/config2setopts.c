@@ -359,8 +359,10 @@ static CURLcode ssl_setopts(struct OperationConfig *config, CURL *curl)
   if(config->doh_verifystatus)
     my_setopt_long(curl, CURLOPT_DOH_SSL_VERIFYSTATUS, 1);
 
-  my_setopt_SSLVERSION(curl, CURLOPT_SSLVERSION,
-                       config->ssl_version | config->ssl_version_max);
+  // Only set sslversion when user sets it. If not set, the default value is fine.
+  if(config->ssl_version || config->ssl_version_max)
+    my_setopt_SSLVERSION(curl, CURLOPT_SSLVERSION,
+                         config->ssl_version | config->ssl_version_max);
   if(config->proxy)
     my_setopt_SSLVERSION(curl, CURLOPT_PROXY_SSLVERSION,
                          config->proxy_ssl_version);
@@ -1003,6 +1005,13 @@ CURLcode config2setopts(struct OperationConfig *config,
       return result;
   }
 
+  /* curl-impersonate: apply after HTTP version/options are configured */
+  if(config->impersonate) {
+    result = my_setopt_str(curl, CURLOPT_IMPERSONATE, config->impersonate);
+    if(result)
+      return result;
+  }
+
   if(use_proto == proto_ftp || use_proto == proto_ftps) {
     result = ftp_setopts(config, curl);
     if(result)
@@ -1221,30 +1230,6 @@ CURLcode config2setopts(struct OperationConfig *config,
   /* new in 8.13.0 */
   if(config->upload_flags)
     my_setopt_long(curl, CURLOPT_UPLOAD_FLAGS, config->upload_flags);
-
-  /* curl-impersonate */
-  if(config->impersonate) {
-    result = my_setopt_str(curl, CURLOPT_IMPERSONATE, config->impersonate);
-    if(result)
-      return result;
-
-    if(use_proto == proto_http || use_proto == proto_https) {
-      /* Let explicit --http* selections override impersonation defaults. */
-      if(config->httpversion)
-        my_setopt_enum(curl, CURLOPT_HTTP_VERSION, config->httpversion);
-
-      /* Let explicit TLS version selections override impersonation defaults.
-         For explicit HTTP/3 requests, require TLS >= 1.3 unless the user
-         supplied an explicit TLS version constraint. */
-      if(config->ssl_version || config->ssl_version_max)
-        my_setopt_SSLVERSION(curl, CURLOPT_SSLVERSION,
-                             config->ssl_version | config->ssl_version_max);
-      else if(config->httpversion == CURL_HTTP_VERSION_3 ||
-              config->httpversion == CURL_HTTP_VERSION_3ONLY)
-        my_setopt_SSLVERSION(curl, CURLOPT_SSLVERSION,
-                             CURL_SSLVERSION_TLSv1_3);
-    }
-  }
 
   return result;
 }

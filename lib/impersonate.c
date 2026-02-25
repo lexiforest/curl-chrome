@@ -829,7 +829,7 @@ const struct impersonate_opts impersonations[] = {
     .tls_session_ticket = true,
     .cert_compression = "brotli",
     .http_headers = {
-      "sec-ch-ua: \"Not:A-Brand\";v=\"99\", \"Chromium\";v=\"145\", \"Google Chrome\";v=\"145\"",
+      "sec-ch-ua: \"Not:A-Brand\";v=\"99\", \"Google Chrome\";v=\"145\", \"Chromium\";v=\"145\"",
       "sec-ch-ua-mobile: ?0",
       "sec-ch-ua-platform: \"macOS\"",
       "Upgrade-Insecure-Requests: 1",

@@ -452,11 +452,9 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
                         const struct impersonate_opts *opts,
                         int default_headers)
 {
-  bool use_http3;
   int i;
   int ret;
   struct curl_slist *headers = NULL;
-  const char *tls_extension_order;
 
   if(opts->target == NULL) {
     DEBUGF(fprintf(stderr, "Error: unknown impersonation target '%s'\n",
@@ -464,24 +462,35 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
     return CURLE_BAD_FUNCTION_ARGUMENT;
   }
 
-  use_http3 = (data->set.httpwant == CURL_HTTP_VERSION_3 ||
-               data->set.httpwant == CURL_HTTP_VERSION_3ONLY ||
-               opts->httpversion == CURL_HTTP_VERSION_3 ||
-               opts->httpversion == CURL_HTTP_VERSION_3ONLY);
-  tls_extension_order = opts->tls_extension_order;
-  if(use_http3 && opts->http3_tls_extension_order)
-    tls_extension_order = opts->http3_tls_extension_order;
-
-  if(opts->httpversion != CURL_HTTP_VERSION_NONE) {
+  // Prefer user set versions
+  long selected_http_version;
+  if (data->set.httpwant != CURL_HTTP_VERSION_NONE) {
+    ret = curl_easy_setopt(data, CURLOPT_HTTP_VERSION, data->set.httpwant);
+    selected_http_version = data->set.httpwant;
+  } else {
     ret = curl_easy_setopt(data, CURLOPT_HTTP_VERSION, opts->httpversion);
+    selected_http_version = opts->httpversion;
+  }
+
+  if(ret)
+    return ret;
+
+  // Force TLS 1.3 if we are using http3
+  if(selected_http_version == CURL_HTTP_VERSION_3 ||
+      selected_http_version == CURL_HTTP_VERSION_3ONLY) {
+    ret = curl_easy_setopt(data, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_3);
     if(ret)
       return ret;
   }
-
-  if (opts->ssl_version != CURL_SSLVERSION_DEFAULT) {
-    ret = curl_easy_setopt(data, CURLOPT_SSLVERSION, opts->ssl_version);
-    if(ret)
-      return ret;
+  // Use impersonate ssl_version if user didn't set it.
+  else {
+    if((data->set.ssl.primary.version == CURL_SSLVERSION_DEFAULT) &&
+       (data->set.ssl.primary.version_max == CURL_SSLVERSION_MAX_NONE) &&
+       (opts->ssl_version != CURL_SSLVERSION_DEFAULT)) {
+      ret = curl_easy_setopt(data, CURLOPT_SSLVERSION, opts->ssl_version);
+      if(ret)
+        return ret;
+    }
   }
 
   if(opts->ciphers) {
@@ -626,6 +635,12 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
   ret = curl_easy_setopt(data, CURLOPT_TLS_GREASE, opts->tls_grease);
   if(ret)
     return ret;
+
+  const char *tls_extension_order = opts->tls_extension_order;
+  if((selected_http_version == CURL_HTTP_VERSION_3 ||
+        selected_http_version == CURL_HTTP_VERSION_3ONLY) &&
+      opts->http3_tls_extension_order)
+    tls_extension_order = opts->http3_tls_extension_order;
 
   if(tls_extension_order) {
     char *permuted_order = NULL;
@@ -827,8 +842,9 @@ CURL *curl_easy_init(void)
       result = curl_easy_impersonate(data, env_target,
                                      !curl_strequal(env_headers, "no"));
       free(env_headers);
-    } else {
-      result = curl_easy_impersonate(data, env_target, true);
+    }
+    else {
+      result = curl_easy_impersonate(data, env_target, TRUE);
     }
     free(env_target);
     if(result) {
@@ -1589,8 +1605,9 @@ void curl_easy_reset(CURL *d)
       curl_easy_impersonate(data, env_target,
                             !curl_strequal(env_headers, "no"));
       free(env_headers);
-    } else {
-      curl_easy_impersonate(data, env_target, true);
+    }
+    else {
+      curl_easy_impersonate(data, env_target, TRUE);
     }
     free(env_target);
   }
