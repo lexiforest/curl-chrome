@@ -512,6 +512,13 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
       return ret;
   }
 
+  if(opts->http3_sig_hash_algs) {
+    ret = curl_easy_setopt(data, CURLOPT_HTTP3_SIG_HASH_ALGS,
+                           opts->http3_sig_hash_algs);
+    if(ret)
+      return ret;
+  }
+
   // TODO: remove npn, which has been deprecated by curl
   ret = curl_easy_setopt(data, CURLOPT_SSL_ENABLE_NPN, opts->npn ? 1 : 0);
   if(ret)

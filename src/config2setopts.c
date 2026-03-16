@@ -602,6 +602,11 @@ static CURLcode http_setopts(struct OperationConfig *config,
                   CURLOPT_HTTP3_SETTINGS,
                   config->http3_settings);
 
+  if(config->http3_sig_hash_algs)
+    my_setopt_str(curl,
+                  CURLOPT_HTTP3_SIG_HASH_ALGS,
+                  config->http3_sig_hash_algs);
+
   if(config->quic_transport_parameters)
     my_setopt_str(curl,
                   CURLOPT_QUIC_TRANSPORT_PARAMETERS,

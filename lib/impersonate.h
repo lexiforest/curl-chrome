@@ -18,6 +18,12 @@ struct impersonate_opts {
   /* Signature hash algorithms (TLS extension 13).
    * Passed to CURLOPT_SSL_SIG_HASH_ALGS */
   const char *sig_hash_algs;
+  /* Signature hash algorithms for HTTP/3 (QUIC TLS).
+   * If set, used instead of sig_hash_algs for QUIC connections.
+   * Chrome applies different verify prefs for TCP vs QUIC:
+   * TCP strips SHA-1 (ssl_client_socket_impl.cc), QUIC uses BoringSSL
+   * defaults which include rsa_pkcs1_sha1. */
+  const char *http3_sig_hash_algs;
   /* Enable TLS NPN extension. */
   bool npn;
   /* Enable TLS ALPN extension. */
