@@ -24,6 +24,16 @@ const struct impersonate_opts impersonations[] = {
       "AES256-GCM-SHA384:"
       "AES128-SHA:"
       "AES256-SHA",
+    .http3_sig_hash_algs =
+      "ecdsa_secp256r1_sha256:"
+      "rsa_pss_rsae_sha256:"
+      "rsa_pkcs1_sha256:"
+      "ecdsa_secp384r1_sha384:"
+      "rsa_pss_rsae_sha384:"
+      "rsa_pkcs1_sha384:"
+      "rsa_pss_rsae_sha512:"
+      "rsa_pkcs1_sha512:"
+      "rsa_pkcs1_sha1",
     .npn = false,
     .alpn = true,
     .alps = true,
@@ -75,6 +85,16 @@ const struct impersonate_opts impersonations[] = {
       "AES256-GCM-SHA384:"
       "AES128-SHA:"
       "AES256-SHA",
+    .http3_sig_hash_algs =
+      "ecdsa_secp256r1_sha256:"
+      "rsa_pss_rsae_sha256:"
+      "rsa_pkcs1_sha256:"
+      "ecdsa_secp384r1_sha384:"
+      "rsa_pss_rsae_sha384:"
+      "rsa_pkcs1_sha384:"
+      "rsa_pss_rsae_sha512:"
+      "rsa_pkcs1_sha512:"
+      "rsa_pkcs1_sha1",
     .npn = false,
     .alpn = true,
     .alps = true,
@@ -126,6 +146,16 @@ const struct impersonate_opts impersonations[] = {
       "AES256-GCM-SHA384:"
       "AES128-SHA:"
       "AES256-SHA",
+    .http3_sig_hash_algs =
+      "ecdsa_secp256r1_sha256:"
+      "rsa_pss_rsae_sha256:"
+      "rsa_pkcs1_sha256:"
+      "ecdsa_secp384r1_sha384:"
+      "rsa_pss_rsae_sha384:"
+      "rsa_pkcs1_sha384:"
+      "rsa_pss_rsae_sha512:"
+      "rsa_pkcs1_sha512:"
+      "rsa_pkcs1_sha1",
     .npn = false,
     .alpn = true,
     .alps = true,
@@ -177,6 +207,16 @@ const struct impersonate_opts impersonations[] = {
       "AES256-GCM-SHA384:"
       "AES128-SHA:"
       "AES256-SHA",
+    .http3_sig_hash_algs =
+      "ecdsa_secp256r1_sha256:"
+      "rsa_pss_rsae_sha256:"
+      "rsa_pkcs1_sha256:"
+      "ecdsa_secp384r1_sha384:"
+      "rsa_pss_rsae_sha384:"
+      "rsa_pkcs1_sha384:"
+      "rsa_pss_rsae_sha512:"
+      "rsa_pkcs1_sha512:"
+      "rsa_pkcs1_sha1",
     .npn = false,
     .alpn = true,
     .alps = true,
@@ -228,6 +268,16 @@ const struct impersonate_opts impersonations[] = {
       "AES256-GCM-SHA384:"
       "AES128-SHA:"
       "AES256-SHA",
+    .http3_sig_hash_algs =
+      "ecdsa_secp256r1_sha256:"
+      "rsa_pss_rsae_sha256:"
+      "rsa_pkcs1_sha256:"
+      "ecdsa_secp384r1_sha384:"
+      "rsa_pss_rsae_sha384:"
+      "rsa_pkcs1_sha384:"
+      "rsa_pss_rsae_sha512:"
+      "rsa_pkcs1_sha512:"
+      "rsa_pkcs1_sha1",
     .npn = false,
     .alpn = true,
     .alps = true,
@@ -280,6 +330,16 @@ const struct impersonate_opts impersonations[] = {
       "AES256-GCM-SHA384:"
       "AES128-SHA:"
       "AES256-SHA",
+    .http3_sig_hash_algs =
+      "ecdsa_secp256r1_sha256:"
+      "rsa_pss_rsae_sha256:"
+      "rsa_pkcs1_sha256:"
+      "ecdsa_secp384r1_sha384:"
+      "rsa_pss_rsae_sha384:"
+      "rsa_pkcs1_sha384:"
+      "rsa_pss_rsae_sha512:"
+      "rsa_pkcs1_sha512:"
+      "rsa_pkcs1_sha1",
     .npn = false,
     .alpn = true,
     .alps = true,
@@ -332,6 +392,16 @@ const struct impersonate_opts impersonations[] = {
       "AES256-GCM-SHA384:"
       "AES128-SHA:"
       "AES256-SHA",
+    .http3_sig_hash_algs =
+      "ecdsa_secp256r1_sha256:"
+      "rsa_pss_rsae_sha256:"
+      "rsa_pkcs1_sha256:"
+      "ecdsa_secp384r1_sha384:"
+      "rsa_pss_rsae_sha384:"
+      "rsa_pkcs1_sha384:"
+      "rsa_pss_rsae_sha512:"
+      "rsa_pkcs1_sha512:"
+      "rsa_pkcs1_sha1",
     .npn = false,
     .alpn = true,
     .alps = true,
@@ -385,6 +455,16 @@ const struct impersonate_opts impersonations[] = {
       "AES256-GCM-SHA384:"
       "AES128-SHA:"
       "AES256-SHA",
+    .http3_sig_hash_algs =
+      "ecdsa_secp256r1_sha256:"
+      "rsa_pss_rsae_sha256:"
+      "rsa_pkcs1_sha256:"
+      "ecdsa_secp384r1_sha384:"
+      "rsa_pss_rsae_sha384:"
+      "rsa_pkcs1_sha384:"
+      "rsa_pss_rsae_sha512:"
+      "rsa_pkcs1_sha512:"
+      "rsa_pkcs1_sha1",
     .npn = false,
     .alpn = true,
     .alps = true,
@@ -438,6 +518,16 @@ const struct impersonate_opts impersonations[] = {
       "AES256-GCM-SHA384:"
       "AES128-SHA:"
       "AES256-SHA",
+    .http3_sig_hash_algs =
+      "ecdsa_secp256r1_sha256:"
+      "rsa_pss_rsae_sha256:"
+      "rsa_pkcs1_sha256:"
+      "ecdsa_secp384r1_sha384:"
+      "rsa_pss_rsae_sha384:"
+      "rsa_pkcs1_sha384:"
+      "rsa_pss_rsae_sha512:"
+      "rsa_pkcs1_sha512:"
+      "rsa_pkcs1_sha1",
     .npn = false,
     .alpn = true,
     .alps = true,
@@ -492,6 +582,16 @@ const struct impersonate_opts impersonations[] = {
       "AES128-SHA:"
       "AES256-SHA",
     .curves = "X25519Kyber768Draft00:X25519:P-256:P-384",
+    .http3_sig_hash_algs =
+      "ecdsa_secp256r1_sha256:"
+      "rsa_pss_rsae_sha256:"
+      "rsa_pkcs1_sha256:"
+      "ecdsa_secp384r1_sha384:"
+      "rsa_pss_rsae_sha384:"
+      "rsa_pkcs1_sha384:"
+      "rsa_pss_rsae_sha512:"
+      "rsa_pkcs1_sha512:"
+      "rsa_pkcs1_sha1",
     .npn = false,
     .alpn = true,
     .alps = true,
@@ -547,6 +647,16 @@ const struct impersonate_opts impersonations[] = {
       "AES128-SHA:"
       "AES256-SHA",
     .curves = "X25519MLKEM768:X25519:P-256:P-384",
+    .http3_sig_hash_algs =
+      "ecdsa_secp256r1_sha256:"
+      "rsa_pss_rsae_sha256:"
+      "rsa_pkcs1_sha256:"
+      "ecdsa_secp384r1_sha384:"
+      "rsa_pss_rsae_sha384:"
+      "rsa_pkcs1_sha384:"
+      "rsa_pss_rsae_sha512:"
+      "rsa_pkcs1_sha512:"
+      "rsa_pkcs1_sha1",
     .npn = false,
     .alpn = true,
     .alps = true,
@@ -602,6 +712,16 @@ const struct impersonate_opts impersonations[] = {
       "AES128-SHA:"
       "AES256-SHA",
     .curves = "X25519:P-256:P-384",
+    .http3_sig_hash_algs =
+      "ecdsa_secp256r1_sha256:"
+      "rsa_pss_rsae_sha256:"
+      "rsa_pkcs1_sha256:"
+      "ecdsa_secp384r1_sha384:"
+      "rsa_pss_rsae_sha384:"
+      "rsa_pkcs1_sha384:"
+      "rsa_pss_rsae_sha512:"
+      "rsa_pkcs1_sha512:"
+      "rsa_pkcs1_sha1",
     .npn = false,
     .alpn = true,
     .alps = true,
@@ -657,6 +777,16 @@ const struct impersonate_opts impersonations[] = {
       "AES128-SHA:"
       "AES256-SHA",
     .curves = "X25519MLKEM768:X25519:P-256:P-384",
+    .http3_sig_hash_algs =
+      "ecdsa_secp256r1_sha256:"
+      "rsa_pss_rsae_sha256:"
+      "rsa_pkcs1_sha256:"
+      "ecdsa_secp384r1_sha384:"
+      "rsa_pss_rsae_sha384:"
+      "rsa_pkcs1_sha384:"
+      "rsa_pss_rsae_sha512:"
+      "rsa_pkcs1_sha512:"
+      "rsa_pkcs1_sha1",
     .npn = false,
     .alpn = true,
     .alps = true,
@@ -712,6 +842,16 @@ const struct impersonate_opts impersonations[] = {
       "AES128-SHA:"
       "AES256-SHA",
     .curves = "X25519MLKEM768:X25519:P-256:P-384",
+    .http3_sig_hash_algs =
+      "ecdsa_secp256r1_sha256:"
+      "rsa_pss_rsae_sha256:"
+      "rsa_pkcs1_sha256:"
+      "ecdsa_secp384r1_sha384:"
+      "rsa_pss_rsae_sha384:"
+      "rsa_pkcs1_sha384:"
+      "rsa_pss_rsae_sha512:"
+      "rsa_pkcs1_sha512:"
+      "rsa_pkcs1_sha1",
     .npn = false,
     .alpn = true,
     .alps = true,
@@ -767,6 +907,16 @@ const struct impersonate_opts impersonations[] = {
       "AES128-SHA:"
       "AES256-SHA",
     .curves = "X25519MLKEM768:X25519:P-256:P-384",
+    .http3_sig_hash_algs =
+      "ecdsa_secp256r1_sha256:"
+      "rsa_pss_rsae_sha256:"
+      "rsa_pkcs1_sha256:"
+      "ecdsa_secp384r1_sha384:"
+      "rsa_pss_rsae_sha384:"
+      "rsa_pkcs1_sha384:"
+      "rsa_pss_rsae_sha512:"
+      "rsa_pkcs1_sha512:"
+      "rsa_pkcs1_sha1",
     .npn = false,
     .alpn = true,
     .alps = true,
@@ -822,6 +972,16 @@ const struct impersonate_opts impersonations[] = {
       "AES128-SHA:"
       "AES256-SHA",
     .curves = "X25519MLKEM768:X25519:P-256:P-384",
+    .http3_sig_hash_algs =
+      "ecdsa_secp256r1_sha256:"
+      "rsa_pss_rsae_sha256:"
+      "rsa_pkcs1_sha256:"
+      "ecdsa_secp384r1_sha384:"
+      "rsa_pss_rsae_sha384:"
+      "rsa_pkcs1_sha384:"
+      "rsa_pss_rsae_sha512:"
+      "rsa_pkcs1_sha512:"
+      "rsa_pkcs1_sha1",
     .npn = false,
     .alpn = true,
     .alps = true,
@@ -963,6 +1123,16 @@ const struct impersonate_opts impersonations[] = {
       "AES256-GCM-SHA384:"
       "AES128-SHA:"
       "AES256-SHA",
+    .http3_sig_hash_algs =
+      "ecdsa_secp256r1_sha256:"
+      "rsa_pss_rsae_sha256:"
+      "rsa_pkcs1_sha256:"
+      "ecdsa_secp384r1_sha384:"
+      "rsa_pss_rsae_sha384:"
+      "rsa_pkcs1_sha384:"
+      "rsa_pss_rsae_sha512:"
+      "rsa_pkcs1_sha512:"
+      "rsa_pkcs1_sha1",
     .npn = false,
     .alpn = true,
     .alps = true,
@@ -1014,6 +1184,16 @@ const struct impersonate_opts impersonations[] = {
       "AES256-GCM-SHA384:"
       "AES128-SHA:"
       "AES256-SHA",
+    .http3_sig_hash_algs =
+      "ecdsa_secp256r1_sha256:"
+      "rsa_pss_rsae_sha256:"
+      "rsa_pkcs1_sha256:"
+      "ecdsa_secp384r1_sha384:"
+      "rsa_pss_rsae_sha384:"
+      "rsa_pkcs1_sha384:"
+      "rsa_pss_rsae_sha512:"
+      "rsa_pkcs1_sha512:"
+      "rsa_pkcs1_sha1",
     .npn = false,
     .alpn = true,
     .alps = true,
@@ -1065,6 +1245,16 @@ const struct impersonate_opts impersonations[] = {
       "AES256-GCM-SHA384:"
       "AES128-SHA:"
       "AES256-SHA",
+    .http3_sig_hash_algs =
+      "ecdsa_secp256r1_sha256:"
+      "rsa_pss_rsae_sha256:"
+      "rsa_pkcs1_sha256:"
+      "ecdsa_secp384r1_sha384:"
+      "rsa_pss_rsae_sha384:"
+      "rsa_pkcs1_sha384:"
+      "rsa_pss_rsae_sha512:"
+      "rsa_pkcs1_sha512:"
+      "rsa_pkcs1_sha1",
     .npn = false,
     .alpn = true,
     .alps = true,
@@ -1116,6 +1306,16 @@ const struct impersonate_opts impersonations[] = {
       "AES256-GCM-SHA384:"
       "AES128-SHA:"
       "AES256-SHA",
+    .http3_sig_hash_algs =
+      "ecdsa_secp256r1_sha256:"
+      "rsa_pss_rsae_sha256:"
+      "rsa_pkcs1_sha256:"
+      "ecdsa_secp384r1_sha384:"
+      "rsa_pss_rsae_sha384:"
+      "rsa_pkcs1_sha384:"
+      "rsa_pss_rsae_sha512:"
+      "rsa_pkcs1_sha512:"
+      "rsa_pkcs1_sha1",
     .npn = false,
     .alpn = true,
     .alps = true,
