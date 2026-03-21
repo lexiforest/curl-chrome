@@ -222,6 +222,7 @@ match_ssl_primary_config(struct Curl_easy *data,
      curl_strequal(c1->cipher_list13, c2->cipher_list13) &&
      curl_strequal(c1->curves, c2->curves) &&
      curl_strequal(c1->sig_hash_algs, c2->sig_hash_algs) &&
+     curl_strequal(c1->http3_sig_hash_algs, c2->http3_sig_hash_algs) &&
      curl_strequal(c1->cert_compression, c2->cert_compression) &&
      curl_strequal(c1->signature_algorithms, c2->signature_algorithms) &&
      curl_strequal(c1->CRLfile, c2->CRLfile) &&
@@ -269,6 +270,7 @@ static bool clone_ssl_primary_config(struct ssl_primary_config *source,
   CLONE_STRING(pinned_key);
   CLONE_STRING(curves);
   CLONE_STRING(sig_hash_algs);
+  CLONE_STRING(http3_sig_hash_algs);
   CLONE_STRING(cert_compression);
   CLONE_STRING(signature_algorithms);
   CLONE_STRING(CRLfile);
@@ -294,6 +296,7 @@ static void free_primary_ssl_config(struct ssl_primary_config *sslc)
   Curl_safefree(sslc->issuercert_blob);
   Curl_safefree(sslc->curves);
   Curl_safefree(sslc->sig_hash_algs);
+  Curl_safefree(sslc->http3_sig_hash_algs);
   Curl_safefree(sslc->cert_compression);
   Curl_safefree(sslc->signature_algorithms);
   Curl_safefree(sslc->CRLfile);
@@ -322,6 +325,7 @@ CURLcode Curl_ssl_easy_config_complete(struct Curl_easy *data)
   data->set.ssl.primary.ca_info_blob = data->set.blobs[BLOB_CAINFO];
   data->set.ssl.primary.curves = data->set.str[STRING_SSL_EC_CURVES];
   data->set.ssl.primary.sig_hash_algs = data->set.str[STRING_SSL_SIG_HASH_ALGS];
+  data->set.ssl.primary.http3_sig_hash_algs = data->set.str[STRING_HTTP3_SIG_HASH_ALGS];
   data->set.ssl.primary.cert_compression = data->set.str[STRING_SSL_CERT_COMPRESSION];
 #ifdef USE_TLS_SRP
   data->set.ssl.primary.username = data->set.str[STRING_TLSAUTH_USERNAME];

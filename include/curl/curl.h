@@ -2361,6 +2361,10 @@ typedef enum {
   /* curl-impersonate: QUIC transport parameters, format: id:value;id:value */
   CURLOPT(CURLOPT_QUIC_TRANSPORT_PARAMETERS, CURLOPTTYPE_STRINGPOINT, 1027),
 
+  /* curl-impersonate: Signature hash algorithms for HTTP/3 (QUIC TLS).
+   * If set, used instead of CURLOPT_SSL_SIG_HASH_ALGS for QUIC connections. */
+  CURLOPT(CURLOPT_HTTP3_SIG_HASH_ALGS, CURLOPTTYPE_STRINGPOINT, 1028),
+
   CURLOPT_LASTENTRY /* the last unused */
 } CURLoption;
 
