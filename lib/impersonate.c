@@ -1218,7 +1218,7 @@ const struct impersonate_opts impersonations[] = {
       "TLS_RSA_WITH_AES_128_CBC_SHA:"
       "TLS_RSA_WITH_AES_256_CBC_SHA",
     .http_headers = {
-      "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:135.0) Gecko/20100101 Firefox/144.0",
+      "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:144.0) Gecko/20100101 Firefox/144.0",
       "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       "Accept-Language: en-US,en;q=0.5",
       "Accept-Encoding: gzip, deflate, br, zstd",
@@ -1285,7 +1285,7 @@ const struct impersonate_opts impersonations[] = {
       "TLS_RSA_WITH_AES_128_CBC_SHA:"
       "TLS_RSA_WITH_AES_256_CBC_SHA",
     .http_headers = {
-      "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:135.0) Gecko/20100101 Firefox/147.0",
+      "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:147.0) Gecko/20100101 Firefox/147.0",
       "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       "Accept-Language: en-US,en;q=0.9",
       "Accept-Encoding: gzip, deflate, br, zstd",
