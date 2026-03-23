@@ -276,6 +276,7 @@ struct ssl_primary_config {
 #endif
   char *curves;          /* list of curves to use */
   char *sig_hash_algs;   /* List of signature hash algorithms to use */
+  char *http3_sig_hash_algs; /* Sig hash algs for QUIC (H3), overrides above */
   char *cert_compression;  /* List of certificate compression algorithms. */
   unsigned int version_max; /* max supported version the client wants to use */
   unsigned char ssl_options;  /* the CURLOPT_SSL_OPTIONS bitmask */
@@ -1358,6 +1359,7 @@ enum dupstring {
   STRING_ECH_CONFIG,            /* CURLOPT_ECH_CONFIG */
   STRING_ECH_PUBLIC,            /* CURLOPT_ECH_PUBLIC */
   STRING_SSL_SIG_HASH_ALGS,
+  STRING_HTTP3_SIG_HASH_ALGS,
   STRING_SSL_CERT_COMPRESSION,
   STRING_HTTP2_PSEUDO_HEADERS_ORDER,
   STRING_HTTP2_SETTINGS,

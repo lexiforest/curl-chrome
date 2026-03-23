@@ -4616,8 +4616,14 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
     uint16_t algs[MAX_SIG_ALGS];
     size_t nalgs;
     /* curl-impersonate: Set the signature algorithms (TLS extension 13).
-     * See net/socket/ssl_client_socket_impl.cc in Chromium's source. */
-    char *sig_hash_algs = conn_config->sig_hash_algs;
+     * Chrome uses different verify prefs for TCP vs QUIC:
+     * TCP: kVerifyPrefs in net/socket/ssl_client_socket_impl.cc (no SHA-1)
+     * QUIC: BoringSSL defaults from ssl/extensions.cc (includes SHA-1)
+     * Use http3_sig_hash_algs for QUIC if available. */
+    char *sig_hash_algs = (peer->transport == TRNSPRT_QUIC
+                           && conn_config->http3_sig_hash_algs)
+                          ? conn_config->http3_sig_hash_algs
+                          : conn_config->sig_hash_algs;
     if (sig_hash_algs) {
       CURLcode result = parse_sig_algs(data, sig_hash_algs, algs, &nalgs);
       if (result)

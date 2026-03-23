@@ -173,6 +173,7 @@ struct OperationConfig {
   char *http2_streams;
   char *http3_pseudo_headers_order;
   char *http3_settings;
+  char *http3_sig_hash_algs;
   char *quic_transport_parameters;
   char *impersonate;
   bool http2_no_priority;
