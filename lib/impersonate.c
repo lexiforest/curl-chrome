@@ -860,8 +860,8 @@ const struct impersonate_opts impersonations[] = {
     .form_boundary = "webkit",
   },
   {
-    .target = "chrome146_linux",
-    .alias = "chrome146_linux",
+    .target = "chrome146",
+    .alias = "chrome146",
     .httpversion = CURL_HTTP_VERSION_2_0,
     .ssl_version = CURL_SSLVERSION_TLSv1_2 | CURL_SSLVERSION_MAX_DEFAULT,
     .ciphers =
@@ -881,7 +881,6 @@ const struct impersonate_opts impersonations[] = {
       "AES128-SHA:"
       "AES256-SHA",
     .curves = "X25519MLKEM768:X25519:P-256:P-384",
-    /* TCP sig algs: Chrome's kVerifyPrefs from ssl_client_socket_impl.cc */
     .sig_hash_algs =
       "ecdsa_secp256r1_sha256:"
       "rsa_pss_rsae_sha256:"
@@ -891,10 +890,6 @@ const struct impersonate_opts impersonations[] = {
       "rsa_pkcs1_sha384:"
       "rsa_pss_rsae_sha512:"
       "rsa_pkcs1_sha512",
-    /* QUIC sig algs: BoringSSL defaults from ssl/extensions.cc.
-     * Chrome's QUIC path does not call SSL_set_verify_algorithm_prefs,
-     * so it includes rsa_pkcs1_sha1 which the TCP path strips.
-     * Captured from Chrome 146.0.7680.80 on Linux. */
     .http3_sig_hash_algs =
       "ecdsa_secp256r1_sha256:"
       "rsa_pss_rsae_sha256:"
@@ -914,9 +909,9 @@ const struct impersonate_opts impersonations[] = {
     .http_headers = {
       "sec-ch-ua: \"Chromium\";v=\"146\", \"Not-A.Brand\";v=\"24\", \"Google Chrome\";v=\"146\"",
       "sec-ch-ua-mobile: ?0",
-      "sec-ch-ua-platform: \"Linux\"",
+      "sec-ch-ua-platform: \"macOS\"",
       "Upgrade-Insecure-Requests: 1",
-      "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+      "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
       "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
       "Sec-Fetch-Site: none",
       "Sec-Fetch-Mode: navigate",
