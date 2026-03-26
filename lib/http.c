@@ -2535,7 +2535,7 @@ static CURLcode http_cookies(struct Curl_easy *data,
                                secure_context, &list);
       Curl_share_unlock(data, CURL_LOCK_DATA_COOKIE);
     }
-    if(!data->set.split_cookies) {
+    if(!data->set.split_cookies || httpversion < 20 /* HTTP/2 */) {
       if(!rc) {
         struct Curl_llist_node *n;
         size_t clen = 8; /* hold the size of the generated Cookie: header */
