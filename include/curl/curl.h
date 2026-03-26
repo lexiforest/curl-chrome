@@ -185,6 +185,10 @@ typedef enum {
 /* Only use the custom method in the first request, always reset in the next */
 #define CURLFOLLOW_FIRSTONLY 3L
 
+/* curl-impersonate: Follow redirects, but reject redirects to
+   internal/private IP addresses (SSRF protection) */
+#define CURLFOLLOW_SAFE      4L
+
 struct curl_httppost {
   struct curl_httppost *next;       /* next entry in the list */
   char *name;                       /* pointer to allocated name */

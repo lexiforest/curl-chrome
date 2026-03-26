@@ -1091,6 +1091,53 @@ static CURLcode set_remote_ip(struct Curl_cfilter *cf,
   return CURLE_OK;
 }
 
+static bool is_internal_ip(const char *ip, int family)
+{
+  if(family == AF_INET) {
+    unsigned int addr;
+    if(1 != curlx_inet_pton(AF_INET, ip, &addr))
+      return FALSE;
+    addr = ntohl(addr);
+    /* 127.0.0.0/8 */
+    if((addr >> 24) == 127)
+      return TRUE;
+    /* 10.0.0.0/8 */
+    if((addr >> 24) == 10)
+      return TRUE;
+    /* 172.16.0.0/12 */
+    if((addr >> 20) == 0xac1) /* 172.16-31 */
+      return TRUE;
+    /* 192.168.0.0/16 */
+    if((addr >> 16) == 0xc0a8)
+      return TRUE;
+    /* 169.254.0.0/16 */
+    if((addr >> 16) == 0xa9fe)
+      return TRUE;
+  }
+#ifdef USE_IPV6
+  else if(family == AF_INET6) {
+    unsigned char addr[16];
+    if(1 != curlx_inet_pton(AF_INET6, ip, addr))
+      return FALSE;
+    /* ::1/128 */
+    {
+      static const unsigned char loopback[16] = {
+        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,1
+      };
+      if(!memcmp(addr, loopback, 16))
+        return TRUE;
+    }
+    /* fc00::/7 - unique local */
+    if((addr[0] & 0xfe) == 0xfc)
+      return TRUE;
+    /* fe80::/10 - link-local */
+    if(addr[0] == 0xfe && (addr[1] & 0xc0) == 0x80)
+      return TRUE;
+  }
+#endif
+  return FALSE;
+}
+
 static CURLcode cf_socket_open(struct Curl_cfilter *cf,
                                struct Curl_easy *data)
 {
@@ -1123,6 +1170,16 @@ static CURLcode cf_socket_open(struct Curl_cfilter *cf,
   result = set_remote_ip(cf, data);
   if(result)
     goto out;
+
+  /* curl-impersonate: SSRF protection, reject internal IPs on redirect */
+  if(data->set.http_follow_mode == CURLFOLLOW_SAFE &&
+     data->state.this_is_a_follow &&
+     is_internal_ip(ctx->ip.remote_ip, ctx->addr.family)) {
+    failf(data, "Redirect to internal IP %s rejected (SSRF protection)",
+          ctx->ip.remote_ip);
+    result = CURLE_COULDNT_CONNECT;
+    goto out;
+  }
 
 #ifdef USE_IPV6
   if(ctx->addr.family == AF_INET6) {

@@ -215,6 +215,7 @@ static const struct LongShort aliases[]= {
   {"list-only",                  ARG_BOOL, 'l', C_LIST_ONLY},
   {"local-port",                 ARG_STRG, ' ', C_LOCAL_PORT},
   {"location",                   ARG_BOOL, 'L', C_LOCATION},
+  {"location-safe",              ARG_BOOL, ' ', C_LOCATION_SAFE},
   {"location-trusted",           ARG_BOOL, ' ', C_LOCATION_TRUSTED},
   {"login-options",              ARG_STRG, ' ', C_LOGIN_OPTIONS},
   {"mail-auth",                  ARG_STRG, ' ', C_MAIL_AUTH},
@@ -2126,6 +2127,10 @@ static ParameterError opt_bool(struct OperationConfig *config,
     break;
   case C_LIST_ONLY: /* --list-only */
     config->dirlistonly = toggle; /* only list the names of the FTP dir */
+    break;
+  case C_LOCATION_SAFE: /* --location-safe */
+    config->followlocation = toggle;
+    config->followlocation_safe = toggle;
     break;
   case C_LOCATION_TRUSTED: /* --location-trusted */
     config->unrestricted_auth = toggle;

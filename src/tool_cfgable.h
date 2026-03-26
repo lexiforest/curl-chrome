@@ -291,6 +291,7 @@ struct OperationConfig {
   BIT(no_body);             /* do not get the body */
   BIT(dirlistonly);         /* only get the FTP dir list */
   BIT(followlocation);      /* follow http redirects */
+  BIT(followlocation_safe); /* follow redirects, reject internal IPs */
   BIT(unrestricted_auth);   /* Continue to send authentication (user+password)
                                when following redirects, even when hostname
                                changed */
