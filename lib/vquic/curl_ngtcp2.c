@@ -1023,6 +1023,7 @@ static CURLcode quic_transport_params_from_string(ngtcp2_transport_params *t,
     bool value_is_auto = FALSE;
     bool value_is_empty_initial_scid = FALSE;
     bool value_is_initial_rtt_auto = FALSE;
+    bool value_is_hex_bytes = FALSE;
 
     setting = tokens[i];
     colon = strchr(setting, ':');
@@ -1066,6 +1067,9 @@ static CURLcode quic_transport_params_from_string(ngtcp2_transport_params *t,
       else if(id == QUIC_TP_VERSION_INFORMATION) {
         /* Parsed by dedicated handler below. */
       }
+      else if(value_str[0] == '0' && (value_str[1] == 'x' ||
+                                       value_str[1] == 'X'))
+        value_is_hex_bytes = TRUE;
       else {
         value = strtoull(value_str, &end, 10);
         if(!*value_str || (end && *end)) {
@@ -1118,6 +1122,42 @@ static CURLcode quic_transport_params_from_string(ngtcp2_transport_params *t,
     }
     if(value_is_empty_initial_scid) {
       result = quic_raw_append_param_bytes(raw, id, NULL, 0);
+      if(result)
+        goto out;
+      continue;
+    }
+    if(value_is_hex_bytes) {
+      const char *hex = value_str + 2; /* skip "0x" */
+      size_t hex_len = strlen(hex);
+      size_t byte_len;
+      unsigned char *bytes;
+      size_t j;
+
+      if((hex_len == 0) || (hex_len % 2 != 0)) {
+        failf(data, "QUIC transport param %" FMT_PRIu64
+              " has invalid hex value", (curl_uint64_t)id);
+        result = CURLE_BAD_FUNCTION_ARGUMENT;
+        goto out;
+      }
+      byte_len = hex_len / 2;
+      bytes = malloc(byte_len);
+      if(!bytes) {
+        result = CURLE_OUT_OF_MEMORY;
+        goto out;
+      }
+      for(j = 0; j < byte_len; j++) {
+        unsigned int byte_val;
+        if(sscanf(hex + 2 * j, "%2x", &byte_val) != 1) {
+          free(bytes);
+          failf(data, "QUIC transport param %" FMT_PRIu64
+                " has invalid hex value", (curl_uint64_t)id);
+          result = CURLE_BAD_FUNCTION_ARGUMENT;
+          goto out;
+        }
+        bytes[j] = (unsigned char)byte_val;
+      }
+      result = quic_raw_append_param_bytes(raw, id, bytes, byte_len);
+      free(bytes);
       if(result)
         goto out;
       continue;
