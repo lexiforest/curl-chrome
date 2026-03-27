@@ -1829,6 +1829,10 @@ static CURLcode setopt_cptr(struct Curl_easy *data, CURLoption option,
   case CURLOPT_HTTP3_SIG_HASH_ALGS:
     return Curl_setstropt(&data->set.str[STRING_HTTP3_SIG_HASH_ALGS], ptr);
     break;
+  case CURLOPT_HTTP3_TLS_EXTENSION_ORDER:
+    return Curl_setstropt(&data->set.str[STRING_HTTP3_TLS_EXTENSION_ORDER],
+                          ptr);
+    break;
   case CURLOPT_HTTP2_STREAMS:
     return Curl_setstropt(&data->set.str[STRING_HTTP2_STREAMS], ptr);
     break;

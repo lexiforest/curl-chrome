@@ -110,6 +110,7 @@ static void free_config_fields(struct OperationConfig *config)
   tool_safefree(config->http3_pseudo_headers_order);
   tool_safefree(config->http3_settings);
   tool_safefree(config->http3_sig_hash_algs);
+  tool_safefree(config->http3_tls_extension_order);
   tool_safefree(config->quic_transport_parameters);
   tool_safefree(config->tls_extension_order);
   tool_safefree(config->impersonate);

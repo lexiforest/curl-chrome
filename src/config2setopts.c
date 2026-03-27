@@ -608,6 +608,11 @@ static CURLcode http_setopts(struct OperationConfig *config,
                   CURLOPT_HTTP3_SIG_HASH_ALGS,
                   config->http3_sig_hash_algs);
 
+  if(config->http3_tls_extension_order)
+    my_setopt_str(curl,
+                  CURLOPT_HTTP3_TLS_EXTENSION_ORDER,
+                  config->http3_tls_extension_order);
+
   if(config->quic_transport_parameters)
     my_setopt_str(curl,
                   CURLOPT_QUIC_TRANSPORT_PARAMETERS,

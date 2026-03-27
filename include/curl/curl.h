@@ -2369,6 +2369,10 @@ typedef enum {
    * If set, used instead of CURLOPT_SSL_SIG_HASH_ALGS for QUIC connections. */
   CURLOPT(CURLOPT_HTTP3_SIG_HASH_ALGS, CURLOPTTYPE_STRINGPOINT, 1028),
 
+  /* curl-impersonate: TLS extension order for HTTP/3 (QUIC TLS).
+   * If set, used instead of CURLOPT_TLS_EXTENSION_ORDER for QUIC connections. */
+  CURLOPT(CURLOPT_HTTP3_TLS_EXTENSION_ORDER, CURLOPTTYPE_STRINGPOINT, 1029),
+
   CURLOPT_LASTENTRY /* the last unused */
 } CURLoption;
 

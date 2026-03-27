@@ -190,6 +190,7 @@ static const struct LongShort aliases[]= {
   {"http3-pseudo-headers-order", ARG_STRG, ' ', C_HTTP3_PSEUDO_HEADERS_ORDER},  // curl-impersonate
   {"http3-settings",             ARG_STRG, ' ', C_HTTP3_SETTINGS},  // curl-impersonate
   {"http3-sig-hash-algs",        ARG_STRG, ' ', C_HTTP3_SIG_HASH_ALGS},  // curl-impersonate
+  {"http3-tls-extension-order",  ARG_STRG, ' ', C_HTTP3_TLS_EXTENSION_ORDER},  // curl-impersonate
   {"ignore-content-length",      ARG_BOOL, ' ', C_IGNORE_CONTENT_LENGTH},
   {"impersonate",                ARG_STRG, ' ', C_IMPERSONATE},
   {"include",                    ARG_BOOL, ' ', C_INCLUDE},
@@ -2542,6 +2543,11 @@ static ParameterError opt_filestring(struct OperationConfig *config,
     if(!feature_http3)
       return PARAM_LIBCURL_DOESNT_SUPPORT;
     err = getstr(&config->http3_sig_hash_algs, nextarg, ALLOW_BLANK);
+    break;
+  case C_HTTP3_TLS_EXTENSION_ORDER:  /* --http3-tls-extension-order curl-impersonate */
+    if(!feature_http3)
+      return PARAM_LIBCURL_DOESNT_SUPPORT;
+    err = getstr(&config->http3_tls_extension_order, nextarg, ALLOW_BLANK);
     break;
   case C_QUIC_TRANSPORT_PARAMETERS:  /* --quic-transport-params curl-impersonate */
     if(!feature_http3)

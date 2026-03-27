@@ -4691,9 +4691,16 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
     SSL_CTX_set_permute_extensions(octx->ssl_ctx, 1);
   }
 
-  /* curl-impersonate: Set TLS extensions order. */
-  if(data->set.str[STRING_TLS_EXTENSION_ORDER]) {
-    SSL_CTX_set_extension_order(octx->ssl_ctx, data->set.str[STRING_TLS_EXTENSION_ORDER]);
+  /* curl-impersonate: Set TLS extensions order.
+   * Use http3_tls_extension_order for QUIC if available. */
+  {
+    char *ext_order = (peer->transport == TRNSPRT_QUIC
+                       && data->set.str[STRING_HTTP3_TLS_EXTENSION_ORDER])
+                      ? data->set.str[STRING_HTTP3_TLS_EXTENSION_ORDER]
+                      : data->set.str[STRING_TLS_EXTENSION_ORDER];
+    if(ext_order) {
+      SSL_CTX_set_extension_order(octx->ssl_ctx, ext_order);
+    }
   }
 
   if(data->set.str[STRING_TLS_DELEGATED_CREDENTIALS]) {
