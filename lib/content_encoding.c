@@ -367,6 +367,7 @@ struct brotli_writer {
   struct Curl_cwriter super;
   char buffer[DECOMPRESS_BUFFER_SIZE];
   BrotliDecoderState *br;    /* State structure for brotli. */
+  bool ended;                /* Valid stream ended; ignore trailing bytes. */
 };
 
 static CURLcode brotli_map_error(BrotliDecoderErrorCode be)
@@ -413,6 +414,7 @@ static CURLcode brotli_do_init(struct Curl_easy *data,
   struct brotli_writer *bp = (struct brotli_writer *) writer;
   (void) data;
 
+  bp->ended = FALSE;
   bp->br = BrotliDecoderCreateInstance(NULL, NULL, NULL);
   return bp->br ? CURLE_OK : CURLE_OUT_OF_MEMORY;
 }
@@ -432,7 +434,7 @@ static CURLcode brotli_do_write(struct Curl_easy *data,
     return Curl_cwriter_write(data, writer->next, type, buf, nbytes);
 
   if(!bp->br)
-    return CURLE_WRITE_ERROR;  /* Stream already ended. */
+    return bp->ended ? CURLE_OK : CURLE_WRITE_ERROR;
 
   while((nbytes || r == BROTLI_DECODER_RESULT_NEEDS_MORE_OUTPUT) &&
         result == CURLE_OK) {
@@ -451,13 +453,14 @@ static CURLcode brotli_do_write(struct Curl_easy *data,
     case BROTLI_DECODER_RESULT_SUCCESS:
       BrotliDecoderDestroyInstance(bp->br);
       bp->br = NULL;
-      if(nbytes)
-        result = CURLE_WRITE_ERROR;
+      bp->ended = TRUE;
       break;
     default:
       result = brotli_map_error(BrotliDecoderGetErrorCode(bp->br));
       break;
     }
+    if(bp->ended)
+      break;
   }
   return result;
 }
