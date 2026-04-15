@@ -2522,8 +2522,6 @@ static void http_header_order_count_lines(const char *start,
   while(p < end) {
     count++;
     p = http_header_order_next_line(p, end);
-    while((p < end) && ISBLANK(*p))
-      p = http_header_order_next_line(p, end);
   }
   *pcount = count;
 }
@@ -2536,18 +2534,15 @@ static void http_header_order_parse_lines(struct http_hdr_line *lines,
   const char *p = start;
   size_t i;
 
-  /* Continuation lines stay attached to their parent header. */
   for(i = 0; (i < nlines) && (p < end); i++) {
     const char *line = p;
     const char *next = http_header_order_next_line(p, end);
     const char *colon;
 
     p = next;
-    while((p < end) && ISBLANK(*p))
-      p = http_header_order_next_line(p, end);
 
     lines[i].line = line;
-    lines[i].linelen = (size_t)(p - line);
+    lines[i].linelen = (size_t)(next - line);
     colon = memchr(line, ':', (size_t)(next - line));
     if(colon) {
       lines[i].name = line;
@@ -2565,6 +2560,7 @@ static CURLcode http_req_apply_header_order(struct Curl_easy *data,
   struct dynbuf old;
   char *buf;
   const char *header_end;
+  const char *header_lines_end;
   const char *request_end;
   const char *header_start;
   const char *p;
@@ -2584,6 +2580,8 @@ static CURLcode http_req_apply_header_order(struct Curl_easy *data,
   header_end = http_header_block_end(buf, blen);
   if(!header_end)
     return CURLE_OK;
+  /* Include the final header line's CRLF, but not the blank line. */
+  header_lines_end = header_end + 2;
 
   request_end = memchr(buf, '\n', (size_t)(header_end - buf));
   if(!request_end)
@@ -2591,14 +2589,14 @@ static CURLcode http_req_apply_header_order(struct Curl_easy *data,
   header_start = request_end + 1;
 
   /* Index logical header entries, preserving duplicate header lines. */
-  http_header_order_count_lines(header_start, header_end, &nlines);
+  http_header_order_count_lines(header_start, header_lines_end, &nlines);
   if(!nlines)
     return CURLE_OK;
 
   lines = calloc(nlines, sizeof(*lines));
   if(!lines)
     return CURLE_OUT_OF_MEMORY;
-  http_header_order_parse_lines(lines, nlines, header_start, header_end);
+  http_header_order_parse_lines(lines, nlines, header_start, header_lines_end);
 
   curlx_dyn_init(&out, DYN_HTTP_REQUEST);
   result = curlx_dyn_addn(&out, buf, (size_t)(header_start - buf));
@@ -2620,8 +2618,8 @@ static CURLcode http_req_apply_header_order(struct Curl_easy *data,
     result = http_header_order_add_rest(&out, lines, nlines);
 
   if(!result)
-    result = curlx_dyn_addn(&out, header_end,
-                            blen - (size_t)(header_end - buf));
+    result = curlx_dyn_addn(&out, header_lines_end,
+                            blen - (size_t)(header_lines_end - buf));
 
   free(lines);
 
