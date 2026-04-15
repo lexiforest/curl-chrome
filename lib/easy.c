@@ -379,22 +379,14 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
   if(ret)
     return ret;
 
-  // Force TLS 1.3 if we are using http3
-  if(selected_http_version == CURL_HTTP_VERSION_3 ||
-      selected_http_version == CURL_HTTP_VERSION_3ONLY) {
-    ret = curl_easy_setopt(data, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_3);
+  // Use impersonate ssl_version if user didn't set it.
+  // QUIC inherently uses TLS 1.3, enforced in the QUIC TLS setup.
+  if((data->set.ssl.primary.version == CURL_SSLVERSION_DEFAULT) &&
+     (data->set.ssl.primary.version_max == CURL_SSLVERSION_MAX_NONE) &&
+     (opts->ssl_version != CURL_SSLVERSION_DEFAULT)) {
+    ret = curl_easy_setopt(data, CURLOPT_SSLVERSION, opts->ssl_version);
     if(ret)
       return ret;
-  }
-  // Use impersonate ssl_version if user didn't set it.
-  else {
-    if((data->set.ssl.primary.version == CURL_SSLVERSION_DEFAULT) &&
-       (data->set.ssl.primary.version_max == CURL_SSLVERSION_MAX_NONE) &&
-       (opts->ssl_version != CURL_SSLVERSION_DEFAULT)) {
-      ret = curl_easy_setopt(data, CURLOPT_SSLVERSION, opts->ssl_version);
-      if(ret)
-        return ret;
-    }
   }
 
   if(opts->ciphers) {

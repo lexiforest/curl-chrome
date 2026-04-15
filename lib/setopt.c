@@ -329,12 +329,9 @@ static CURLcode setopt_HTTP_VERSION(struct Curl_easy *data, long arg)
     return CURLE_UNSUPPORTED_PROTOCOL;
   }
   data->set.httpwant = (unsigned char)arg;
-#ifdef USE_HTTP3
-  if((arg == CURL_HTTP_VERSION_3) || (arg == CURL_HTTP_VERSION_3ONLY)) {
-    data->set.ssl.primary.version = CURL_SSLVERSION_TLSv1_3;
-    data->set.ssl.primary.version_max = CURL_SSLVERSION_MAX_NONE;
-  }
-#endif
+  /* QUIC inherently uses TLS 1.3, enforced in the QUIC TLS setup
+     (e.g. ossl_init_method). No need to override the global SSL version
+     here, as that would prevent TLS 1.2 fallback for --http3. */
   return CURLE_OK;
 }
 #endif /* ! CURL_DISABLE_HTTP */
