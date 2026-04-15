@@ -568,6 +568,11 @@ static CURLcode http_setopts(struct OperationConfig *config,
                   CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER,
                   config->http2_pseudo_headers_order);
 
+  if(config->http_header_order)
+    my_setopt_str(curl,
+                  CURLOPT_HTTPHEADER_ORDER,
+                  config->http_header_order);
+
   if(config->http2_settings)
     my_setopt_str(curl,
                   CURLOPT_HTTP2_SETTINGS,

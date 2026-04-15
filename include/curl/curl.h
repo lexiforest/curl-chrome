@@ -2373,6 +2373,9 @@ typedef enum {
    * If set, used instead of CURLOPT_TLS_EXTENSION_ORDER for QUIC connections. */
   CURLOPT(CURLOPT_HTTP3_TLS_EXTENSION_ORDER, CURLOPTTYPE_STRINGPOINT, 1029),
 
+  /* curl-impersonate: Comma-separated order for normal HTTP headers. */
+  CURLOPT(CURLOPT_HTTPHEADER_ORDER, CURLOPTTYPE_STRINGPOINT, 1030),
+
   CURLOPT_LASTENTRY /* the last unused */
 } CURLoption;
 

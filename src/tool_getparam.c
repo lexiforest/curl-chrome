@@ -173,6 +173,7 @@ static const struct LongShort aliases[]= {
   {"hostpubmd5",                 ARG_STRG, ' ', C_HOSTPUBMD5},
   {"hostpubsha256",              ARG_STRG, ' ', C_HOSTPUBSHA256},
   {"hsts",                       ARG_STRG|ARG_TLS, ' ', C_HSTS},
+  {"http-header-order",          ARG_STRG, ' ', C_HTTP_HEADER_ORDER},
   {"http0.9",                    ARG_BOOL, ' ', C_HTTP0_9},
   {"http1.0",                    ARG_NONE, '0', C_HTTP1_0},
   {"http1.1",                    ARG_NONE, ' ', C_HTTP1_1},
@@ -2500,6 +2501,9 @@ static ParameterError opt_filestring(struct OperationConfig *config,
     if(!feature_http2)
       return PARAM_LIBCURL_DOESNT_SUPPORT;
     err = getstr(&config->http2_pseudo_headers_order, nextarg, ALLOW_BLANK);
+    break;
+  case C_HTTP_HEADER_ORDER: /* --http-header-order curl-impersonate */
+    err = getstr(&config->http_header_order, nextarg, ALLOW_BLANK);
     break;
   case C_HTTP2_SETTINGS:  /* --http2-settings curl-impersonate */
     if(!feature_http2)

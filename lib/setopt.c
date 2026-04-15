@@ -55,6 +55,7 @@
 #include "slist.h"
 #include "strdup.h"
 #include "escape.h"
+#include "curl_ctype.h"
 
 /* The last 3 #include files should be in this order */
 #include "curl_printf.h"
@@ -113,6 +114,98 @@ static bool setopt_valid_form_boundary(const char *value)
 {
   return curl_strequal(value, "webkit") ||
          curl_strequal(value, "firefox");
+}
+
+/* Return whether `c` is valid in an HTTP field name. */
+static bool http_header_order_name_char(char c)
+{
+  return ISALNUM(c) || c == '!' || c == '#' || c == '$' ||
+         c == '%' || c == '&' || c == '\'' || c == '*' ||
+         c == '+' || c == '-' || c == '.' || c == '^' ||
+         c == '_' || c == '`' || c == '|' || c == '~';
+}
+
+/* Parse one comma-separated header name and trim surrounding blanks. */
+static void http_header_order_token(const char **pp,
+                                    const char **pname,
+                                    size_t *pnamelen)
+{
+  const char *p = *pp;
+  const char *name;
+  const char *end;
+
+  while(ISBLANK(*p))
+    p++;
+  name = p;
+
+  while(*p && *p != ',')
+    p++;
+  end = p;
+  while(end > name && ISBLANK(end[-1]))
+    end--;
+
+  *pname = name;
+  *pnamelen = (size_t)(end - name);
+  *pp = p;
+}
+
+/* Return whether `name` already appeared earlier in `order`. */
+static bool http_header_order_duplicate(const char *order,
+                                        const char *name,
+                                        size_t namelen)
+{
+  const char *p = order;
+
+  while(p < name) {
+    const char *prev;
+    size_t prevlen;
+
+    http_header_order_token(&p, &prev, &prevlen);
+    if(prevlen == namelen && curl_strnequal(prev, name, namelen))
+      return TRUE;
+    if(*p == ',') {
+      p++;
+      if(!*p)
+        return FALSE;
+    }
+  }
+  return FALSE;
+}
+
+/* Validate CURLOPT_HTTPHEADER_ORDER before storing it. */
+static bool setopt_valid_http_header_order(const char *order)
+{
+  const char *p = order;
+
+  if(!order)
+    return TRUE;
+  if(!*order)
+    return FALSE;
+
+  /* Validate comma-separated HTTP field names before storing the option. */
+  while(*p) {
+    const char *name;
+    size_t namelen;
+    size_t i;
+
+    http_header_order_token(&p, &name, &namelen);
+    if(!namelen || name[0] == ':' ||
+       http_header_order_duplicate(order, name, namelen))
+      return FALSE;
+
+    for(i = 0; i < namelen; i++) {
+      if(!http_header_order_name_char(name[i]))
+        return FALSE;
+    }
+
+    if(*p == ',') {
+      p++;
+      if(!*p)
+        return FALSE;
+    }
+  }
+
+  return TRUE;
 }
 
 CURLcode Curl_setblobopt(struct curl_blob **blobp,
@@ -1816,6 +1909,11 @@ static CURLcode setopt_cptr(struct Curl_easy *data, CURLoption option,
     break;
   case CURLOPT_HTTP2_SETTINGS:
     return Curl_setstropt(&data->set.str[STRING_HTTP2_SETTINGS], ptr);
+    break;
+  case CURLOPT_HTTPHEADER_ORDER:
+    if(!setopt_valid_http_header_order(ptr))
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    return Curl_setstropt(&data->set.str[STRING_HTTPHEADER_ORDER], ptr);
     break;
   case CURLOPT_HTTP3_PSEUDO_HEADERS_ORDER:
     return Curl_setstropt(&data->set.str[STRING_HTTP3_PSEUDO_HEADERS_ORDER], ptr);
