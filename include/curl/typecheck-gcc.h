@@ -348,6 +348,7 @@ CURLWARNING(_curl_easy_getinfo_err_curl_off_t,
    (option) == CURLOPT_FORM_BOUNDARY ||                                 \
    (option) == CURLOPT_HAPROXY_CLIENT_IP ||                             \
    (option) == CURLOPT_HSTS ||                                          \
+   (option) == CURLOPT_HTTPHEADER_ORDER ||                              \
    (option) == CURLOPT_HTTP2_PSEUDO_HEADERS_ORDER ||                    \
    (option) == CURLOPT_HTTP2_SETTINGS ||                                \
    (option) == CURLOPT_HTTP2_STREAMS ||                                 \

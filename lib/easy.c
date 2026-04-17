@@ -490,6 +490,13 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
       return ret;
   }
 
+  if(opts->http_header_order) {
+    ret = curl_easy_setopt(data, CURLOPT_HTTPHEADER_ORDER,
+                           opts->http_header_order);
+    if(ret)
+      return ret;
+  }
+
   if(opts->http3_pseudo_headers_order) {
     ret = curl_easy_setopt(data,
                            CURLOPT_HTTP3_PSEUDO_HEADERS_ORDER,

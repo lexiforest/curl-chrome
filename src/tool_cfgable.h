@@ -165,6 +165,7 @@ struct OperationConfig {
   char *ssl_signature_algorithms;
   char *krblevel;
   char *request_target;
+  char *http_header_order;
   char *http2_pseudo_headers_order;
   char *http2_settings;
   long http2_window_update;

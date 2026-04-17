@@ -112,6 +112,8 @@ static CURLcode http_range(struct Curl_easy *data,
 static CURLcode http_req_complete(struct Curl_easy *data,
                                   struct dynbuf *r, int httpversion,
                                   Curl_HttpReq httpreq);
+static CURLcode http_req_apply_header_order(struct Curl_easy *data,
+                                            struct dynbuf *r);
 static CURLcode http_req_set_reader(struct Curl_easy *data,
                                     Curl_HttpReq httpreq, int httpversion,
                                     const char **tep);
@@ -2418,6 +2420,222 @@ static CURLcode addexpect(struct Curl_easy *data, struct dynbuf *r,
   return CURLE_OK;
 }
 
+struct http_hdr_line {
+  const char *line;
+  size_t linelen;
+  const char *name;
+  size_t namelen;
+  bool used;
+};
+
+static const char *http_header_block_end(const char *buf, size_t blen)
+{
+  size_t i;
+
+  for(i = 0; (i + 3) < blen; i++) {
+    if(buf[i] == '\r' && buf[i + 1] == '\n' &&
+       buf[i + 2] == '\r' && buf[i + 3] == '\n')
+      return &buf[i];
+  }
+  return NULL;
+}
+
+static void http_header_order_token(const char **pp,
+                                    const char **pname,
+                                    size_t *pnamelen)
+{
+  const char *p = *pp;
+  const char *name;
+  const char *end;
+
+  while(ISBLANK(*p))
+    p++;
+  name = p;
+
+  while(*p && *p != ',')
+    p++;
+  end = p;
+  while(end > name && ISBLANK(end[-1]))
+    end--;
+
+  *pname = name;
+  *pnamelen = (size_t)(end - name);
+  *pp = p;
+}
+
+static bool http_header_name_match(const struct http_hdr_line *line,
+                                   const char *name, size_t namelen)
+{
+  return line->namelen == namelen &&
+         curl_strnequal(line->name, name, namelen);
+}
+
+static CURLcode http_header_order_add(struct dynbuf *out,
+                                      struct http_hdr_line *lines,
+                                      size_t nlines,
+                                      const char *name, size_t namelen)
+{
+  size_t i;
+
+  for(i = 0; i < nlines; i++) {
+    if(!lines[i].used && http_header_name_match(&lines[i], name, namelen)) {
+      CURLcode result = curlx_dyn_addn(out, lines[i].line, lines[i].linelen);
+      if(result)
+        return result;
+      lines[i].used = TRUE;
+    }
+  }
+  return CURLE_OK;
+}
+
+static CURLcode http_header_order_add_rest(struct dynbuf *out,
+                                           struct http_hdr_line *lines,
+                                           size_t nlines)
+{
+  size_t i;
+
+  for(i = 0; i < nlines; i++) {
+    if(!lines[i].used) {
+      CURLcode result = curlx_dyn_addn(out, lines[i].line, lines[i].linelen);
+      if(result)
+        return result;
+      lines[i].used = TRUE;
+    }
+  }
+  return CURLE_OK;
+}
+
+static const char *http_header_order_next_line(const char *p, const char *end)
+{
+  const char *nl = memchr(p, '\n', (size_t)(end - p));
+
+  return nl ? nl + 1 : end;
+}
+
+static void http_header_order_count_lines(const char *start,
+                                          const char *end,
+                                          size_t *pcount)
+{
+  const char *p = start;
+  size_t count = 0;
+
+  while(p < end) {
+    count++;
+    p = http_header_order_next_line(p, end);
+  }
+  *pcount = count;
+}
+
+static void http_header_order_parse_lines(struct http_hdr_line *lines,
+                                          size_t nlines,
+                                          const char *start,
+                                          const char *end)
+{
+  const char *p = start;
+  size_t i;
+
+  for(i = 0; (i < nlines) && (p < end); i++) {
+    const char *line = p;
+    const char *next = http_header_order_next_line(p, end);
+    const char *colon;
+
+    p = next;
+
+    lines[i].line = line;
+    lines[i].linelen = (size_t)(next - line);
+    colon = memchr(line, ':', (size_t)(next - line));
+    if(colon) {
+      lines[i].name = line;
+      lines[i].namelen = (size_t)(colon - line);
+    }
+  }
+}
+
+static CURLcode http_req_apply_header_order(struct Curl_easy *data,
+                                            struct dynbuf *r)
+{
+  const char *order = data->set.str[STRING_HTTPHEADER_ORDER];
+  struct http_hdr_line *lines = NULL;
+  struct dynbuf out;
+  struct dynbuf old;
+  char *buf;
+  const char *header_end;
+  const char *header_lines_end;
+  const char *request_end;
+  const char *header_start;
+  const char *p;
+  size_t blen;
+  size_t nlines = 0;
+  CURLcode result = CURLE_OK;
+
+  if(!order)
+    return CURLE_OK;
+
+  buf = curlx_dyn_ptr(r);
+  blen = curlx_dyn_len(r);
+  if(!buf || !blen)
+    return CURLE_OK;
+
+  /* Split the completed HTTP/1-style request into ordered regions. */
+  header_end = http_header_block_end(buf, blen);
+  if(!header_end)
+    return CURLE_OK;
+  /* Include the final header line's CRLF, but not the blank line. */
+  header_lines_end = header_end + 2;
+
+  request_end = memchr(buf, '\n', (size_t)(header_end - buf));
+  if(!request_end)
+    return CURLE_OK;
+  header_start = request_end + 1;
+
+  /* Index logical header entries, preserving duplicate header lines. */
+  http_header_order_count_lines(header_start, header_lines_end, &nlines);
+  if(!nlines)
+    return CURLE_OK;
+
+  lines = calloc(nlines, sizeof(*lines));
+  if(!lines)
+    return CURLE_OUT_OF_MEMORY;
+  http_header_order_parse_lines(lines, nlines, header_start, header_lines_end);
+
+  curlx_dyn_init(&out, DYN_HTTP_REQUEST);
+  result = curlx_dyn_addn(&out, buf, (size_t)(header_start - buf));
+
+  /* Rebuild headers: requested names first, then all unlisted headers. */
+  p = order;
+  while(!result && *p) {
+    const char *name;
+    size_t namelen;
+
+    http_header_order_token(&p, &name, &namelen);
+    if(namelen)
+      result = http_header_order_add(&out, lines, nlines, name, namelen);
+    if(*p == ',')
+      p++;
+  }
+
+  if(!result)
+    result = http_header_order_add_rest(&out, lines, nlines);
+
+  if(!result)
+    result = curlx_dyn_addn(&out, header_lines_end,
+                            blen - (size_t)(header_lines_end - buf));
+
+  free(lines);
+
+  if(result) {
+    curlx_dyn_free(&out);
+    return result;
+  }
+
+  /* Replace the caller's buffer only after the rebuild succeeds. */
+  old = *r;
+  *r = out;
+  out = old;
+  curlx_dyn_free(&out);
+  return CURLE_OK;
+}
+
 static CURLcode http_req_complete(struct Curl_easy *data,
                                   struct dynbuf *r, int httpversion,
                                   Curl_HttpReq httpreq)
@@ -3046,6 +3264,8 @@ CURLcode Curl_http(struct Curl_easy *data, bool *done)
   if(!result) {
     /* req_send takes ownership of the 'req' memory on success */
     result = http_req_complete(data, &req, httpversion, httpreq);
+    if(!result)
+      result = http_req_apply_header_order(data, &req);
     if(!result)
       result = Curl_req_send(data, &req, httpversion);
   }

@@ -104,6 +104,7 @@ static void free_config_fields(struct OperationConfig *config)
   // curl-impersonate
   tool_safefree(config->ssl_sig_hash_algs);
   tool_safefree(config->ssl_cert_compression);
+  tool_safefree(config->http_header_order);
   tool_safefree(config->http2_pseudo_headers_order);
   tool_safefree(config->http2_settings);
   tool_safefree(config->http2_streams);

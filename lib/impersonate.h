@@ -38,6 +38,7 @@ struct impersonate_opts {
   const char *http_headers[IMPERSONATE_MAX_HEADERS];
   const char *http2_pseudo_headers_order;
   const char *http2_settings;
+  const char *http_header_order;
   int http2_window_update;
   const char *http2_streams;
   const char *http3_pseudo_headers_order;
