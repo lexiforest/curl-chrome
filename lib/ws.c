@@ -26,6 +26,13 @@
 
 #if !defined(CURL_DISABLE_WEBSOCKETS) && !defined(CURL_DISABLE_HTTP)
 
+#include <stdint.h>
+#if defined(__x86_64__) || defined(_M_X64)
+  #include <immintrin.h>
+#elif defined(__aarch64__) || defined(_M_ARM64)
+  #include <arm_neon.h>
+#endif
+
 #include "urldata.h"
 #include "url.h"
 #include "bufq.h"
@@ -74,8 +81,64 @@
 #define WSBIT_MASK 0x80
 
 /* buffer dimensioning */
-#define WS_CHUNK_SIZE 65535
-#define WS_CHUNK_COUNT 2
+#define WS_CHUNK_SIZE 131072
+#define WS_CHUNK_COUNT 4
+
+#ifndef WS_ENC_XBUF_SIZE
+#define WS_ENC_XBUF_SIZE 8192
+#endif
+
+/* CPU Feature Bitmask Constants */
+#define WS_CPU_FEAT_INIT    ((uint32_t)1 << 0)
+#define WS_CPU_FEAT_AVX2    ((uint32_t)1 << 1)
+#define WS_CPU_FEAT_AVX512  ((uint32_t)1 << 2)
+
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+/* AVX-512 Path: 128 bytes per iteration (2x unrolled) */
+__attribute__((target("avx512f")))
+static size_t ws_xor_avx512(const unsigned char *src, unsigned char *dst, size_t len, uint32_t m32) {
+  size_t j = 0;
+  __m512i vmask = _mm512_set1_epi32((int)m32);
+  for(; j + 128 <= len; j += 128) {
+    __m512i v0 = _mm512_loadu_si512((const __m512i*)(src + j));
+    __m512i v1 = _mm512_loadu_si512((const __m512i*)(src + j + 64));
+    _mm512_storeu_si512((__m512i*)(dst + j), _mm512_xor_si512(v0, vmask));
+    _mm512_storeu_si512((__m512i*)(dst + j + 64), _mm512_xor_si512(v1, vmask));
+  }
+  return j;
+}
+
+/* AVX2 Path: 64 bytes per iteration (2x unrolled) */
+__attribute__((target("avx2")))
+static size_t ws_xor_avx2(const unsigned char *src, unsigned char *dst, size_t len, uint32_t m32) {
+  size_t j = 0;
+  __m256i vmask = _mm256_set1_epi32((int)m32);
+  for(; j + 64 <= len; j += 64) {
+    __m256i v0 = _mm256_loadu_si256((const __m256i*)(src + j));
+    __m256i v1 = _mm256_loadu_si256((const __m256i*)(src + j + 32));
+    _mm256_storeu_si256((__m256i*)(dst + j), _mm256_xor_si256(v0, vmask));
+    _mm256_storeu_si256((__m256i*)(dst + j + 32), _mm256_xor_si256(v1, vmask));
+  }
+  return j;
+}
+#endif
+
+#if defined(__aarch64__) || defined(_M_ARM64)
+/* NEON Path: 32 bytes per iteration (2x unrolled) */
+static size_t ws_xor_neon(const unsigned char *src, unsigned char *dst, size_t len, uint32_t m32) {
+  size_t j = 0;
+  uint32x4_t vmask = vdupq_n_u32(m32);
+  for(; j + 32 <= len; j += 32) {
+    uint8x16_t v0 = vld1q_u8(src + j);
+    uint8x16_t v1 = vld1q_u8(src + j + 16);
+    v0 = veorq_u8(v0, vreinterpretq_u8_u32(vmask));
+    v1 = veorq_u8(v1, vreinterpretq_u8_u32(vmask));
+    vst1q_u8(dst + j, v0);
+    vst1q_u8(dst + j + 16, v1);
+  }
+  return j;
+}
+#endif
 
 
 /* a client-side WS frame decoder, parsing frame headers and
@@ -853,29 +916,96 @@ static ssize_t ws_enc_write_payload(struct ws_encoder *enc,
                                     const unsigned char *buf, size_t buflen,
                                     struct bufq *out, CURLcode *err)
 {
-  size_t i, len, n;
+  size_t i = 0, len, n, chunk, j;
+  unsigned char xbuf[WS_ENC_XBUF_SIZE];
+
+  /* Defensive check for finished payloads */
+  if(enc->payload_remain <= 0) {
+    ws_enc_info(enc, data, "buffered");
+    return 0;
+  }
+
+  /* Thread-safe CPU feature cache. */
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+  static uint32_t cpu_feats = 0;
+  if(!__atomic_load_n(&cpu_feats, __ATOMIC_ACQUIRE)) {
+    uint32_t f = WS_CPU_FEAT_INIT;
+    __builtin_cpu_init();
+    if(__builtin_cpu_supports("avx2"))
+      f |= WS_CPU_FEAT_AVX2;
+    if(__builtin_cpu_supports("avx512f"))
+      f |= WS_CPU_FEAT_AVX512;
+    __atomic_store_n(&cpu_feats, f, __ATOMIC_RELEASE);
+  }
+#endif
 
   if(Curl_bufq_is_full(out)) {
     *err = CURLE_AGAIN;
     return -1;
   }
 
-  /* not the most performant way to do this */
   len = buflen;
   if((curl_off_t)len > enc->payload_remain)
     len = (size_t)enc->payload_remain;
 
-  for(i = 0; i < len; ++i) {
-    unsigned char c = buf[i] ^ enc->mask[enc->xori];
-    *err = Curl_bufq_write(out, &c, 1, &n);
+  while(i < len) {
+    unsigned int sx = enc->xori;
+    unsigned char m[4] = { enc->mask[sx&3], enc->mask[(sx+1)&3],
+                           enc->mask[(sx+2)&3], enc->mask[(sx+3)&3] };
+
+    chunk = len - i;
+    if(chunk > sizeof(xbuf)) chunk = sizeof(xbuf);
+
+    j = 0;
+
+/* SIMD and 32-bit Little-Endian gated scalar paths */
+#if (defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) || \
+    defined(_WIN32) || defined(_WIN64) || defined(__LITTLE_ENDIAN__)
+
+    uint32_t m32;
+    memcpy(&m32, m, 4);
+
+  #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+    {
+      /* Cleanly re-load feats before dispatch */
+      uint32_t f = __atomic_load_n(&cpu_feats, __ATOMIC_RELAXED);
+      if(f & WS_CPU_FEAT_AVX512) {
+        j = ws_xor_avx512(buf + i, xbuf, chunk, m32);
+      } else if(f & WS_CPU_FEAT_AVX2) {
+        j = ws_xor_avx2(buf + i, xbuf, chunk, m32);
+      }
+    }
+  #elif defined(__aarch64__) || defined(_M_ARM64)
+    /* NEON path - little endian AARCH64 */
+    j = ws_xor_neon(buf + i, xbuf, chunk, m32);
+  #endif
+
+    /* 32-bit Scalar Cleanup */
+    for(; j + 4 <= chunk; j += 4) {
+      uint32_t d32;
+      memcpy(&d32, buf + i + j, 4);
+      d32 ^= m32;
+      memcpy(xbuf + j, &d32, 4);
+    }
+#endif
+
+    /* Universal Scalar Fallback */
+    for(; j < chunk; ++j) {
+      xbuf[j] = buf[i + j] ^ m[j & 3];
+    }
+
+    *err = Curl_bufq_write(out, xbuf, chunk, &n);
+    if(n > 0) {
+      i += n;
+      enc->xori = (sx + (unsigned int)n) & 3;
+    }
     if(*err) {
       if((*err != CURLE_AGAIN) || !i)
         return -1;
       break;
     }
-    enc->xori++;
-    enc->xori &= 3;
   }
+
   enc->payload_remain -= (curl_off_t)i;
   ws_enc_info(enc, data, "buffered");
   return (ssize_t)i;
