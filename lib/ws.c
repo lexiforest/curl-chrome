@@ -103,8 +103,19 @@
 
 #if WS_IS_LITTLE_ENDIAN
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+
+#if defined(__clang__)
+#  if defined(__clang_major__) && (__clang_major__ < 22)
+#    define WS_TARGET_AVX512 "avx512f,evex512"
+#  else
+#    define WS_TARGET_AVX512 "avx512f"
+#  endif
+#else
+#  define WS_TARGET_AVX512 "avx512f"
+#endif
+
 /* AVX-512 Path: 128 bytes per iteration (2x unrolled) */
-__attribute__((target("avx512f")))
+__attribute__((target(WS_TARGET_AVX512)))
 static size_t ws_xor_avx512(const unsigned char *src, unsigned char *dst, size_t len, uint32_t m32) {
   size_t j = 0;
   __m512i vmask = _mm512_set1_epi32((int)m32);
