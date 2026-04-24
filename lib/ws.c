@@ -116,28 +116,38 @@
 
 /* AVX-512 Path: 128 bytes per iteration (2x unrolled) */
 __attribute__((target(WS_TARGET_AVX512)))
-static size_t ws_xor_avx512(const unsigned char *src, unsigned char *dst, size_t len, uint32_t m32) {
+static size_t ws_xor_avx512(const unsigned char *src, unsigned char *dst,
+                            size_t len, uint32_t m32)
+{
   size_t j = 0;
   __m512i vmask = _mm512_set1_epi32((int)m32);
   for(; j + 128 <= len; j += 128) {
-    __m512i v0 = _mm512_loadu_si512((const __m512i*)(const void *)(src + j));
-    __m512i v1 = _mm512_loadu_si512((const __m512i*)(const void *)(src + j + 64));
-    _mm512_storeu_si512((__m512i*)(void *)(dst + j), _mm512_xor_si512(v0, vmask));
-    _mm512_storeu_si512((__m512i*)(void *)(dst + j + 64), _mm512_xor_si512(v1, vmask));
+    __m512i v0 = _mm512_loadu_si512((const __m512i *)(const void *)(src + j));
+    __m512i v1 = _mm512_loadu_si512((const __m512i *)(const void *)
+                                    (src + j + 64));
+    _mm512_storeu_si512((__m512i *)(void *)(dst + j),
+                        _mm512_xor_si512(v0, vmask));
+    _mm512_storeu_si512((__m512i *)(void *)(dst + j + 64),
+                        _mm512_xor_si512(v1, vmask));
   }
   return j;
 }
 
 /* AVX2 Path: 64 bytes per iteration (2x unrolled) */
 __attribute__((target("avx2")))
-static size_t ws_xor_avx2(const unsigned char *src, unsigned char *dst, size_t len, uint32_t m32) {
+static size_t ws_xor_avx2(const unsigned char *src, unsigned char *dst,
+                          size_t len, uint32_t m32)
+{
   size_t j = 0;
   __m256i vmask = _mm256_set1_epi32((int)m32);
   for(; j + 64 <= len; j += 64) {
-    __m256i v0 = _mm256_loadu_si256((const __m256i*)(const void *)(src + j));
-    __m256i v1 = _mm256_loadu_si256((const __m256i*)(const void *)(src + j + 32));
-    _mm256_storeu_si256((__m256i*)(void *)(dst + j), _mm256_xor_si256(v0, vmask));
-    _mm256_storeu_si256((__m256i*)(void *)(dst + j + 32), _mm256_xor_si256(v1, vmask));
+    __m256i v0 = _mm256_loadu_si256((const __m256i *)(const void *)(src + j));
+    __m256i v1 = _mm256_loadu_si256((const __m256i *)(const void *)
+                                    (src + j + 32));
+    _mm256_storeu_si256((__m256i *)(void *)(dst + j),
+                        _mm256_xor_si256(v0, vmask));
+    _mm256_storeu_si256((__m256i *)(void *)(dst + j + 32),
+                        _mm256_xor_si256(v1, vmask));
   }
   return j;
 }
@@ -145,7 +155,9 @@ static size_t ws_xor_avx2(const unsigned char *src, unsigned char *dst, size_t l
 
 #if defined(__aarch64__) || defined(_M_ARM64)
 /* NEON Path: 32 bytes per iteration (2x unrolled) */
-static size_t ws_xor_neon(const unsigned char *src, unsigned char *dst, size_t len, uint32_t m32) {
+static size_t ws_xor_neon(const unsigned char *src, unsigned char *dst,
+                          size_t len, uint32_t m32)
+{
   size_t j = 0;
   uint32x4_t vmask = vdupq_n_u32(m32);
   for(; j + 32 <= len; j += 32) {
@@ -766,7 +778,8 @@ static CURLcode ws_cw_write(struct Curl_easy *data,
     }
   }
 
-  if((type & CLIENTWRITE_EOS) && (!Curl_bufq_is_empty(&ctx->buf) || ws->dec.state != WS_DEC_INIT)) {
+  if((type & CLIENTWRITE_EOS) &&
+     (!Curl_bufq_is_empty(&ctx->buf) || ws->dec.state != WS_DEC_INIT)) {
     failf(data, "[WS] decode ending with %zd bytes remaining and "
           "incomplete frame", Curl_bufq_len(&ctx->buf));
     return CURLE_RECV_ERROR;
@@ -979,11 +992,12 @@ static ssize_t ws_enc_write_payload(struct ws_encoder *enc,
 
   while(i < len) {
     unsigned int sx = enc->xori;
-    unsigned char m[4] = { enc->mask[sx&3], enc->mask[(sx+1)&3],
-                           enc->mask[(sx+2)&3], enc->mask[(sx+3)&3] };
+    unsigned char m[4] = { enc->mask[sx & 3], enc->mask[(sx + 1) & 3],
+                           enc->mask[(sx + 2) & 3], enc->mask[(sx + 3) & 3] };
 
     chunk = len - i;
-    if(chunk > sizeof(xbuf)) chunk = sizeof(xbuf);
+    if(chunk > sizeof(xbuf))
+      chunk = sizeof(xbuf);
 
     j = 0;
 
@@ -999,7 +1013,8 @@ static ssize_t ws_enc_write_payload(struct ws_encoder *enc,
       uint32_t f = __atomic_load_n(&cpu_feats, __ATOMIC_RELAXED);
       if(f & WS_CPU_FEAT_AVX512) {
         j = ws_xor_avx512(buf + i, xbuf, chunk, m32);
-      } else if(f & WS_CPU_FEAT_AVX2) {
+      }
+      else if(f & WS_CPU_FEAT_AVX2) {
         j = ws_xor_avx2(buf + i, xbuf, chunk, m32);
       }
     }
@@ -1427,7 +1442,8 @@ static CURLcode ws_flush(struct Curl_easy *data, struct websocket *ws,
           result = CURLE_AGAIN;
       }
 
-      /* Advance buffer for any bytes successfully written before handling errors */
+      /* Advance buffer for any bytes successfully written before
+         handling errors */
       if(n > 0) {
         CURL_TRC_WS(data, "flushed %zu bytes", n);
         Curl_bufq_skip(&ws->sendbuf, n);
