@@ -171,6 +171,52 @@ static size_t ws_xor_neon(const unsigned char *src, unsigned char *dst,
   return j;
 }
 #endif
+
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+/* Manual CPU feature detection - to avoid CI/CD errors */
+static uint32_t ws_get_cpu_features(void)
+{
+  uint32_t eax, ebx, ecx, edx;
+  uint32_t features = WS_CPU_FEAT_INIT;
+
+  /* CPUID EAX=1: Check for OSXSAVE */
+  __asm__ volatile ("cpuid"
+                    : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
+                    : "a"(1), "c"(0));
+
+  /* Bit 27 of ECX indicates saving extended states support */
+  if(!(ecx & (1 << 27)))
+    return features;
+
+  /* XGETBV ECX=0: Read the XFEATURE_ENABLED_MASK register */
+  uint32_t xcr0_eax, xcr0_edx;
+  __asm__ volatile ("xgetbv"
+                    : "=a"(xcr0_eax), "=d"(xcr0_edx)
+                    : "c"(0));
+
+  /* Bits 1 & 2 (0x06) for AVX/YMM state support */
+  if((xcr0_eax & 0x06) != 0x06)
+    return features;
+
+  /* CPUID EAX=7, ECX=0: Check extended features */
+  __asm__ volatile ("cpuid"
+                    : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
+                    : "a"(7), "c"(0));
+
+  /* Check AVX2 hardware support (EBX bit 5) */
+  if(ebx & (1 << 5))
+    features |= WS_CPU_FEAT_AVX2;
+
+  /* Bits 5, 6, & 7 (0xE0) + 0x06 = 0xE6 must be set for AVX-512/ZMM support */
+  if((xcr0_eax & 0xe6) == 0xe6) {
+    /* Check AVX512F hardware support (EBX bit 16) */
+    if(ebx & (1 << 16))
+      features |= WS_CPU_FEAT_AVX512;
+  }
+
+  return features;
+}
+#endif
 #endif
 
 
@@ -202,6 +248,7 @@ struct ws_encoder {
   unsigned char mask[4]; /* 32-bit mask for this connection */
   unsigned char firstbyte; /* first byte of frame we encode */
   BIT(contfragment); /* set TRUE if the previous fragment sent was not final */
+  unsigned char xbuf[WS_ENC_XBUF_SIZE]; /* 8KB heap buffer for XOR masking */
 };
 
 /* A websocket connection with en- and decoder that treat frames
@@ -951,35 +998,13 @@ static ssize_t ws_enc_write_payload(struct ws_encoder *enc,
                                     struct bufq *out, CURLcode *err)
 {
   size_t i = 0, len, n, chunk, j;
-
-/* Cache line alignment */
-#if defined(__GNUC__) || defined(__clang__)
-  __attribute__((aligned(64))) unsigned char xbuf[WS_ENC_XBUF_SIZE];
-#elif defined(_MSC_VER)
-  __declspec(align(64)) unsigned char xbuf[WS_ENC_XBUF_SIZE];
-#else
-  unsigned char xbuf[WS_ENC_XBUF_SIZE];
-#endif
+  unsigned char *xbuf = enc->xbuf;
 
   /* Defensive check for finished payloads */
   if(enc->payload_remain <= 0) {
     ws_enc_info(enc, data, "buffered");
     return 0;
   }
-
-  /* CPU feature cache. */
-#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
-  static uint32_t cpu_feats = 0;
-  if(!__atomic_load_n(&cpu_feats, __ATOMIC_ACQUIRE)) {
-    uint32_t f = WS_CPU_FEAT_INIT;
-    __builtin_cpu_init();
-    if(__builtin_cpu_supports("avx2"))
-      f |= WS_CPU_FEAT_AVX2;
-    if(__builtin_cpu_supports("avx512f"))
-      f |= WS_CPU_FEAT_AVX512;
-    __atomic_store_n(&cpu_feats, f, __ATOMIC_RELEASE);
-  }
-#endif
 
   if(Curl_bufq_is_full(out)) {
     *err = CURLE_AGAIN;
@@ -996,8 +1021,8 @@ static ssize_t ws_enc_write_payload(struct ws_encoder *enc,
                            enc->mask[(sx + 2) & 3], enc->mask[(sx + 3) & 3] };
 
     chunk = len - i;
-    if(chunk > sizeof(xbuf))
-      chunk = sizeof(xbuf);
+    if(chunk > WS_ENC_XBUF_SIZE)
+      chunk = WS_ENC_XBUF_SIZE;
 
     j = 0;
 
@@ -1009,8 +1034,13 @@ static ssize_t ws_enc_write_payload(struct ws_encoder *enc,
 
   #if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
     {
-      /* Reload feats before dispatch */
+      static uint32_t cpu_feats = 0;
       uint32_t f = __atomic_load_n(&cpu_feats, __ATOMIC_RELAXED);
+      if(!(f & WS_CPU_FEAT_INIT)) {
+        f = ws_get_cpu_features();
+        __atomic_store_n(&cpu_feats, f, __ATOMIC_RELAXED);
+      }
+
       if(f & WS_CPU_FEAT_AVX512) {
         j = ws_xor_avx512(buf + i, xbuf, chunk, m32);
       }
