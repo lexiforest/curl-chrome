@@ -32,7 +32,8 @@
  * Include architecture-specific SIMD intrinsics and CPUID headers.
  * MSVC requires <intrin.h>, while GCC/Clang uses <cpuid.h>.
  */
-#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
+#if defined(__x86_64__) || defined(_M_X64) || \
+    defined(__i386__) || defined(_M_IX86)
 #  include <immintrin.h>
 #  if defined(_MSC_VER)
 #    include <intrin.h>
@@ -104,7 +105,8 @@
 #define WS_CPU_FEAT_AVX512  (1 << 2)
 
 /* Determine endianness reliably across compilers and OSes. */
-#if (defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)) || \
+#if (defined(__BYTE_ORDER__) && \
+      (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)) || \
     defined(_WIN32) || defined(_WIN64) || defined(__LITTLE_ENDIAN__) || \
     defined(__ARMEL__) || defined(__AARCH64EL__) || \
     defined(_M_IX86) || defined(_M_X64) || \
@@ -115,7 +117,8 @@
 #endif
 
 /* Identify 64-bit architectures for the fallback path */
-#if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__) || defined(_M_ARM64)
+#if defined(__x86_64__) || defined(_M_X64) || \
+    defined(__aarch64__) || defined(_M_ARM64)
 #  define WS_64BIT_NATIVE 1
 #else
 #  define WS_64BIT_NATIVE 0
@@ -124,7 +127,8 @@
 #if WS_IS_LITTLE_ENDIAN
 
 /* SIMD Configuration */
-#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
+#if defined(__x86_64__) || defined(_M_X64) || \
+    defined(__i386__) || defined(_M_IX86)
 #  define WS_HAVE_X86_SIMD 1
 #  if defined(__GNUC__) || defined(__clang__)
 #    if defined(__has_attribute)
@@ -146,11 +150,15 @@
 #  endif
 
 #  if defined(_MSC_VER)
-#    define WS_ATOMIC_LOAD(var)       (uint32_t)_InterlockedOr((volatile long*)&(var), 0)
-#    define WS_ATOMIC_STORE(var, val) _InterlockedExchange((volatile long*)&(var), (long)(val))
+#    define WS_ATOMIC_LOAD(var) \
+       (uint32_t)_InterlockedOr((volatile long*)&(var), 0)
+#    define WS_ATOMIC_STORE(var, val) \
+       _InterlockedExchange((volatile long*)&(var), (long)(val))
 #  else
-#    define WS_ATOMIC_LOAD(var)       __atomic_load_n(&(var), __ATOMIC_RELAXED)
-#    define WS_ATOMIC_STORE(var, val) __atomic_store_n(&(var), (val), __ATOMIC_RELAXED)
+#    define WS_ATOMIC_LOAD(var) \
+       __atomic_load_n(&(var), __ATOMIC_RELAXED)
+#    define WS_ATOMIC_STORE(var, val) \
+       __atomic_store_n(&(var), (val), __ATOMIC_RELAXED)
 #  endif
 #endif
 
@@ -170,7 +178,8 @@ static size_t ws_xor_avx512(const unsigned char *src, unsigned char *dst,
   size_t j = 0;
   __m512i vmask = _mm512_set1_epi32((int)m32);
   for(; j + 128 <= len; j += 128) {
-    __m512i v0 = _mm512_loadu_si512((const __m512i *)(const void *)(src + j));
+    __m512i v0 = _mm512_loadu_si512((const __m512i *)(const void *)
+                                    (src + j));
     __m512i v1 = _mm512_loadu_si512((const __m512i *)(const void *)
                                     (src + j + 64));
     _mm512_storeu_si512((__m512i *)(void *)(dst + j),
@@ -205,7 +214,7 @@ static size_t ws_xor_avx2(const unsigned char *src, unsigned char *dst,
 
 /*
  * Dynamically check for hardware SIMD support at runtime.
- * We must check both the CPU hardware bits AND the OS capability bits (OSXSAVE).
+ * We must check both the CPU hardware bits AND the OS capability bits.
  */
 static uint32_t ws_get_cpu_features(void)
 {
@@ -240,7 +249,7 @@ static uint32_t ws_get_cpu_features(void)
   if(!(ecx & (1 << 27)))
     return features;
 
-  __asm__ volatile ("xgetbv" : "=a"(xcr0_eax), "=d"(xcr0_edx) : "c"(0));
+  __asm__ volatile("xgetbv" : "=a"(xcr0_eax), "=d"(xcr0_edx) : "c"(0));
 
   if((xcr0_eax & 0x06) != 0x06)
     return features;
