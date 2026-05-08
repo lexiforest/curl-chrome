@@ -134,7 +134,13 @@
 #    if defined(__has_attribute)
 #      if __has_attribute(target)
 #        define WS_TARGET_AVX2   __attribute__((target("avx2")))
-#        define WS_TARGET_AVX512 __attribute__((target("avx512f")))
+#        if defined(__clang__) && \
+            ((defined(__apple_build_version__) && __clang_major__ >= 16) || \
+             (!defined(__apple_build_version__) && __clang_major__ >= 18))
+#          define WS_TARGET_AVX512 __attribute__((target("avx512f,evex512")))
+#        else
+#          define WS_TARGET_AVX512 __attribute__((target("avx512f")))
+#        endif
 #        define WS_SUPPORT_AVX_RUNTIME 1
 #      else
 #        define WS_TARGET_AVX2
@@ -222,31 +228,52 @@ static uint32_t ws_get_cpu_features(void)
 
 #if defined(_MSC_VER)
   int cpuinfo[4];
-  __cpuidex(cpuinfo, 1, 0);
-  if(!(cpuinfo[2] & (1 << 27)))
+  int max_leaf;
+  unsigned long long xcr0;
+
+  /* Check max CPUID leaf */
+  __cpuid(cpuinfo, 0);
+  max_leaf = cpuinfo[0];
+  if(max_leaf < 1)
     return features;
 
-  unsigned long long xcr0 = _xgetbv(0);
+  __cpuidex(cpuinfo, 1, 0);
+  /* Check XSAVE (26), OSXSAVE (27), and AVX (28) */
+  if((cpuinfo[2] & ((1 << 26) | (1 << 27) | (1 << 28))) !=
+                   ((1 << 26) | (1 << 27) | (1 << 28)))
+    return features;
+
+  xcr0 = _xgetbv(0);
   if((xcr0 & 0x06) != 0x06)
     return features;
 
-  /* Retrieve AVX extended features */
-  __cpuidex(cpuinfo, 7, 0);
-  if(cpuinfo[1] & (1 << 5))
-    features |= WS_CPU_FEAT_AVX2;
+  /* Check extended CPU features */
+  if(max_leaf >= 7) {
+    __cpuidex(cpuinfo, 7, 0);
+    if(cpuinfo[1] & (1 << 5))
+      features |= WS_CPU_FEAT_AVX2;
 
-  if((xcr0 & 0xe6) == 0xe6) {
-    if(cpuinfo[1] & (1 << 16))
-      features |= WS_CPU_FEAT_AVX512;
+    if((xcr0 & 0xe6) == 0xe6) {
+      if(cpuinfo[1] & (1 << 16))
+        features |= WS_CPU_FEAT_AVX512;
+    }
   }
 #elif defined(__GNUC__) || defined(__clang__)
   unsigned int eax = 0, ebx = 0, ecx = 0, edx = 0;
+  unsigned int max_leaf;
   uint32_t xcr0_eax, xcr0_edx;
+
+  /* Check max CPUID leaf */
+  max_leaf = __get_cpuid_max(0, NULL);
+  if(max_leaf < 1)
+    return features;
 
   if(!__get_cpuid(1, &eax, &ebx, &ecx, &edx))
     return features;
 
-  if(!(ecx & (1 << 27)))
+  /* Check XSAVE (26), OSXSAVE (27), and AVX (28) */
+  if((ecx & ((1 << 26) | (1 << 27) | (1 << 28))) !=
+            ((1 << 26) | (1 << 27) | (1 << 28)))
     return features;
 
   __asm__ volatile("xgetbv" : "=a"(xcr0_eax), "=d"(xcr0_edx) : "c"(0));
@@ -254,13 +281,16 @@ static uint32_t ws_get_cpu_features(void)
   if((xcr0_eax & 0x06) != 0x06)
     return features;
 
-  __cpuid_count(7, 0, eax, ebx, ecx, edx);
-  if(ebx & (1 << 5))
-    features |= WS_CPU_FEAT_AVX2;
+  /* Check extended CPU features */
+  if(max_leaf >= 7) {
+    __cpuid_count(7, 0, eax, ebx, ecx, edx);
+    if(ebx & (1 << 5))
+      features |= WS_CPU_FEAT_AVX2;
 
-  if((xcr0_eax & 0xe6) == 0xe6) {
-    if(ebx & (1 << 16))
-      features |= WS_CPU_FEAT_AVX512;
+    if((xcr0_eax & 0xe6) == 0xe6) {
+      if(ebx & (1 << 16))
+        features |= WS_CPU_FEAT_AVX512;
+    }
   }
 #endif
 
@@ -1067,7 +1097,7 @@ static ssize_t ws_enc_write_payload(struct ws_encoder *enc,
                                     const unsigned char *buf, size_t buflen,
                                     struct bufq *out, CURLcode *err)
 {
-  size_t i = 0, len, n, chunk, j;
+  size_t i = 0, len, n, chunk, j, xbuf_i;
   unsigned char *xbuf = enc->xbuf;
 #if defined(WS_HAVE_X86_SIMD) && WS_IS_LITTLE_ENDIAN
   static uint32_t cpu_feats = 0;
@@ -1076,13 +1106,9 @@ static ssize_t ws_enc_write_payload(struct ws_encoder *enc,
 
   /* Defensive check for finished payloads */
   if(enc->payload_remain <= 0) {
+    *err = CURLE_OK;
     ws_enc_info(enc, data, "buffered");
     return 0;
-  }
-
-  if(Curl_bufq_is_full(out)) {
-    *err = CURLE_AGAIN;
-    return -1;
   }
 
   len = buflen;
@@ -1090,24 +1116,26 @@ static ssize_t ws_enc_write_payload(struct ws_encoder *enc,
     len = (size_t)enc->payload_remain;
 
 #if defined(WS_HAVE_X86_SIMD) && WS_IS_LITTLE_ENDIAN
-  /*
-   * Evaluate CPU features once per `curl_ws_send` call. This saves many
-   * redundant calls across the 8KB chunks of large payloads.
-   */
+  /* Evaluation of process-global CPU feature cache */
   f = WS_ATOMIC_LOAD(cpu_feats);
   if(!(f & WS_CPU_FEAT_INIT)) {
     f = ws_get_cpu_features();
     WS_ATOMIC_STORE(cpu_feats, f);
   }
+  (void)f;
 #endif
 
   while(i < len) {
-    unsigned int sx = enc->xori;
-    unsigned char m[4] = { enc->mask[sx & 3], enc->mask[(sx + 1) & 3],
-                           enc->mask[(sx + 2) & 3], enc->mask[(sx + 3) & 3] };
+    unsigned char m[4];
 #if WS_IS_LITTLE_ENDIAN
     uint32_t m32;
 #endif
+
+    /* Setup the 4-byte mask rotated to the current frame offset */
+    m[0] = enc->mask[enc->xori];
+    m[1] = enc->mask[(enc->xori + 1) & 3];
+    m[2] = enc->mask[(enc->xori + 2) & 3];
+    m[3] = enc->mask[(enc->xori + 3) & 3];
 
     chunk = len - i;
     if(chunk > WS_ENC_XBUF_SIZE)
@@ -1118,23 +1146,21 @@ static ssize_t ws_enc_write_payload(struct ws_encoder *enc,
 #if WS_IS_LITTLE_ENDIAN
     memcpy(&m32, m, 4);
 
-    /* SIMD (128, 64, or 32 bytes per iteration) */
+    /* SIMD Ladder (128, 64, or 32 bytes per iteration) */
 #if defined(WS_HAVE_X86_SIMD)
 #  if defined(WS_SUPPORT_AVX_RUNTIME) || defined(__AVX512F__)
-    if(f & WS_CPU_FEAT_AVX512) {
+    if(f & WS_CPU_FEAT_AVX512)
       j = ws_xor_avx512(buf + i, xbuf, chunk, m32);
-    }
 #  endif
 #  if defined(WS_SUPPORT_AVX_RUNTIME) || defined(__AVX2__)
-    if((j == 0) && (f & WS_CPU_FEAT_AVX2)) {
+    if(!j && (f & WS_CPU_FEAT_AVX2))
       j = ws_xor_avx2(buf + i, xbuf, chunk, m32);
-    }
 #  endif
 #elif defined(WS_HAVE_ARM_SIMD)
     j = ws_xor_neon(buf + i, xbuf, chunk, m32);
 #endif
 
-    /* 64-bit (8 bytes per iteration) */
+    /* Scalar Ladder (8 or 4 bytes per iteration) */
 #if WS_64BIT_NATIVE
     {
       uint64_t m64 = ((uint64_t)m32 << 32) | m32;
@@ -1146,8 +1172,6 @@ static ssize_t ws_enc_write_payload(struct ws_encoder *enc,
       }
     }
 #endif
-
-    /* 32-bit (4 bytes per iteration) */
     for(; j + 4 <= chunk; j += 4) {
       uint32_t d32;
       memcpy(&d32, buf + i + j, 4);
@@ -1157,21 +1181,37 @@ static ssize_t ws_enc_write_payload(struct ws_encoder *enc,
 #endif /* WS_IS_LITTLE_ENDIAN */
 
     /* Final Remainder (1 byte per iteration) */
-    for(; j < chunk; ++j) {
+    for(; j < chunk; ++j)
       xbuf[j] = buf[i + j] ^ m[j & 3];
-    }
 
-    *err = Curl_bufq_write(out, xbuf, chunk, &n);
-    if(n > 0) {
-      i += n;
-      enc->xori = (sx + (unsigned int)n) & 3;
-    }
-    if(*err) {
-      if((*err != CURLE_AGAIN) || !i)
-        return -1;
-      break;
+    /* Write Loop: Flushes the staging buffer to the connection queue.
+     * This handles short writes and phantom stalls (n=0) by coercing
+     * them into EAGAIN and exiting for the caller to retry. */
+    xbuf_i = 0;
+    while(xbuf_i < chunk) {
+      *err = Curl_bufq_write(out, xbuf + xbuf_i, chunk - xbuf_i, &n);
+
+      if(n > 0) {
+        xbuf_i += n;
+        i += n;
+        enc->xori = (enc->xori + (unsigned int)n) & 3;
+      }
+
+      if(*err) {
+        if((*err != CURLE_AGAIN) || !i)
+          return -1;
+        goto write_done;
+      }
+      if(n == 0) {
+        *err = CURLE_AGAIN;
+        if(!i)
+          return -1;
+        goto write_done;
+      }
     }
   }
+
+write_done:
   enc->payload_remain -= (curl_off_t)i;
   ws_enc_info(enc, data, "buffered");
   return (ssize_t)i;
