@@ -1233,11 +1233,12 @@ static bool h3_setting_supported(unsigned long id)
 /* HTTP/3 GREASE setting identifiers follow: 0x1f * N + 0x21 */
 #define H3_SETTINGS_GREASE_ID_BASE  UINT64_C(0x21)
 #define H3_SETTINGS_GREASE_ID_STEP  UINT64_C(0x1f)
-#define H3_VARINT_MAX               UINT64_C(0x3fffffffffffffff)
 
-static bool h3_rand_u64(struct Curl_easy *data, uint64_t *val)
+/* Chrome uses a narrower uint32_t range than RFC 9114 allows:
+   https://quiche.googlesource.com/quiche/+/refs/heads/main/quiche/quic/core/http/quic_send_control_stream.cc */
+static bool h3_rand_u32(struct Curl_easy *data, uint32_t *val)
 {
-  unsigned char rnd[sizeof(uint64_t)];
+  unsigned char rnd[sizeof(uint32_t)];
   CURLcode result;
   size_t i;
 
@@ -1255,17 +1256,15 @@ static bool h3_rand_u64(struct Curl_easy *data, uint64_t *val)
 static bool h3_generate_grease_setting(struct Curl_easy *data,
                                        nghttp3_settings_entry *iv)
 {
-  uint64_t n;
-  uint64_t value;
-  uint64_t max_n = (H3_VARINT_MAX - H3_SETTINGS_GREASE_ID_BASE) /
-                   H3_SETTINGS_GREASE_ID_STEP;
+  uint32_t n;
+  uint32_t value;
 
-  if(!h3_rand_u64(data, &n) || !h3_rand_u64(data, &value))
+  if(!h3_rand_u32(data, &n) || !h3_rand_u32(data, &value))
     return FALSE;
 
-  n %= (max_n + 1);
-  iv->id = H3_SETTINGS_GREASE_ID_STEP * n + H3_SETTINGS_GREASE_ID_BASE;
-  iv->value = value & H3_VARINT_MAX;
+  iv->id = (H3_SETTINGS_GREASE_ID_STEP * (uint64_t)n) +
+           H3_SETTINGS_GREASE_ID_BASE;
+  iv->value = value;
   return TRUE;
 }
 
