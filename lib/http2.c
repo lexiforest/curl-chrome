@@ -493,6 +493,8 @@ static CURLcode cf_h2_update_local_win(struct Curl_cfilter *cf,
                   stream->id, dwsize - wsize);
     }
     else {
+      rv = nghttp2_session_set_local_window_size(ctx->h2, NGHTTP2_FLAG_NONE,
+                                                 stream->id, dwsize);
       if(rv) {
         failf(data, "[%d] nghttp2_session_set_local_window_size() failed: "
               "%s(%d)", stream->id, nghttp2_strerror(rv), rv);
@@ -2095,7 +2097,7 @@ static int sweight_in_effect(const struct Curl_easy *data)
 {
   /* 0 weight is not set by user and we take the nghttp2 default one */
   return data->state.priority.weight ?
-    data->state.priority.weight : NGHTTP2_DEFAULT_WEIGHT;
+    data->state.priority.weight : CHROME_DEFAULT_STREAM_WEIGHT;
 }
 
 /*
@@ -2144,7 +2146,7 @@ static CURLcode h2_progress_egress(struct Curl_cfilter *cf,
   /* curl-impersonate: Check if stream exclusive flag is true. */
   if(stream && stream->id > 0 &&
      ((sweight_wanted(data) != sweight_in_effect(data)) ||
-     (data->set.priority.exclusive != 1) ||
+      (data->set.priority.exclusive != data->state.priority.exclusive) ||
       (data->set.priority.parent != data->state.priority.parent)) ) {
     /* send new weight and/or dependency */
     nghttp2_priority_spec pri_spec;
