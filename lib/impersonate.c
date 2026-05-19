@@ -2256,6 +2256,7 @@ const struct impersonate_opts impersonations[] = {
     .http2_window_update = 12517377,
     .http2_pseudo_headers_order = "mpas",
     .http2_stream_exclusive = 0,
+    .http2_stream_weight = 42,
     .cert_compression = "zlib,brotli,zstd",
     .ech = "true",
     .tls_session_ticket = true,

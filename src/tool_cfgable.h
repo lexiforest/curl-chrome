@@ -163,6 +163,7 @@ struct OperationConfig {
   char *ssl_cert_compression;
   char *ssl_sig_hash_algs;
   char *ssl_signature_algorithms;
+  char *form_boundary;
   char *krblevel;
   char *request_target;
   char *http_header_order;

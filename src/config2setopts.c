@@ -674,6 +674,8 @@ static CURLcode cookie_setopts(struct OperationConfig *config, CURL *curl)
   /* new in libcurl 7.9.7 */
   my_setopt_long(curl, CURLOPT_COOKIESESSION, config->cookiesession);
   my_setopt_long(curl, CURLOPT_SPLIT_COOKIES, config->split_cookies);
+  if(config->form_boundary)
+    my_setopt_str(curl, CURLOPT_FORM_BOUNDARY, config->form_boundary);
 
   return result;
 }
