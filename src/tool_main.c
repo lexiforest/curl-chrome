@@ -43,6 +43,7 @@
 #include "tool_main.h"
 #include "tool_libinfo.h"
 #include "tool_stderr.h"
+#include "impersonate.h"
 
 /*
  * This is low-level hard-hacking memory leak tracking and similar. Using
@@ -164,18 +165,25 @@ static CURLcode main_init(struct GlobalConfig *global)
   if(global->first) {
     /* Perform the libcurl initialization */
     result = curl_global_init(CURL_GLOBAL_DEFAULT);
-    if(!result) {
-      /* Get information about libcurl */
-      result = get_libcurl_info();
-
-      if(result) {
-        errorf(global, "error retrieving curl library information");
-        free(global->first);
-      }
-    }
-    else {
+    if(result) {
       errorf(global, "error initializing curl library");
       free(global->first);
+    }
+    else {
+      result = curl_impersonate_load_targets_from_config();
+      if(result) {
+        errorf(global, "error loading impersonate fingerprints config");
+        free(global->first);
+      }
+      else {
+        /* Get information about libcurl */
+        result = get_libcurl_info();
+
+        if(result) {
+          errorf(global, "error retrieving curl library information");
+          free(global->first);
+        }
+      }
     }
   }
   else {
@@ -205,6 +213,7 @@ static void main_free(struct GlobalConfig *global)
 {
   /* Cleanup the easy handle */
   /* Main cleanup */
+  curl_impersonate_free_targets_from_config();
   curl_global_cleanup();
   free_globalconfig(global);
 

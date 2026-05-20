@@ -2,7 +2,7 @@
 #include <curl/curl.h>
 #include "impersonate.h"
 
-const struct impersonate_opts impersonations[] = {
+const struct impersonate_opts builtin_impersonations[] = {
   {
     .target = "chrome100",
     .alias = "chrome100",
@@ -2271,4 +2271,8 @@ const struct impersonate_opts impersonations[] = {
   }
 };
 
-const size_t num_impersonations = sizeof(impersonations) / sizeof(impersonations[0]);
+const size_t num_builtin_impersonations =
+  sizeof(builtin_impersonations) / sizeof(builtin_impersonations[0]);
+const struct impersonate_opts *impersonations = builtin_impersonations;
+size_t num_impersonations =
+  sizeof(builtin_impersonations) / sizeof(builtin_impersonations[0]);

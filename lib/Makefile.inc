@@ -211,6 +211,7 @@ LIB_CFILES =         \
   if2ip.c            \
   imap.c             \
   impersonate.c      \
+  impersonate_json.c \
   krb5.c             \
   ldap.c             \
   llist.c            \
@@ -347,6 +348,7 @@ LIB_HFILES =         \
   idn.h              \
   if2ip.h            \
   imap.h             \
+  impersonate.h      \
   llist.h            \
   macos.h            \
   memdebug.h         \

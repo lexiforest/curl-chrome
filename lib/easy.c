@@ -433,8 +433,8 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
   if(ret)
     return ret;
 
-  // always enable this for browsers
-  ret = curl_easy_setopt(data, CURLOPT_TLS_SIGNED_CERT_TIMESTAMPS, 1);
+  ret = curl_easy_setopt(data, CURLOPT_TLS_SIGNED_CERT_TIMESTAMPS,
+                         opts->tls_signed_cert_timestamps ? 1 : 0);
   if(ret)
     return ret;
 
@@ -671,17 +671,19 @@ CURLcode curl_easy_impersonate(CURL *data, const char *target,
 
   opts = binary_search(num_impersonations, target);
 
-  // If not found, fallback and search by alias again
-  if(opts == NULL) {
-    for(int i = 0; i < num_impersonations; ++i) {
-      if (curl_strequal(target, impersonations[i].alias)) {
+  /* If not found, fallback and search by alias again. */
+  if(!opts) {
+    size_t i;
+
+    for(i = 0; i < num_impersonations; ++i) {
+      if(curl_strequal(target, impersonations[i].alias)) {
         opts = impersonations + i;
         break;
       }
     }
   }
 
-  if(opts == NULL) {
+  if(!opts) {
     failf(_data, "Unknown impersonation target '%s'. "
           "Use a valid --impersonate target such as firefox147.", target);
     DEBUGF(fprintf(stderr, "Error: unknown impersonation target '%s'\n",

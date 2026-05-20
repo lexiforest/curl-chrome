@@ -69,7 +69,16 @@ struct impersonate_opts {
  * curl-impersonate: Global array of supported browsers and their
  * impersonation options.
  */
-extern const struct impersonate_opts impersonations[];
-extern const size_t num_impersonations;
+extern const struct impersonate_opts builtin_impersonations[];
+extern const size_t num_builtin_impersonations;
+extern const struct impersonate_opts *impersonations;
+extern size_t num_impersonations;
+
+CURL_EXTERN CURLcode curl_impersonate_load_targets_from_config(void);
+CURL_EXTERN void curl_impersonate_free_targets_from_config(void);
+
+CURLcode load_targets_from_config(void);
+void free_targets_from_config(void);
+void Curl_impersonate_opts_cleanup(struct impersonate_opts *opts);
 
 #endif /* HEADER_CURL_IMPERSONATE_H */
