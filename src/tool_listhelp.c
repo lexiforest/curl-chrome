@@ -241,6 +241,9 @@ const struct helptxt helptext[] = {
    "Specify multipart MIME data",
    CURLHELP_HTTP | CURLHELP_UPLOAD | CURLHELP_POST | CURLHELP_IMAP |
    CURLHELP_SMTP},
+  {"    --form-boundary <style>",
+   "Set multipart form boundary style",
+   CURLHELP_HTTP | CURLHELP_UPLOAD | CURLHELP_POST},
   {"    --form-escape",
    "Escape form fields using backslash",
    CURLHELP_HTTP | CURLHELP_UPLOAD | CURLHELP_POST},

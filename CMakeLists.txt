@@ -774,7 +774,7 @@ if(CURL_USE_OPENSSL)
   cmake_pop_check_state()
 
   if(HAVE_BORINGSSL OR HAVE_AWSLC)
-    if(OPENSSL_USE_STATIC_LIBS AND CMAKE_C_COMPILER_ID MATCHES "Clang")
+    if(OPENSSL_USE_STATIC_LIBS AND CMAKE_C_COMPILER_ID MATCHES "Clang" AND NOT MSVC)
       if(APPLE OR BSD OR ANDROID)
         set(_cxx_runtime_lib "c++")
       else()

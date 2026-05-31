@@ -147,6 +147,7 @@ static const struct LongShort aliases[]= {
   {"fail-with-body",             ARG_BOOL, ' ', C_FAIL_WITH_BODY},
   {"false-start",                ARG_BOOL, ' ', C_FALSE_START},
   {"form",                       ARG_STRG, 'F', C_FORM},
+  {"form-boundary",              ARG_STRG, ' ', C_FORM_BOUNDARY},
   {"form-escape",                ARG_BOOL, ' ', C_FORM_ESCAPE},
   {"form-string",                ARG_STRG, ' ', C_FORM_STRING},
   {"ftp-account",                ARG_STRG, ' ', C_FTP_ACCOUNT},
@@ -2563,6 +2564,9 @@ static ParameterError opt_filestring(struct OperationConfig *config,
     break;
   case C_SIGNATURE_HASHES: /* --signature-hashes */
     err = getstr(&config->ssl_sig_hash_algs, nextarg, ALLOW_BLANK);
+    break;
+  case C_FORM_BOUNDARY: /* --form-boundary */
+    err = getstr(&config->form_boundary, nextarg, DENY_BLANK);
     break;
   case C_HAPPY_EYEBALLS_TIMEOUT_MS: /* --happy-eyeballs-timeout-ms */
     err = str2unum(&config->happy_eyeballs_timeout_ms, nextarg);
