@@ -630,6 +630,7 @@ static CURLcode quic_apply_transport_param(ngtcp2_transport_params *t,
 #define QUIC_VARINT_MAX UINT64_C(0x3fffffffffffffff)
 #define QUIC_TP_INITIAL_SOURCE_CONNECTION_ID UINT64_C(0x0f)
 #define QUIC_TP_VERSION_INFORMATION          UINT64_C(0x11)
+#define QUIC_TP_VERSION_INFORMATION_DRAFT    UINT64_C(0xff73db)
 #define QUIC_TP_INITIAL_RTT                  UINT64_C(0x3127)
 #define QUIC_TP_GOOGLE_VERSION               UINT64_C(0x4752)
 #define QUIC_TP_GREASE_ID_BASE              UINT64_C(27)
@@ -881,6 +882,7 @@ static CURLcode quic_parse_version_token(const char *tok,
 }
 
 static CURLcode quic_append_version_information(struct dynbuf *raw,
+                                                uint64_t id,
                                                 const char *value_str,
                                                 struct Curl_easy *data)
 {
@@ -944,7 +946,7 @@ static CURLcode quic_append_version_information(struct dynbuf *raw,
     goto out;
   }
 
-  result = quic_raw_append_param_bytes(raw, QUIC_TP_VERSION_INFORMATION,
+  result = quic_raw_append_param_bytes(raw, id,
                                        (const uint8_t *)curlx_dyn_ptr(&vb),
                                        curlx_dyn_len(&vb));
 
@@ -952,6 +954,12 @@ out:
   free(tmp);
   curlx_dyn_free(&vb);
   return result;
+}
+
+static bool quic_tp_is_version_information(uint64_t id)
+{
+  return id == QUIC_TP_VERSION_INFORMATION ||
+         id == QUIC_TP_VERSION_INFORMATION_DRAFT;
 }
 
 static CURLcode quic_transport_params_from_string(ngtcp2_transport_params *t,
@@ -1049,10 +1057,19 @@ static CURLcode quic_transport_params_from_string(ngtcp2_transport_params *t,
       value_str = colon + 1;
     }
 
-    id = strtoull(setting, &end, 10);
-    if(!*setting || (end && *end)) {
-      result = CURLE_BAD_FUNCTION_ARGUMENT;
-      goto out;
+    if(curl_strequal(setting, "version_information"))
+      id = QUIC_TP_VERSION_INFORMATION;
+    else if(curl_strequal(setting, "version_information_draft"))
+      id = QUIC_TP_VERSION_INFORMATION_DRAFT;
+    else {
+      int base = (setting[0] == '0' && (setting[1] == 'x' ||
+                                        setting[1] == 'X')) ? 16 : 10;
+
+      id = strtoull(setting, &end, base);
+      if(!*setting || (end && *end)) {
+        result = CURLE_BAD_FUNCTION_ARGUMENT;
+        goto out;
+      }
     }
     if(has_value) {
       if(id == QUIC_TP_INITIAL_SOURCE_CONNECTION_ID &&
@@ -1064,7 +1081,7 @@ static CURLcode quic_transport_params_from_string(ngtcp2_transport_params *t,
               (curl_strequal(value_str, "AUTO") ||
                curl_strequal(value_str, "RANDOM")))
         value_is_initial_rtt_auto = TRUE;
-      else if(id == QUIC_TP_VERSION_INFORMATION) {
+      else if(quic_tp_is_version_information(id)) {
         /* Parsed by dedicated handler below. */
       }
       else if(value_str[0] == '0' && (value_str[1] == 'x' ||
@@ -1079,8 +1096,8 @@ static CURLcode quic_transport_params_from_string(ngtcp2_transport_params *t,
       }
     }
 
-    if(has_value && id == QUIC_TP_VERSION_INFORMATION) {
-      result = quic_append_version_information(raw, value_str, data);
+    if(has_value && quic_tp_is_version_information(id)) {
+      result = quic_append_version_information(raw, id, value_str, data);
       if(result)
         goto out;
       continue;
