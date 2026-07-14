@@ -2366,7 +2366,8 @@ typedef enum {
   CURLOPT(CURLOPT_QUIC_TRANSPORT_PARAMETERS, CURLOPTTYPE_STRINGPOINT, 1027),
 
   /* curl-impersonate: Signature hash algorithms for HTTP/3 (QUIC TLS).
-   * If set, used instead of CURLOPT_SSL_SIG_HASH_ALGS for QUIC connections. */
+   * If set, used instead of CURLOPT_SSL_SIGNATURE_ALGORITHMS for QUIC
+   * connections. */
   CURLOPT(CURLOPT_HTTP3_SIG_HASH_ALGS, CURLOPTTYPE_STRINGPOINT, 1028),
 
   /* curl-impersonate: TLS extension order for HTTP/3 (QUIC TLS).
@@ -2375,6 +2376,29 @@ typedef enum {
 
   /* curl-impersonate: Comma-separated order for normal HTTP headers. */
   CURLOPT(CURLOPT_HTTPHEADER_ORDER, CURLOPTTYPE_STRINGPOINT, 1030),
+
+  /* curl-impersonate: HTTP/3-specific custom HTTP headers.
+   * If set, used instead of CURLOPT_HTTPHEADER for HTTP/3 connections. */
+  CURLOPT(CURLOPT_HTTP3_HTTPHEADER, CURLOPTTYPE_SLISTPOINT, 1031),
+
+  /* curl-impersonate: HTTP/3-specific order for normal HTTP headers. */
+  CURLOPT(CURLOPT_HTTP3_HTTPHEADER_ORDER, CURLOPTTYPE_STRINGPOINT, 1032),
+
+  /* curl-impersonate: HTTP/3-specific EC curves. */
+  CURLOPT(CURLOPT_HTTP3_SSL_EC_CURVES, CURLOPTTYPE_STRINGPOINT, 1033),
+
+  /* curl-impersonate: WebSocket-specific custom HTTP headers.
+   * If set, used instead of CURLOPT_HTTPHEADER for ws:// and wss://. */
+  CURLOPT(CURLOPT_WS_HTTPHEADER, CURLOPTTYPE_SLISTPOINT, 1034),
+
+  /* curl-impersonate: WebSocket-specific order for normal HTTP headers. */
+  CURLOPT(CURLOPT_WS_HTTPHEADER_ORDER, CURLOPTTYPE_STRINGPOINT, 1035),
+
+  /* curl-impersonate: Disable WebSocket TLS session ticket extension. */
+  CURLOPT(CURLOPT_WS_SSL_DISABLE_TICKET, CURLOPTTYPE_LONG, 1036),
+
+  /* curl-impersonate: WebSocket-specific TLS certificate compression. */
+  CURLOPT(CURLOPT_WS_SSL_CERT_COMPRESSION, CURLOPTTYPE_STRINGPOINT, 1037),
 
   CURLOPT_LASTENTRY /* the last unused */
 } CURLoption;

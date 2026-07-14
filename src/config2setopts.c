@@ -318,6 +318,9 @@ static CURLcode ssl_setopts(struct OperationConfig *config, CURL *curl)
 
   if(config->ssl_ec_curves)
     my_setopt_str(curl, CURLOPT_SSL_EC_CURVES, config->ssl_ec_curves);
+  if(config->http3_ssl_ec_curves)
+    my_setopt_str(curl, CURLOPT_HTTP3_SSL_EC_CURVES,
+                  config->http3_ssl_ec_curves);
 
   if(config->ssl_signature_algorithms)
     my_setopt_str(curl, CURLOPT_SSL_SIGNATURE_ALGORITHMS,
@@ -420,14 +423,12 @@ static CURLcode ssl_setopts(struct OperationConfig *config, CURL *curl)
             "--proxy-tls13-ciphers", ssl_backend());
   }
 
-  /* curl-impersonate */
-  if(config->ssl_sig_hash_algs)
-    my_setopt_str(curl, CURLOPT_SSL_SIG_HASH_ALGS,
-                  config->ssl_sig_hash_algs);
-
   if(config->ssl_cert_compression)
     my_setopt_str(curl, CURLOPT_SSL_CERT_COMPRESSION,
                   config->ssl_cert_compression);
+  if(config->ws_ssl_cert_compression)
+    my_setopt_str(curl, CURLOPT_WS_SSL_CERT_COMPRESSION,
+                  config->ws_ssl_cert_compression);
 
   if(config->ssl_permute_extensions)
     my_setopt(curl, CURLOPT_SSL_PERMUTE_EXTENSIONS, 1L);
@@ -457,6 +458,8 @@ static CURLcode ssl_setopts(struct OperationConfig *config, CURL *curl)
   if (config->noticket) {
     my_setopt(curl, CURLOPT_SSL_ENABLE_TICKET, 0L);
   }
+  if(config->ws_disable_session_ticket)
+    my_setopt(curl, CURLOPT_WS_SSL_DISABLE_TICKET, 1L);
 
   if(config->tls_signed_cert_timestamps) {
     my_setopt(curl, CURLOPT_TLS_SIGNED_CERT_TIMESTAMPS, 1L);
@@ -603,6 +606,11 @@ static CURLcode http_setopts(struct OperationConfig *config,
                   CURLOPT_HTTP3_PSEUDO_HEADERS_ORDER,
                   config->http3_pseudo_headers_order);
 
+  if(config->http3_http_header_order)
+    my_setopt_str(curl,
+                  CURLOPT_HTTP3_HTTPHEADER_ORDER,
+                  config->http3_http_header_order);
+
   if(config->http3_settings)
     my_setopt_str(curl,
                   CURLOPT_HTTP3_SETTINGS,
@@ -612,6 +620,11 @@ static CURLcode http_setopts(struct OperationConfig *config,
     my_setopt_str(curl,
                   CURLOPT_HTTP3_SIG_HASH_ALGS,
                   config->http3_sig_hash_algs);
+
+  if(config->ws_http_header_order)
+    my_setopt_str(curl,
+                  CURLOPT_WS_HTTPHEADER_ORDER,
+                  config->ws_http_header_order);
 
   if(config->http3_tls_extension_order)
     my_setopt_str(curl,
@@ -1009,6 +1022,8 @@ CURLcode config2setopts(struct OperationConfig *config,
     my_setopt_bitmask(curl, CURLOPT_HTTPAUTH, config->authtype);
 
   my_setopt_slist(curl, CURLOPT_HTTPHEADER, config->headers);
+  my_setopt_slist(curl, CURLOPT_HTTP3_HTTPHEADER, config->http3_headers);
+  my_setopt_slist(curl, CURLOPT_WS_HTTPHEADER, config->ws_headers);
 
   if(proto_http || proto_rtsp) {
     my_setopt_str(curl, CURLOPT_REFERER, config->referer);

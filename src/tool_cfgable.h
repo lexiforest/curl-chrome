@@ -161,7 +161,7 @@ struct OperationConfig {
   char *customrequest;
   char *ssl_ec_curves;
   char *ssl_cert_compression;
-  char *ssl_sig_hash_algs;
+  char *ws_ssl_cert_compression;
   char *ssl_signature_algorithms;
   char *form_boundary;
   char *krblevel;
@@ -175,9 +175,13 @@ struct OperationConfig {
   char *http2_streams;
   char *http3_pseudo_headers_order;
   char *http3_settings;
+  char *http3_http_header_order;
+  char *http3_ssl_ec_curves;
   char *http3_sig_hash_algs;
   char *http3_tls_extension_order;
   char *quic_transport_parameters;
+  char *ws_http_header_order;
+  bool ws_disable_session_ticket;
   char *impersonate;
   bool http2_no_priority;
   bool tls_grease;
@@ -192,6 +196,8 @@ struct OperationConfig {
   struct curl_slist *prequote;
   bool ssl_permute_extensions;
   struct curl_slist *headers;
+  struct curl_slist *http3_headers;
+  struct curl_slist *ws_headers;
   struct curl_slist *proxyheaders;
   struct tool_mime *mimeroot;
   struct tool_mime *mimecurrent;

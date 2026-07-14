@@ -275,8 +275,7 @@ struct ssl_primary_config {
   char *password; /* TLS password (for, e.g., SRP) */
 #endif
   char *curves;          /* list of curves to use */
-  char *sig_hash_algs;   /* List of signature hash algorithms to use */
-  char *http3_sig_hash_algs; /* Sig hash algs for QUIC (H3), overrides above */
+  char *tls_extension_order; /* TLS extension order to use */
   char *cert_compression;  /* List of certificate compression algorithms. */
   unsigned int version_max; /* max supported version the client wants to use */
   unsigned char ssl_options;  /* the CURLOPT_SSL_OPTIONS bitmask */
@@ -285,6 +284,7 @@ struct ssl_primary_config {
   BIT(verifyhost);       /* set TRUE if CN/SAN must match hostname */
   BIT(verifystatus);     /* set TRUE if certificate status must be checked */
   BIT(cache_session);    /* cache session or not */
+  BIT(enable_ticket);    /* TLS session ticket extension */
 };
 
 struct ssl_config_data {
@@ -1350,6 +1350,7 @@ enum dupstring {
   STRING_DNS_LOCAL_IP6,
 #endif
   STRING_SSL_EC_CURVES,
+  STRING_HTTP3_SSL_EC_CURVES,
 #ifndef CURL_DISABLE_AWS
   STRING_AWS_SIGV4, /* Parameters for V4 signature */
 #endif
@@ -1358,9 +1359,9 @@ enum dupstring {
 #endif
   STRING_ECH_CONFIG,            /* CURLOPT_ECH_CONFIG */
   STRING_ECH_PUBLIC,            /* CURLOPT_ECH_PUBLIC */
-  STRING_SSL_SIG_HASH_ALGS,
   STRING_HTTP3_SIG_HASH_ALGS,
   STRING_SSL_CERT_COMPRESSION,
+  STRING_WS_SSL_CERT_COMPRESSION,
   STRING_HTTP2_PSEUDO_HEADERS_ORDER,
   STRING_HTTP2_SETTINGS,
   STRING_HTTP2_STREAMS,
@@ -1368,6 +1369,8 @@ enum dupstring {
   STRING_HTTP3_SETTINGS,
   STRING_QUIC_TRANSPORT_PARAMETERS,
   STRING_HTTPHEADER_ORDER,
+  STRING_HTTP3_HTTPHEADER_ORDER,
+  STRING_WS_HTTPHEADER_ORDER,
   STRING_TLS_EXTENSION_ORDER,
   STRING_HTTP3_TLS_EXTENSION_ORDER,
   STRING_TLS_DELEGATED_CREDENTIALS,
@@ -1459,6 +1462,8 @@ struct UserDefined {
                                 download */
   curl_off_t set_resume_from;  /* continue [ftp] transfer from here */
   struct curl_slist *headers; /* linked list of extra headers */
+  struct curl_slist *http3_headers; /* HTTP/3-specific extra headers */
+  struct curl_slist *ws_headers; /* WebSocket-specific extra headers */
   struct curl_httppost *httppost;  /* linked list of old POST data */
 #if !defined(CURL_DISABLE_MIME) || !defined(CURL_DISABLE_FORM_API)
   curl_mimepart mimepost;  /* MIME/POST data. */
@@ -1682,6 +1687,7 @@ struct UserDefined {
   BIT(ssl_enable_alpn);/* TLS ALPN extension? */
   BIT(ssl_enable_alps);/* TLS ALPS extension? */
   BIT(ssl_enable_ticket); /* TLS session ticket extension */
+  BIT(ws_disable_session_ticket); /* disable WebSocket TLS session ticket */
   BIT(ssl_permute_extensions); /* TLS Permute extensions */
   BIT(tls_grease);  /* TLS grease? */
   BIT(tls_key_usage_no_check);  /* TLS key_usage_check? */

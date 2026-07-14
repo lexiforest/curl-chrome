@@ -1631,10 +1631,7 @@ CURLcode Curl_add_custom_headers(struct Curl_easy *data,
    * curl-impersonate: Use the merged list of headers if it exists (i.e. when
    * the CURLOPT_HTTPBASEHEADER option was set.
    */
-  struct curl_slist *noproxyheaders =
-    (data->state.merged_headers ?
-     data->state.merged_headers :
-     data->set.headers);
+  struct curl_slist *noproxyheaders = Curl_http_request_headers(data);
 
 #ifndef CURL_DISABLE_PROXY
   enum Curl_proxy_use proxy;
@@ -2567,6 +2564,14 @@ static CURLcode http_req_apply_header_order(struct Curl_easy *data,
   size_t blen;
   size_t nlines = 0;
   CURLcode result = CURLE_OK;
+
+  if(data->conn && data->conn->handler &&
+     (data->conn->handler->protocol & (CURLPROTO_WS | CURLPROTO_WSS)) &&
+     data->set.str[STRING_WS_HTTPHEADER_ORDER])
+    order = data->set.str[STRING_WS_HTTPHEADER_ORDER];
+  else if(data->conn && (data->conn->alpn == CURL_HTTP_VERSION_3) &&
+          data->set.str[STRING_HTTP3_HTTPHEADER_ORDER])
+    order = data->set.str[STRING_HTTP3_HTTPHEADER_ORDER];
 
   if(!order)
     return CURLE_OK;

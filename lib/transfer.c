@@ -90,6 +90,24 @@
 
 #if !defined(CURL_DISABLE_HTTP) || !defined(CURL_DISABLE_SMTP) || \
     !defined(CURL_DISABLE_IMAP)
+struct curl_slist *Curl_http_request_headers(const struct Curl_easy *data)
+{
+  struct curl_slist *head =
+    data->state.merged_headers ? data->state.merged_headers :
+    data->set.headers;
+
+  if(data->conn && data->conn->handler &&
+     (data->conn->handler->protocol & (CURLPROTO_WS | CURLPROTO_WSS)) &&
+     data->set.ws_headers)
+    return data->set.ws_headers;
+
+  if(data->conn && (data->conn->alpn == CURL_HTTP_VERSION_3) &&
+     data->set.http3_headers)
+    return data->set.http3_headers;
+
+  return head;
+}
+
 /*
  * checkheaders() checks the linked list of custom headers for a
  * particular header (prefix). Provide the prefix without colon!
@@ -104,13 +122,7 @@ char *Curl_checkheaders(const struct Curl_easy *data,
   DEBUGASSERT(thislen);
   DEBUGASSERT(thisheader[thislen-1] != ':');
 
-  /*
-   * curl-impersonate:
-   * Check if we have overriden the user-supplied list of headers.
-   */
-  head = data->set.headers;
-  if (data->state.merged_headers)
-    head = data->state.merged_headers;
+  head = Curl_http_request_headers(data);
 
   for(; head; head = head->next) {
     if(curl_strnequal(head->data, thisheader, thislen) &&

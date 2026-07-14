@@ -116,7 +116,8 @@ void Curl_ssl_easy_config_init(struct Curl_easy *data);
  * Init the `data->set.ssl` and `data->set.proxy_ssl` for
  * connection matching use.
  */
-CURLcode Curl_ssl_easy_config_complete(struct Curl_easy *data);
+CURLcode Curl_ssl_easy_config_complete(struct Curl_easy *data,
+                                       struct connectdata *conn);
 
 /**
  * Init SSL configs (main + proxy) for a new connection from the easy handle.

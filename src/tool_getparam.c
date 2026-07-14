@@ -188,6 +188,9 @@ static const struct LongShort aliases[]= {
   {"http2-streams",              ARG_STRG, ' ', C_HTTP2_STREAMS},  // curl-impersonate
   {"http2-window-update",        ARG_STRG, ' ', C_HTTP2_WINDOW_UPDATE},  // curl-impersonate
   {"http3",                      ARG_NONE|ARG_TLS, ' ', C_HTTP3},
+  {"http3-curves",               ARG_STRG|ARG_TLS, ' ', C_HTTP3_CURVES},  // curl-impersonate
+  {"http3-httpheader",           ARG_STRG, ' ', C_HTTP3_HTTPHEADER},  // curl-impersonate
+  {"http3-httpheader-order",     ARG_STRG, ' ', C_HTTP3_HTTPHEADER_ORDER},  // curl-impersonate
   {"http3-only",                 ARG_NONE|ARG_TLS, ' ', C_HTTP3_ONLY},
   {"http3-pseudo-headers-order", ARG_STRG, ' ', C_HTTP3_PSEUDO_HEADERS_ORDER},  // curl-impersonate
   {"http3-settings",             ARG_STRG, ' ', C_HTTP3_SETTINGS},  // curl-impersonate
@@ -399,6 +402,10 @@ static const struct LongShort aliases[]= {
 #ifdef USE_WATT32
   {"wdebug",                     ARG_BOOL, ' ', C_WDEBUG},
 #endif
+  {"ws-cert-compression",        ARG_STRG|ARG_TLS, ' ', C_WS_CERT_COMPRESSION},  // curl-impersonate
+  {"ws-disable-session-ticket",  ARG_BOOL, ' ', C_WS_DISABLE_SESSION_TICKET},  // curl-impersonate
+  {"ws-httpheader",              ARG_STRG, ' ', C_WS_HTTPHEADER},  // curl-impersonate
+  {"ws-httpheader-order",        ARG_STRG, ' ', C_WS_HTTPHEADER_ORDER},  // curl-impersonate
   {"write-out",                  ARG_STRG, 'w', C_WRITE_OUT},
   {"xattr",                      ARG_BOOL, ' ', C_XATTR},
 };
@@ -1287,9 +1294,14 @@ static ParameterError parse_header(struct OperationConfig *config,
       curlx_dyn_init(&line, 1024*100);
       while(my_get_line(file, &line, &error)) {
         const char *ptr = curlx_dyn_ptr(&line);
-        err = add2list(cmd == C_PROXY_HEADER ? /* --proxy-header? */
-                       &config->proxyheaders :
-                       &config->headers, ptr);
+        struct curl_slist **headers = &config->headers;
+        if(cmd == C_PROXY_HEADER) /* --proxy-header */
+          headers = &config->proxyheaders;
+        else if(cmd == C_HTTP3_HTTPHEADER) /* --http3-httpheader */
+          headers = &config->http3_headers;
+        else if(cmd == C_WS_HTTPHEADER) /* --ws-httpheader */
+          headers = &config->ws_headers;
+        err = add2list(headers, ptr);
         if(err)
           break;
       }
@@ -1303,6 +1315,10 @@ static ParameterError parse_header(struct OperationConfig *config,
   else {
     if(cmd == C_PROXY_HEADER) /* --proxy-header */
       err = add2list(&config->proxyheaders, nextarg);
+    else if(cmd == C_HTTP3_HTTPHEADER) /* --http3-httpheader */
+      err = add2list(&config->http3_headers, nextarg);
+    else if(cmd == C_WS_HTTPHEADER) /* --ws-httpheader */
+      err = add2list(&config->ws_headers, nextarg);
     else
       err = add2list(&config->headers, nextarg);
   }
@@ -1974,6 +1990,9 @@ static ParameterError opt_bool(struct OperationConfig *config,
   case C_TLS_SESSION_TICKET:  /* --tls-session-ticket curl-impersonate */
     config->noticket = (!toggle)?TRUE:FALSE;
     break;
+  case C_WS_DISABLE_SESSION_TICKET:  /* --ws-disable-session-ticket curl-impersonate */
+    config->ws_disable_session_ticket = toggle;
+    break;
   case C_TLS_PERMUTE_EXTENSIONS:  /* --tls-permute-extensions curl-impersonate */
     config->ssl_permute_extensions = toggle;
     break;
@@ -2539,10 +2558,20 @@ static ParameterError opt_filestring(struct OperationConfig *config,
       return PARAM_LIBCURL_DOESNT_SUPPORT;
     err = getstr(&config->http3_pseudo_headers_order, nextarg, ALLOW_BLANK);
     break;
+  case C_HTTP3_HTTPHEADER_ORDER: /* --http3-httpheader-order curl-impersonate */
+    if(!feature_http3)
+      return PARAM_LIBCURL_DOESNT_SUPPORT;
+    err = getstr(&config->http3_http_header_order, nextarg, ALLOW_BLANK);
+    break;
   case C_HTTP3_SETTINGS:  /* --http3-settings curl-impersonate */
     if(!feature_http3)
       return PARAM_LIBCURL_DOESNT_SUPPORT;
     err = getstr(&config->http3_settings, nextarg, ALLOW_BLANK);
+    break;
+  case C_HTTP3_CURVES:  /* --http3-curves curl-impersonate */
+    if(!feature_http3)
+      return PARAM_LIBCURL_DOESNT_SUPPORT;
+    err = getstr(&config->http3_ssl_ec_curves, nextarg, DENY_BLANK);
     break;
   case C_HTTP3_SIG_HASH_ALGS:  /* --http3-sig-hash-algs curl-impersonate */
     if(!feature_http3)
@@ -2554,6 +2583,9 @@ static ParameterError opt_filestring(struct OperationConfig *config,
       return PARAM_LIBCURL_DOESNT_SUPPORT;
     err = getstr(&config->http3_tls_extension_order, nextarg, ALLOW_BLANK);
     break;
+  case C_WS_HTTPHEADER_ORDER:  /* --ws-httpheader-order curl-impersonate */
+    err = getstr(&config->ws_http_header_order, nextarg, ALLOW_BLANK);
+    break;
   case C_QUIC_TRANSPORT_PARAMETERS:  /* --quic-transport-params curl-impersonate */
     if(!feature_http3)
       return PARAM_LIBCURL_DOESNT_SUPPORT;
@@ -2562,8 +2594,11 @@ static ParameterError opt_filestring(struct OperationConfig *config,
   case C_CERT_COMPRESSION:  /* --cert-compression curl-impersonate */
     err = getstr(&config->ssl_cert_compression, nextarg, ALLOW_BLANK);
     break;
+  case C_WS_CERT_COMPRESSION:  /* --ws-cert-compression curl-impersonate */
+    err = getstr(&config->ws_ssl_cert_compression, nextarg, ALLOW_BLANK);
+    break;
   case C_SIGNATURE_HASHES: /* --signature-hashes */
-    err = getstr(&config->ssl_sig_hash_algs, nextarg, ALLOW_BLANK);
+    err = getstr(&config->ssl_signature_algorithms, nextarg, ALLOW_BLANK);
     break;
   case C_FORM_BOUNDARY: /* --form-boundary */
     err = getstr(&config->form_boundary, nextarg, DENY_BLANK);
@@ -2826,8 +2861,14 @@ static ParameterError opt_filestring(struct OperationConfig *config,
   case C_REQUEST_TARGET: /* --request-target */
     err = getstr(&config->request_target, nextarg, DENY_BLANK);
     break;
+  case C_HTTP3_HTTPHEADER: /* --http3-httpheader */
+    if(!feature_http3)
+      return PARAM_LIBCURL_DOESNT_SUPPORT;
+    err = parse_header(config, (cmdline_t)a->cmd, nextarg);
+    break;
   case C_HEADER: /* --header */
   case C_PROXY_HEADER: /* --proxy-header */
+  case C_WS_HTTPHEADER: /* --ws-httpheader */
     err = parse_header(config, (cmdline_t)a->cmd, nextarg);
     break;
   case C_CONFIG: /* --config */

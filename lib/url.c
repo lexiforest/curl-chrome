@@ -3709,7 +3709,7 @@ static CURLcode create_conn(struct Curl_easy *data,
   conn->bits.tcp_fastopen = data->set.tcp_fastopen;
 
   /* Complete the easy's SSL configuration for connection cache matching */
-  result = Curl_ssl_easy_config_complete(data);
+  result = Curl_ssl_easy_config_complete(data, conn);
   if(result)
     goto out;
 

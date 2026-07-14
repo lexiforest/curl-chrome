@@ -15,8 +15,9 @@ struct impersonate_opts {
   /* Elliptic curves (TLS extension 10).
    * Passed to CURLOPT_SSL_EC_CURVES */
   const char *curves;
+  const char *http3_curves;
   /* Signature hash algorithms (TLS extension 13).
-   * Passed to CURLOPT_SSL_SIG_HASH_ALGS */
+   * Passed to CURLOPT_SSL_SIGNATURE_ALGORITHMS */
   const char *sig_hash_algs;
   /* Signature hash algorithms for HTTP/3 (QUIC TLS).
    * If set, used instead of sig_hash_algs for QUIC connections.
@@ -32,13 +33,19 @@ struct impersonate_opts {
   bool alps;
   /* Enable TLS session ticket extension. */
   bool tls_session_ticket;
+  bool ws_disable_session_ticket;
   /* TLS certificate compression algorithms.
    * (TLS extension 27) */
   const char *cert_compression;
+  const char *ws_cert_compression;
   const char *http_headers[IMPERSONATE_MAX_HEADERS];
+  const char *http3_headers[IMPERSONATE_MAX_HEADERS];
+  const char *ws_headers[IMPERSONATE_MAX_HEADERS];
   const char *http2_pseudo_headers_order;
   const char *http2_settings;
   const char *http_header_order;
+  const char *http3_http_header_order;
+  const char *ws_http_header_order;
   int http2_window_update;
   const char *http2_streams;
   const char *http3_pseudo_headers_order;

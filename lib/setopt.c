@@ -1455,6 +1455,9 @@ static CURLcode setopt_long(struct Curl_easy *data, CURLoption option,
   case CURLOPT_SSL_ENABLE_TICKET:
     data->set.ssl_enable_ticket = enabled;
     break;
+  case CURLOPT_WS_SSL_DISABLE_TICKET:
+    data->set.ws_disable_session_ticket = enabled;
+    break;
   case CURLOPT_SSL_PERMUTE_EXTENSIONS:
     data->set.ssl_permute_extensions = enabled;
     break;
@@ -1654,6 +1657,18 @@ static CURLcode setopt_slist(struct Curl_easy *data, CURLoption option,
      * Set a list with HTTP headers to use (or replace internals with)
      */
     data->set.headers = slist;
+    break;
+  case CURLOPT_HTTP3_HTTPHEADER:
+    /*
+     * Set an HTTP/3-specific list with HTTP headers to use.
+     */
+    data->set.http3_headers = slist;
+    break;
+  case CURLOPT_WS_HTTPHEADER:
+    /*
+     * Set a WebSocket-specific list with HTTP headers to use.
+     */
+    data->set.ws_headers = slist;
     break;
   case CURLOPT_HTTPBASEHEADER:
     /*
@@ -1912,6 +1927,17 @@ static CURLcode setopt_cptr(struct Curl_easy *data, CURLoption option,
       return CURLE_BAD_FUNCTION_ARGUMENT;
     return Curl_setstropt(&data->set.str[STRING_HTTPHEADER_ORDER], ptr);
     break;
+  case CURLOPT_HTTP3_HTTPHEADER_ORDER:
+    if(!setopt_valid_http_header_order(ptr))
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    return Curl_setstropt(&data->set.str[STRING_HTTP3_HTTPHEADER_ORDER],
+                          ptr);
+    break;
+  case CURLOPT_WS_HTTPHEADER_ORDER:
+    if(!setopt_valid_http_header_order(ptr))
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    return Curl_setstropt(&data->set.str[STRING_WS_HTTPHEADER_ORDER], ptr);
+    break;
   case CURLOPT_HTTP3_PSEUDO_HEADERS_ORDER:
     return Curl_setstropt(&data->set.str[STRING_HTTP3_PSEUDO_HEADERS_ORDER], ptr);
     break;
@@ -1933,10 +1959,10 @@ static CURLcode setopt_cptr(struct Curl_easy *data, CURLoption option,
     break;
   case CURLOPT_SSL_SIG_HASH_ALGS:
     /*
-     * Set the list of hash algorithms we want to use in the SSL connection.
-     * Specify comma-delimited list of algorithms to use.
+     * Backwards-compatible alias for CURLOPT_SSL_SIGNATURE_ALGORITHMS.
      */
-    return Curl_setstropt(&data->set.str[STRING_SSL_SIG_HASH_ALGS], ptr);
+    return Curl_setstropt(&data->set.str[STRING_SSL_SIGNATURE_ALGORITHMS],
+                          ptr);
     break;
   case CURLOPT_SSL_CERT_COMPRESSION:
     /*
@@ -1946,6 +1972,14 @@ static CURLcode setopt_cptr(struct Curl_easy *data, CURLoption option,
      * and "brotli".
      */
     return Curl_setstropt(&data->set.str[STRING_SSL_CERT_COMPRESSION], ptr);
+    break;
+  case CURLOPT_WS_SSL_CERT_COMPRESSION:
+    /*
+     * Set the list of certificate compression algorithms we support in the
+     * TLS connection when using WebSocket.
+     */
+    return Curl_setstropt(&data->set.str[STRING_WS_SSL_CERT_COMPRESSION],
+                          ptr);
     break;
   case CURLOPT_TLS_DELEGATED_CREDENTIALS:
     return Curl_setstropt(&data->set.str[STRING_TLS_DELEGATED_CREDENTIALS], ptr);
@@ -2677,6 +2711,12 @@ static CURLcode setopt_cptr(struct Curl_easy *data, CURLoption option,
      */
     return Curl_setstropt(&data->set.str[STRING_SSL_EC_CURVES], ptr);
 
+  case CURLOPT_HTTP3_SSL_EC_CURVES:
+    /*
+     * Set HTTP/3-specific accepted curves in SSL connection setup.
+     */
+    return Curl_setstropt(&data->set.str[STRING_HTTP3_SSL_EC_CURVES], ptr);
+
   case CURLOPT_SSL_SIGNATURE_ALGORITHMS:
     /*
      * Set accepted signature algorithms.
@@ -3301,7 +3341,9 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
        way than being listed explicitly */
     switch(option) {
     case CURLOPT_HTTPHEADER:
+    case CURLOPT_HTTP3_HTTPHEADER:
     case CURLOPT_HTTPBASEHEADER:
+    case CURLOPT_WS_HTTPHEADER:
     case CURLOPT_QUOTE:
     case CURLOPT_POSTQUOTE:
     case CURLOPT_TELNETOPTIONS:

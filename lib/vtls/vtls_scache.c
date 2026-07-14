@@ -518,6 +518,11 @@ CURLcode Curl_ssl_peer_key_make(struct Curl_cfilter *cf,
     if(r)
       goto out;
   }
+  if(!ssl->enable_ticket) {
+    r = curlx_dyn_add(&buf, ":NOTICKET");
+    if(r)
+      goto out;
+  }
   if(ssl->cipher_list) {
     r = curlx_dyn_addf(&buf, ":CIPHER-%s", ssl->cipher_list);
     if(r)
@@ -530,6 +535,11 @@ CURLcode Curl_ssl_peer_key_make(struct Curl_cfilter *cf,
   }
   if(ssl->curves) {
     r = curlx_dyn_addf(&buf, ":CURVES-%s", ssl->curves);
+    if(r)
+      goto out;
+  }
+  if(ssl->signature_algorithms) {
+    r = curlx_dyn_addf(&buf, ":SIGALGS-%s", ssl->signature_algorithms);
     if(r)
       goto out;
   }

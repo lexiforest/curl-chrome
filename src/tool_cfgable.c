@@ -102,17 +102,21 @@ static void free_config_fields(struct OperationConfig *config)
   tool_safefree(config->proto_redir_str);
 
   // curl-impersonate
-  tool_safefree(config->ssl_sig_hash_algs);
+  tool_safefree(config->ssl_signature_algorithms);
   tool_safefree(config->ssl_cert_compression);
+  tool_safefree(config->ws_ssl_cert_compression);
   tool_safefree(config->http_header_order);
   tool_safefree(config->http2_pseudo_headers_order);
   tool_safefree(config->http2_settings);
   tool_safefree(config->http2_streams);
   tool_safefree(config->http3_pseudo_headers_order);
   tool_safefree(config->http3_settings);
+  tool_safefree(config->http3_http_header_order);
+  tool_safefree(config->http3_ssl_ec_curves);
   tool_safefree(config->http3_sig_hash_algs);
   tool_safefree(config->http3_tls_extension_order);
   tool_safefree(config->quic_transport_parameters);
+  tool_safefree(config->ws_http_header_order);
   tool_safefree(config->tls_extension_order);
   tool_safefree(config->impersonate);
 
@@ -179,6 +183,8 @@ static void free_config_fields(struct OperationConfig *config)
   curl_slist_free_all(config->prequote);
 
   curl_slist_free_all(config->headers);
+  curl_slist_free_all(config->http3_headers);
+  curl_slist_free_all(config->ws_headers);
   curl_slist_free_all(config->proxyheaders);
 
   curl_mime_free(config->mimepost);

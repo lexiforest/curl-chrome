@@ -207,6 +207,7 @@ match_ssl_primary_config(struct Curl_easy *data,
      (c1->verifypeer == c2->verifypeer) &&
      (c1->verifyhost == c2->verifyhost) &&
      (c1->verifystatus == c2->verifystatus) &&
+     (c1->enable_ticket == c2->enable_ticket) &&
      blobcmp(c1->cert_blob, c2->cert_blob) &&
      blobcmp(c1->ca_info_blob, c2->ca_info_blob) &&
      blobcmp(c1->issuercert_blob, c2->issuercert_blob) &&
@@ -221,8 +222,7 @@ match_ssl_primary_config(struct Curl_easy *data,
      curl_strequal(c1->cipher_list, c2->cipher_list) &&
      curl_strequal(c1->cipher_list13, c2->cipher_list13) &&
      curl_strequal(c1->curves, c2->curves) &&
-     curl_strequal(c1->sig_hash_algs, c2->sig_hash_algs) &&
-     curl_strequal(c1->http3_sig_hash_algs, c2->http3_sig_hash_algs) &&
+     curl_strequal(c1->tls_extension_order, c2->tls_extension_order) &&
      curl_strequal(c1->cert_compression, c2->cert_compression) &&
      curl_strequal(c1->signature_algorithms, c2->signature_algorithms) &&
      curl_strequal(c1->CRLfile, c2->CRLfile) &&
@@ -256,6 +256,7 @@ static bool clone_ssl_primary_config(struct ssl_primary_config *source,
   dest->verifyhost = source->verifyhost;
   dest->verifystatus = source->verifystatus;
   dest->cache_session = source->cache_session;
+  dest->enable_ticket = source->enable_ticket;
   dest->ssl_options = source->ssl_options;
 
   CLONE_BLOB(cert_blob);
@@ -269,8 +270,7 @@ static bool clone_ssl_primary_config(struct ssl_primary_config *source,
   CLONE_STRING(cipher_list13);
   CLONE_STRING(pinned_key);
   CLONE_STRING(curves);
-  CLONE_STRING(sig_hash_algs);
-  CLONE_STRING(http3_sig_hash_algs);
+  CLONE_STRING(tls_extension_order);
   CLONE_STRING(cert_compression);
   CLONE_STRING(signature_algorithms);
   CLONE_STRING(CRLfile);
@@ -295,8 +295,7 @@ static void free_primary_ssl_config(struct ssl_primary_config *sslc)
   Curl_safefree(sslc->ca_info_blob);
   Curl_safefree(sslc->issuercert_blob);
   Curl_safefree(sslc->curves);
-  Curl_safefree(sslc->sig_hash_algs);
-  Curl_safefree(sslc->http3_sig_hash_algs);
+  Curl_safefree(sslc->tls_extension_order);
   Curl_safefree(sslc->cert_compression);
   Curl_safefree(sslc->signature_algorithms);
   Curl_safefree(sslc->CRLfile);
@@ -306,8 +305,13 @@ static void free_primary_ssl_config(struct ssl_primary_config *sslc)
 #endif
 }
 
-CURLcode Curl_ssl_easy_config_complete(struct Curl_easy *data)
+CURLcode Curl_ssl_easy_config_complete(struct Curl_easy *data,
+                                       struct connectdata *conn)
 {
+  const bool is_h3 = conn && (conn->transport_wanted == TRNSPRT_QUIC);
+  const bool is_wss = conn && conn->handler &&
+    (conn->handler->protocol & CURLPROTO_WSS);
+
   data->set.ssl.primary.CApath = data->set.str[STRING_SSL_CAPATH];
   data->set.ssl.primary.CAfile = data->set.str[STRING_SSL_CAFILE];
   data->set.ssl.primary.CRLfile = data->set.str[STRING_SSL_CRLFILE];
@@ -324,9 +328,30 @@ CURLcode Curl_ssl_easy_config_complete(struct Curl_easy *data)
   data->set.ssl.primary.cert_blob = data->set.blobs[BLOB_CERT];
   data->set.ssl.primary.ca_info_blob = data->set.blobs[BLOB_CAINFO];
   data->set.ssl.primary.curves = data->set.str[STRING_SSL_EC_CURVES];
-  data->set.ssl.primary.sig_hash_algs = data->set.str[STRING_SSL_SIG_HASH_ALGS];
-  data->set.ssl.primary.http3_sig_hash_algs = data->set.str[STRING_HTTP3_SIG_HASH_ALGS];
-  data->set.ssl.primary.cert_compression = data->set.str[STRING_SSL_CERT_COMPRESSION];
+  data->set.ssl.primary.tls_extension_order =
+    data->set.str[STRING_TLS_EXTENSION_ORDER];
+  data->set.ssl.primary.cert_compression =
+    data->set.str[STRING_SSL_CERT_COMPRESSION];
+  data->set.ssl.primary.enable_ticket = data->set.ssl_enable_ticket;
+
+  if(is_wss) {
+    if(data->set.ws_disable_session_ticket)
+      data->set.ssl.primary.enable_ticket = FALSE;
+    if(data->set.str[STRING_WS_SSL_CERT_COMPRESSION])
+      data->set.ssl.primary.cert_compression =
+        data->set.str[STRING_WS_SSL_CERT_COMPRESSION];
+  }
+  else if(is_h3) {
+    if(data->set.str[STRING_HTTP3_SSL_EC_CURVES])
+      data->set.ssl.primary.curves =
+        data->set.str[STRING_HTTP3_SSL_EC_CURVES];
+    if(data->set.str[STRING_HTTP3_SIG_HASH_ALGS])
+      data->set.ssl.primary.signature_algorithms =
+        data->set.str[STRING_HTTP3_SIG_HASH_ALGS];
+    if(data->set.str[STRING_HTTP3_TLS_EXTENSION_ORDER])
+      data->set.ssl.primary.tls_extension_order =
+        data->set.str[STRING_HTTP3_TLS_EXTENSION_ORDER];
+  }
 #ifdef USE_TLS_SRP
   data->set.ssl.primary.username = data->set.str[STRING_TLSAUTH_USERNAME];
   data->set.ssl.primary.password = data->set.str[STRING_TLSAUTH_PASSWORD];
@@ -345,6 +370,7 @@ CURLcode Curl_ssl_easy_config_complete(struct Curl_easy *data)
     data->set.str[STRING_SSL_CIPHER_LIST_PROXY];
   data->set.proxy_ssl.primary.cipher_list13 =
     data->set.str[STRING_SSL_CIPHER13_LIST_PROXY];
+  data->set.proxy_ssl.primary.enable_ticket = data->set.ssl_enable_ticket;
   data->set.proxy_ssl.primary.pinned_key =
     data->set.str[STRING_SSL_PINNEDPUBLICKEY_PROXY];
   data->set.proxy_ssl.primary.cert_blob = data->set.blobs[BLOB_CERT_PROXY];

@@ -401,8 +401,15 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
       return ret;
   }
 
+  if(opts->http3_curves) {
+    ret = curl_easy_setopt(data, CURLOPT_HTTP3_SSL_EC_CURVES,
+                           opts->http3_curves);
+    if(ret)
+      return ret;
+  }
+
   if(opts->sig_hash_algs) {
-    ret = curl_easy_setopt(data, CURLOPT_SSL_SIG_HASH_ALGS,
+    ret = curl_easy_setopt(data, CURLOPT_SSL_SIGNATURE_ALGORITHMS,
                            opts->sig_hash_algs);
     if(ret)
       return ret;
@@ -433,6 +440,12 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
   if(ret)
     return ret;
 
+  if(opts->ws_disable_session_ticket) {
+    ret = curl_easy_setopt(data, CURLOPT_WS_SSL_DISABLE_TICKET, 1L);
+    if(ret)
+      return ret;
+  }
+
   // always enable this for browsers
   ret = curl_easy_setopt(data, CURLOPT_TLS_SIGNED_CERT_TIMESTAMPS, 1);
   if(ret)
@@ -453,6 +466,14 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
     ret = curl_easy_setopt(data,
                            CURLOPT_SSL_CERT_COMPRESSION,
                            opts->cert_compression);
+    if(ret)
+      return ret;
+  }
+
+  if(opts->ws_cert_compression) {
+    ret = curl_easy_setopt(data,
+                           CURLOPT_WS_SSL_CERT_COMPRESSION,
+                           opts->ws_cert_compression);
     if(ret)
       return ret;
   }
@@ -493,6 +514,20 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
   if(opts->http_header_order) {
     ret = curl_easy_setopt(data, CURLOPT_HTTPHEADER_ORDER,
                            opts->http_header_order);
+    if(ret)
+      return ret;
+  }
+
+  if(opts->http3_http_header_order) {
+    ret = curl_easy_setopt(data, CURLOPT_HTTP3_HTTPHEADER_ORDER,
+                           opts->http3_http_header_order);
+    if(ret)
+      return ret;
+  }
+
+  if(opts->ws_http_header_order) {
+    ret = curl_easy_setopt(data, CURLOPT_WS_HTTPHEADER_ORDER,
+                           opts->ws_http_header_order);
     if(ret)
       return ret;
   }

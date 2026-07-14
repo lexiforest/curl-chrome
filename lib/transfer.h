@@ -25,6 +25,7 @@
  ***************************************************************************/
 
 #define Curl_headersep(x) ((((x)==':') || ((x)==';')))
+struct curl_slist *Curl_http_request_headers(const struct Curl_easy *data);
 char *Curl_checkheaders(const struct Curl_easy *data,
                         const char *thisheader,
                         const size_t thislen);

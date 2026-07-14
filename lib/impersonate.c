@@ -1214,8 +1214,10 @@ const struct impersonate_opts impersonations[] = {
     .http2_pseudo_headers_order = "mpas",
     .http2_stream_exclusive = 0,
     .cert_compression = "zlib,brotli,zstd",
+    .ws_cert_compression = "",
     .ech = "true",
     .tls_session_ticket = true,
+    .ws_disable_session_ticket = true,
     .tls_extension_order = "0-23-65281-10-11-35-16-5-34-51-43-13-45-28-27-65037",
     .tls_delegated_credentials = "ecdsa_secp256r1_sha256:ecdsa_secp384r1_sha384:ecdsa_secp521r1_sha512:ecdsa_sha1",
     .tls_record_size_limit = 16385,
@@ -1280,8 +1282,10 @@ const struct impersonate_opts impersonations[] = {
     .http2_pseudo_headers_order = "mpas",
     .http2_stream_exclusive = 0,
     .cert_compression = "zlib,brotli,zstd",
+    .ws_cert_compression = "",
     .ech = "true",
     .tls_session_ticket = true,
+    .ws_disable_session_ticket = true,
     .tls_extension_order = "0-23-65281-10-11-35-16-5-34-18-51-43-13-45-28-27-65037",
     .tls_delegated_credentials = "ecdsa_secp256r1_sha256:ecdsa_secp384r1_sha384:ecdsa_secp521r1_sha512:ecdsa_sha1",
     .tls_record_size_limit = 16385,
@@ -1347,8 +1351,10 @@ const struct impersonate_opts impersonations[] = {
     .http2_stream_exclusive = 0,
     .http2_stream_weight = 42,
     .cert_compression = "zlib,brotli,zstd",
+    .ws_cert_compression = "",
     .ech = "true",
     .tls_session_ticket = true,
+    .ws_disable_session_ticket = true,
     .tls_extension_order = "0-23-65281-10-11-35-16-5-34-18-51-43-13-45-28-27-65037",
     .tls_delegated_credentials = "ecdsa_secp256r1_sha256:ecdsa_secp384r1_sha384:ecdsa_secp521r1_sha512:ecdsa_sha1",
     .tls_record_size_limit = 16385,
@@ -1418,8 +1424,10 @@ const struct impersonate_opts impersonations[] = {
     .quic_transport_parameters = "1:30000;4:25165824;5:12582912;6:1048576;7:1048576;8:100;9:100;11:20;14:8;15:AUTO;17:1@GREASE,1;GREASE;32:65535",
     .http3_tls_extension_order = "28-51-27-13-34-10-45-16-65281-23-5-0-43-57-65037",
     .cert_compression = "zlib,brotli,zstd",
+    .ws_cert_compression = "",
     .ech = "true",
     .tls_session_ticket = true,
+    .ws_disable_session_ticket = true,
     .tls_extension_order = "0-23-65281-10-11-35-16-5-34-18-51-43-13-45-28-27-65037",
     .tls_delegated_credentials = "ecdsa_secp256r1_sha256:ecdsa_secp384r1_sha384:ecdsa_secp521r1_sha512:ecdsa_sha1",
     .tls_record_size_limit = 16385,
@@ -1523,7 +1531,7 @@ const struct impersonate_opts impersonations[] = {
       "TLS_RSA_WITH_AES_128_CBC_SHA:"
       "TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA:"
       "TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA:"
-      "TLS_RSA_WITH_3DES_EDE_CBC_SHA,",
+      "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
     .curves = "X25519:P-256:P-384:P-521",
     .sig_hash_algs =
       "ecdsa_secp256r1_sha256:"

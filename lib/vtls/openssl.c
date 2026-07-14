@@ -4224,13 +4224,12 @@ static CURLcode ossl_init_ssl(struct ossl_ctx *octx,
     size_t i;
     struct alpn_proto_buf proto;
 
-    /* curl-impersonate: Set new ALPS codepoint before adding any ALPS settings */
-    if(data->set.tls_use_new_alps_codepoint) {
-      SSL_set_alps_use_new_codepoint(octx->ssl, 1);
-    }
+    /* Select the ALPS codepoint before adding any application settings. */
+    SSL_set_alps_use_new_codepoint(
+      octx->ssl, data->set.tls_use_new_alps_codepoint ? 1 : 0);
 
     for(i = 0; i < alps->count; ++i) {
-      /* curl-impersonate: Add the ALPS extension (17513) like Chrome does. */
+      /* curl-impersonate: Add the ALPS extension like Chrome does. */
       // XXX: Firefox does not enable this.
       SSL_add_application_settings(octx->ssl, alps->entries[i],
                                    strlen(alps->entries[i]), NULL,
@@ -4445,10 +4444,8 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
   ctx_options = SSL_OP_ALL;
 
 #ifdef SSL_OP_NO_TICKET
-  if(data->set.ssl_enable_ticket) {
-  /* curl-impersonate:
-   * Turn off SSL_OP_NO_TICKET, we want TLS extension 35 (session_ticket)
-   * to be present in the client hello. */
+  if(conn_config->enable_ticket) {
+    /* Enable the TLS session ticket extension when requested. */
     ctx_options &= ~SSL_OP_NO_TICKET;
   } else {
     ctx_options |= SSL_OP_NO_TICKET;
@@ -4596,7 +4593,8 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
     }
   }
 
-#ifdef HAVE_SSL_CTX_SET1_SIGALGS
+#if defined(HAVE_SSL_CTX_SET1_SIGALGS) && \
+  !defined(OPENSSL_IS_BORINGSSL)
 #define OSSL_SIGALG_CAST(x) OSSL_CURVE_CAST(x)
   {
     const char *signature_algorithms = conn_config->signature_algorithms;
@@ -4615,33 +4613,26 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
   {
     uint16_t algs[MAX_SIG_ALGS];
     size_t nalgs;
-    /* curl-impersonate: Set the signature algorithms (TLS extension 13).
-     * Chrome uses different verify prefs for TCP vs QUIC:
-     * TCP: kVerifyPrefs in net/socket/ssl_client_socket_impl.cc (no SHA-1)
-     * QUIC: BoringSSL defaults from ssl/extensions.cc (includes SHA-1)
-     * Use http3_sig_hash_algs for QUIC if available. */
-    char *sig_hash_algs = (peer->transport == TRNSPRT_QUIC
-                           && conn_config->http3_sig_hash_algs)
-                          ? conn_config->http3_sig_hash_algs
-                          : conn_config->sig_hash_algs;
-    if (sig_hash_algs) {
-      CURLcode result = parse_sig_algs(data, sig_hash_algs, algs, &nalgs);
-      if (result)
+    /* curl-impersonate: Set the signature algorithms (TLS extension 13). */
+    const char *signature_algorithms = conn_config->signature_algorithms;
+    if(signature_algorithms) {
+      CURLcode result = parse_sig_algs(data, signature_algorithms, algs,
+                                       &nalgs);
+      if(result)
         return result;
-      if (!SSL_CTX_set_verify_algorithm_prefs(octx->ssl_ctx, algs, nalgs)) {
-        failf(data, "failed setting signature hash algorithms list: '%s'",
-              sig_hash_algs);
-        return CURLE_SSL_CIPHER;
-      }
-    } else {
-      /* Use defaults from Chrome. */
-      if (!SSL_CTX_set_verify_algorithm_prefs(octx->ssl_ctx,
-                                              default_sig_algs,
-                                              DEFAULT_SIG_ALGS_LENGTH)) {
-        failf(data, "failed setting signature hash algorithms list: '%s'",
-              sig_hash_algs);
-        return CURLE_SSL_CIPHER;
-      }
+    }
+    else {
+      memcpy(algs, default_sig_algs, sizeof(default_sig_algs));
+      nalgs = DEFAULT_SIG_ALGS_LENGTH;
+    }
+    if(!SSL_CTX_set_signing_algorithm_prefs(octx->ssl_ctx, algs, nalgs) ||
+       !SSL_CTX_set_verify_algorithm_prefs(octx->ssl_ctx, algs, nalgs)) {
+      if(signature_algorithms)
+        failf(data, "failed setting signature algorithms: '%s'",
+              signature_algorithms);
+      else
+        failf(data, "failed setting default signature algorithms");
+      return CURLE_SSL_CIPHER;
     }
   }
 #endif
@@ -4691,17 +4682,10 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
     SSL_CTX_set_permute_extensions(octx->ssl_ctx, 1);
   }
 
-  /* curl-impersonate: Set TLS extensions order.
-   * Use http3_tls_extension_order for QUIC if available. */
-  {
-    char *ext_order = (peer->transport == TRNSPRT_QUIC
-                       && data->set.str[STRING_HTTP3_TLS_EXTENSION_ORDER])
-                      ? data->set.str[STRING_HTTP3_TLS_EXTENSION_ORDER]
-                      : data->set.str[STRING_TLS_EXTENSION_ORDER];
-    if(ext_order) {
-      SSL_CTX_set_extension_order(octx->ssl_ctx, ext_order);
-    }
-  }
+  /* curl-impersonate: Set TLS extensions order. */
+  if(conn_config->tls_extension_order)
+    SSL_CTX_set_extension_order(octx->ssl_ctx,
+                                conn_config->tls_extension_order);
 
   if(data->set.str[STRING_TLS_DELEGATED_CREDENTIALS]) {
     SSL_CTX_set_delegated_credentials(octx->ssl_ctx, data->set.str[STRING_TLS_DELEGATED_CREDENTIALS]);
@@ -4722,7 +4706,7 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
     SSL_CTX_set_key_usage_check_enabled(octx->ssl_ctx, 1);
   }
 
-  if(conn_config->cert_compression &&
+  if(conn_config->cert_compression && conn_config->cert_compression[0] &&
      add_cert_compression(data,
                           octx->ssl_ctx,
                           conn_config->cert_compression))
