@@ -22,6 +22,9 @@
 # SPDX-License-Identifier: curl
 #
 ###########################################################################
+use strict;
+use warnings;
+
 # Perform simple file and directory manipulation in a portable way
 if($#ARGV <= 0) {
     print "Usage: $0 mkdir|rmdir|rm|move|gone path1 [path2] [more commands...]\n";
@@ -33,20 +36,20 @@ while(@ARGV) {
     my $cmd = shift @ARGV;
     my $arg = shift @ARGV;
     if($cmd eq "mkdir") {
-        mkdir $arg || die "$!";
+        mkdir $arg or die "$!";
     }
     elsif($cmd eq "rmdir") {
-        rmdir $arg || die "$!";
+        rmdir $arg or die "$!";
     }
     elsif($cmd eq "rm") {
-        unlink $arg || die "$!";
+        unlink $arg or die "$!";
     }
     elsif($cmd eq "move") {
         my $arg2 = shift @ARGV;
-        move($arg,$arg2) || die "$!";
+        move($arg,$arg2) or die "$!";
     }
     elsif($cmd eq "gone") {
-        ! -e $arg || die "Path $arg exists";
+        ! -e $arg or die "Path $arg exists";
     } else {
         print "Unsupported command $cmd\n";
         exit 1;

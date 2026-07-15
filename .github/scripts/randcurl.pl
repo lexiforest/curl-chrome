@@ -18,6 +18,9 @@
 # directory where it runs.
 #
 
+use strict;
+use warnings;
+
 my $curl = "../src/curl";
 my $url = "localhost:7777"; # not listening to this
 
@@ -30,6 +33,14 @@ if(!$seconds) {
     $seconds = 10;
 }
 print "Run $curl for $seconds seconds\n";
+
+my @opt;
+my %arg;
+my %uniq;
+my %allrc;
+
+my $totalargs = 0;
+my $totalcmds = 0;
 
 my $counter = 0xabcdef + time();
 sub getnum {
@@ -50,7 +61,7 @@ sub storedata {
 }
 
 sub getoptions {
-    my @all = `$curl --help all`;
+    my @all = qx($curl --help all);
     for my $o (@all) {
         chomp $o;
         if($o =~ /^ -(.), --([^ ]*) (.*)/) {
@@ -81,7 +92,7 @@ sub randarg {
         "0123456789".
         ",-?#$%!@ ";
     my $len = getnum(20);
-    my $o;
+    my $o = '';
     for (1 .. $len) {
         $o .= substr($nice, getnum(length($nice)), 1);
     }
@@ -104,7 +115,6 @@ my %commonrc = (
     '2' => 1,
     '26' => 1,
     );
-
 
 sub runone {
     my $a;
@@ -132,7 +142,7 @@ sub runone {
         $a .= " ".addarg();
     }
 
-    my $cmd="$curl$a $url";
+    my $cmd = "$curl$a $url";
 
     my $rc = system("$cmd >curl-output 2>&1 </dev/null -M 0.1") >> 8;
     #my $rc = system("valgrind -q $cmd >/dev/null 2>&1 </dev/null -M 0.1") >> 8;
@@ -164,6 +174,7 @@ sub runconfig {
         my $o = getnum($nopts);
         my $option = $opt[$o];
         my $ar = "";
+        $uniq{$option} = 0 if(!exists $uniq{$option});
         $uniq{$option}++;
         if($arg{$option}) {
             $ar = " ".randarg();
@@ -183,7 +194,7 @@ sub runconfig {
     print C "$a\n";
     close(C);
 
-    my $cmd="$curl -K config $url";
+    my $cmd = "$curl -K config $url";
 
     my $rc = system("$cmd >curl-output 2>&1 </dev/null -M 0.1") >> 8;
 
@@ -207,7 +218,7 @@ sub runconfig {
 }
 
 # run curl command lines using -K
-my $end = time() + $seconds/2;
+my $end = time() + $seconds / 2;
 my $c = 0;
 print "Running command lines\n";
 do {
@@ -217,7 +228,7 @@ do {
 print "$c command lines\n";
 
 # run curl command lines
-$end = time() + $seconds/2;
+$end = time() + $seconds / 2;
 $c = 0;
 print "Running config lines\n";
 do {

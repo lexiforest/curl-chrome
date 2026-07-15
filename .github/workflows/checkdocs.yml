@@ -14,8 +14,8 @@ name: 'Docs'
       - '*/ci'
     paths:
       - '.github/workflows/checkdocs.yml'
-      - '.github/scripts/mdlinkcheck'
-      - '/scripts/**'
+      - '.github/scripts/**'
+      - 'scripts/**'
       - '**.md'
       - 'docs/*'
   pull_request:
@@ -24,7 +24,7 @@ name: 'Docs'
     paths:
       - '.github/workflows/checkdocs.yml'
       - '.github/scripts/**'
-      - '.github/scripts/mdlinkcheck'
+      - 'scripts/**'
       - '**.md'
       - 'docs/*'
 
@@ -34,128 +34,102 @@ concurrency:
 
 permissions: {}
 
-jobs:
-  #  proselint:
-  #    name: 'proselint'
-  #    runs-on: ubuntu-latest
-  #    steps:
-  #      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
-  #        with:
-  #          persist-credentials: false
-  #
-  #      - name: 'install prereqs'
-  #        run: |
-  #          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
-  #          sudo apt-get -o Dpkg::Use-Pty=0 update
-  #          sudo rm -f /var/lib/man-db/auto-update
-  #          sudo apt-get -o Dpkg::Use-Pty=0 install python3-proselint
-  #
-  #      # config file help: https://github.com/amperser/proselint/
-  #      - name: 'create proselint config'
-  #        run: |
-  #          cat <<JSON > ~/.proselintrc.json
-  #          {
-  #            "checks": {
-  #              "typography.diacritical_marks": false,
-  #              "typography.symbols": false,
-  #              "annotations.misc": false,
-  #              "security.password": false,
-  #              "misc.annotations": false
-  #            }
-  #          }
-  #          JSON
-  #
-  #      - name: 'trim headers off all *.md files'
-  #        run: git ls-files -z '*.md' | xargs -0 -n1 .github/scripts/trimmarkdownheader.pl
-  #
-  #      - name: 'check prose'
-  #        run: git ls-files -z '*.md' | grep -Evz 'CHECKSRC.md|DISTROS.md|curl_mprintf.md|CURLOPT_INTERFACE.md|interface.md' | xargs -0 proselint README
-  #
-  #      # This is for CHECKSRC and files with aggressive exclamation mark needs
-  #      - name: 'create second proselint config'
-  #        run: |
-  #          cat <<JSON > ~/.proselintrc.json
-  #          {
-  #            "checks": {
-  #              "typography.diacritical_marks": false,
-  #              "typography.symbols": false,
-  #              "typography.exclamation": false,
-  #              "lexical_illusions.misc": false,
-  #              "annotations.misc": false
-  #            }
-  #          }
-  #          JSON
-  #
-  #      - name: 'check special prose'
-  #        run: proselint docs/internals/CHECKSRC.md docs/libcurl/curl_mprintf.md docs/libcurl/opts/CURLOPT_INTERFACE.md docs/cmdline-opts/interface.md
+env:
+  DO_NOT_TRACK: '1'
 
-  linkcheck:
-    name: 'linkcheck'
-    runs-on: ubuntu-latest
+jobs:
+  # config file help: https://github.com/amperser/proselint/
+  proselint:
+    name: 'proselint'
+    runs-on: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
-      - name: 'mdlinkcheck'
-        run: ./scripts/mdlinkcheck
+      - name: 'install prereqs'
+        run: |
+          python3 -m venv ~/venv
+          ~/venv/bin/pip --disable-pip-version-check --no-input --no-cache-dir install --progress-bar off --prefer-binary -r .github/scripts/requirements-proselint.txt
 
-  spellcheck:
-    name: 'spellcheck'
+      - name: 'trim headers off all *.md files'
+        run: git ls-files '*.md' -z | xargs -0 -n1 .github/scripts/trimmarkdownheader.pl
+
+      - name: 'check prose'
+        run: |
+          cat <<JSON > ~/.proselintrc.json
+          {
+            "checks": {
+              "annotations.misc": false,
+              "lexical_illusions": false,
+              "misc.annotations": false,
+              "redundancy.misc.garner": false,
+              "security.password": false,
+              "spelling.ve_of": false,
+              "typography.diacritical_marks": false,
+              "typography.symbols": false
+            }
+          }
+          JSON
+          source ~/venv/bin/activate
+          git ls-files README '*.md' -z | grep -Evz '(CHECKSRC|DISTROS|CURLOPT_INTERFACE|interface)\.md' | xargs -0 proselint check --
+
+      - name: 'check special prose'  # For CHECKSRC and files with aggressive exclamation mark needs
+        run: |
+          cat <<JSON > ~/.proselintrc.json
+          {
+            "checks": {
+              "annotations.misc": false,
+              "lexical_illusions": false,
+              "typography.diacritical_marks": false,
+              "typography.punctuation.exclamation": false,
+              "typography.symbols": false
+            }
+          }
+          JSON
+          source ~/venv/bin/activate
+          proselint check docs/internals/CHECKSRC.md docs/libcurl/opts/CURLOPT_INTERFACE.md docs/cmdline-opts/interface.md
+
+  pyspelling:
+    name: 'pyspelling'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
       - name: 'trim all *.md files in docs/'
+        run: .github/scripts/cleancmd.pl 'docs/*.md'
+
+      - name: 'install'
+        timeout-minutes: 2
         run: |
-          # shellcheck disable=SC2046
-          .github/scripts/cleancmd.pl $(find docs -name '*.md')
+          sudo find /etc/apt/sources.list.d -type f -not -name 'ubuntu.sources' -delete -print
+          sudo sed -i 's/priority:1/priority:9/' /etc/apt/apt-mirrors.txt; cat /etc/apt/apt-mirrors.txt
+          sudo apt-get -o Dpkg::Use-Pty=0 update
+          sudo apt-get -o Dpkg::Use-Pty=0 install aspell aspell-en
+          python3 -m venv ~/venv
+          ~/venv/bin/pip --disable-pip-version-check --no-input --no-cache-dir install --progress-bar off --prefer-binary -r .github/scripts/requirements-docs.txt
 
-      - name: 'setup the custom wordlist'
-        run: grep -v '^#' .github/scripts/spellcheck.words > wordlist.txt
+      - name: 'check spelling'
+        run: |
+          source ~/venv/bin/activate
+          # setup the custom wordlist
+          grep -v '^#' .github/scripts/pyspelling.words > wordlist.txt
+          aspell --version
+          pyspelling --version
+          pyspelling --verbose --jobs 5 --config .github/scripts/pyspelling.yaml
 
-      - name: 'check Spelling'
-        uses: rojopolis/spellcheck-github-actions@35a02bae020e6999c5c37fabaf447f2eb8822ca7 # v0
-        with:
-          config_path: .github/scripts/spellcheck.yaml
-
-  badwords-synopsis:
-    name: 'badwords, synopsis'
-    runs-on: ubuntu-latest
+  synopsis-man-examples:
+    name: 'synopsis, man-examples'
+    runs-on: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-
-      - name: 'badwords'
-        run: |
-          # shellcheck disable=SC2046
-          .github/scripts/badwords.pl < .github/scripts/badwords.txt $(git ls-files '**.md') docs/TODO docs/KNOWN_BUGS packages/OS400/README.OS400
 
       - name: 'verify synopsis'
         run: .github/scripts/verify-synopsis.pl docs/libcurl/curl*.md
 
-  man-examples:
-    name: 'man-examples'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-        with:
-          persist-credentials: false
-
       - name: 'verify examples'
         run: .github/scripts/verify-examples.pl docs/libcurl/curl*.md docs/libcurl/opts/*.md
-
-  miscchecks:
-    name: 'spacecheck'
-    runs-on: ubuntu-24.04-arm
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-        with:
-          persist-credentials: false
-
-      - name: 'spacecheck'
-        run: .github/scripts/spacecheck.pl

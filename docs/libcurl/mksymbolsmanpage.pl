@@ -22,6 +22,8 @@
 # * SPDX-License-Identifier: curl
 # *
 # ***************************************************************************
+use strict;
+use warnings;
 
 use POSIX qw(strftime);
 my @ts;
@@ -68,7 +70,7 @@ HEADER
     ;
 
 sub nameref {
-    my ($n)=@_;
+    my ($n) = @_;
     if($n =~ /^CURLOPT_/) {
         if($n eq "CURLOPT_RTSPHEADER") {
             $n = "CURLOPT_HTTPHEADER";
@@ -287,7 +289,7 @@ sub nameref {
 
 while(<STDIN>) {
     if($_ =~ /^(CURL[A-Z0-9_.]*) *(.*)/i) {
-        my ($symbol, $rest)=($1,$2);
+        my ($symbol, $rest) = ($1, $2);
         my ($intro, $dep, $rem);
         if($rest =~ s/^([0-9.]*) *//) {
            $intro = $1;

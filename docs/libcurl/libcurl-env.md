@@ -32,8 +32,8 @@ uses the **ftp_proxy** variable.
 
 These proxy variables are also checked for in their uppercase versions, except
 the **http_proxy** one which is only used lowercase. Note also that some
-systems actually have a case insensitive handling of environment variables and
-then of course **HTTP_PROXY** still works.
+systems (like Windows) have a case insensitive handling of environment
+variables and then of course **HTTP_PROXY** still works.
 
 An exception exists for the WebSocket **ws** and **wss** URL schemes, where
 libcurl first checks **ws_proxy** or **wss_proxy** but if they are not set, it
@@ -65,6 +65,11 @@ the .netrc file is likely to exist.
 When the netrc feature is used (CURLOPT_NETRC(3)), this variable is
 checked as the secondary way to find the "current" home directory (on Windows
 only) in which the .netrc file is likely to exist.
+
+## `NETRC`
+
+The filename used as netrc file when CURLOPT_NETRC(3) is used without
+CURLOPT_NETRC_FILE(3). (Added in 8.16.0)
 
 ## `NO_PROXY`
 

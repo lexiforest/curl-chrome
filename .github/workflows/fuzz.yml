@@ -16,11 +16,8 @@ name: 'Fuzzer'
       - 'appveyor.*'
       - 'CMake/**'
       - 'Dockerfile'
-      - 'packages/**'
-      - 'plan9/**'
       - 'projects/**'
       - 'tests/data/**'
-      - 'winbuild/**'
   pull_request:
     branches:
       - master
@@ -31,14 +28,19 @@ name: 'Fuzzer'
       - 'appveyor.*'
       - 'CMake/**'
       - 'Dockerfile'
-      - 'packages/**'
-      - 'plan9/**'
       - 'projects/**'
       - 'tests/data/**'
-      - 'winbuild/**'
+
+concurrency:
+  # Hard-coded workflow name to avoid colliding with curl-fuzzer's group
+  group: curl-fuzz-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
 
 permissions: {}
 
+env:
+  DO_NOT_TRACK: '1'
+
 jobs:
   Fuzzing:
-    uses: curl/curl-fuzzer/.github/workflows/ci.yml@master
+    uses: curl/curl-fuzzer/.github/workflows/ci.yml@master  # zizmor: ignore[unpinned-uses]

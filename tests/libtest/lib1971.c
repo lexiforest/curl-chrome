@@ -23,21 +23,19 @@
  ***************************************************************************/
 #include "first.h"
 
-#include "memdebug.h"
-
 static size_t t1971_read_cb(char *ptr, size_t size, size_t nitems, void *userp)
 {
-  (void)ptr; /* unused */
-  (void)size; /* unused */
-  (void)nitems; /* unused */
-  (void)userp; /* unused */
+  (void)ptr;
+  (void)size;
+  (void)nitems;
+  (void)userp;
   return 0;
 }
 
-static CURLcode test_lib1971(char *URL)
+static CURLcode test_lib1971(const char *URL)
 {
   CURL *curl;
-  CURLcode res = TEST_ERR_MAJOR_BAD;
+  CURLcode result = TEST_ERR_MAJOR_BAD;
   struct curl_slist *list = NULL;
   struct curl_slist *connect_to = NULL;
 
@@ -53,23 +51,23 @@ static CURLcode test_lib1971(char *URL)
     return TEST_ERR_MAJOR_BAD;
   }
 
-  test_setopt(curl, CURLOPT_UPLOAD, 1L);
-  test_setopt(curl, CURLOPT_READFUNCTION, t1971_read_cb);
-  test_setopt(curl, CURLOPT_VERBOSE, 1L);
-  test_setopt(curl, CURLOPT_AWS_SIGV4, "aws:amz:us-east-1:s3");
-  test_setopt(curl, CURLOPT_USERPWD, "xxx");
-  test_setopt(curl, CURLOPT_HEADER, 0L);
-  test_setopt(curl, CURLOPT_URL, URL);
+  easy_setopt(curl, CURLOPT_UPLOAD, 1L);
+  easy_setopt(curl, CURLOPT_READFUNCTION, t1971_read_cb);
+  easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+  easy_setopt(curl, CURLOPT_AWS_SIGV4, "aws:amz:us-east-1:s3");
+  easy_setopt(curl, CURLOPT_USERPWD, "xxx");
+  easy_setopt(curl, CURLOPT_HEADER, 0L);
+  easy_setopt(curl, CURLOPT_URL, URL);
   list = curl_slist_append(list, "Content-Type: application/json");
   if(!list)
     goto test_cleanup;
-  test_setopt(curl, CURLOPT_HTTPHEADER, list);
+  easy_setopt(curl, CURLOPT_HTTPHEADER, list);
   if(libtest_arg2) {
     connect_to = curl_slist_append(connect_to, libtest_arg2);
   }
-  test_setopt(curl, CURLOPT_CONNECT_TO, connect_to);
+  easy_setopt(curl, CURLOPT_CONNECT_TO, connect_to);
 
-  res = curl_easy_perform(curl);
+  result = curl_easy_perform(curl);
 
 test_cleanup:
 
@@ -78,5 +76,5 @@ test_cleanup:
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return res;
+  return result;
 }

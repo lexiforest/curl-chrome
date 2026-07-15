@@ -22,10 +22,9 @@
  *
  ***************************************************************************/
 #include "unitcheck.h"
+#include "doh.h"
 
-#include "doh.h" /* from the lib dir */
-
-static CURLcode test_unit1655(char *arg)
+static CURLcode test_unit1655(const char *arg)
 {
   UNITTEST_BEGIN_SIMPLE
 
@@ -52,7 +51,7 @@ static CURLcode test_unit1655(char *arg)
     static const char toolong[] =
       /* ..|....1.........2.........3.........4.........5.........6... */
       /* 3456789012345678901234567890123456789012345678901234567890123 */
-      "here.is.a.hostname.which.is.just.barely.too.long."   /* 49:  49 */
+      "here.is.a.hostname.which.is.only.barely.too.long."   /* 49:  49 */
       "to.be.encoded.as.a.QNAME.of.the.maximum.allowed.length."
                                                             /* 55: 104 */
       "which.is.256.including.a.final.zero-length.label."   /* 49: 153 */
@@ -67,7 +66,7 @@ static CURLcode test_unit1655(char *arg)
       "this.is.an.otherwise-valid.hostname."
       "with-a-label-of-greater-length-than-the-sixty-three-characters-"
       "specified.in.the.RFCs.";
-    int i;
+    size_t i;
 
     struct test {
       const char *name;
@@ -89,7 +88,7 @@ static CURLcode test_unit1655(char *arg)
       { max, DOH_OK }                      /* expect buffer overwrite */
     };
 
-    for(i = 0; i < (int)(CURL_ARRAYSIZE(playlist)); i++) {
+    for(i = 0; i < CURL_ARRAYSIZE(playlist); i++) {
       const char *name = playlist[i].name;
       size_t olen = 100000;
       struct demo victim;
@@ -98,7 +97,7 @@ static CURLcode test_unit1655(char *arg)
       victim.canary1 = 87; /* magic numbers, arbitrarily picked */
       victim.canary2 = 35;
       victim.canary3 = 41;
-      d = doh_req_encode(name, DNS_TYPE_A, victim.dohbuffer,
+      d = doh_req_encode(name, CURL_DNS_TYPE_A, victim.dohbuffer,
                          sizeof(struct demo), /* allow room for overflow */
                          &olen);
 
@@ -118,19 +117,17 @@ static CURLcode test_unit1655(char *arg)
         fail_unless(victim.canary3 == 41,
                     "three-byte buffer overwrite has happened");
       }
-      else {
-        if(d == DOH_OK) {
-          fail_unless(olen <= sizeof(victim.dohbuffer),
-            "wrote outside bounds");
-          fail_unless(olen > strlen(name), "unrealistic low size");
-        }
+      else if(d == DOH_OK) {
+        fail_unless(olen <= sizeof(victim.dohbuffer),
+                    "wrote outside bounds");
+        fail_unless(olen > strlen(name), "unrealistic low size");
       }
     }
   } while(0);
 
   /* run normal cases and try to trigger buffer length related errors */
   do {
-    DNStype dnstype = DNS_TYPE_A;
+    DNStype dnstype = CURL_DNS_TYPE_A;
     unsigned char buffer[128];
     const size_t buflen = sizeof(buffer);
     const size_t magic1 = 9765;

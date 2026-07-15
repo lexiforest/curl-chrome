@@ -27,7 +27,9 @@
 #include <locale.h> /* for setlocale() */
 #endif
 
-#include "memdebug.h"
+#if defined(UNITTESTS) && !defined(BUILDING_LIBCURL)
+#include "tool_stderr.h"  /* for tool_init_stderr() */
+#endif
 
 int select_wrapper(int nfds, fd_set *rd, fd_set *wr, fd_set *exc,
                    struct timeval *tv)
@@ -50,44 +52,107 @@ int select_wrapper(int nfds, fd_set *rd, fd_set *wr, fd_set *exc,
   return select(nfds, rd, wr, exc, tv);
 }
 
-char *libtest_arg2 = NULL;
-char *libtest_arg3 = NULL;
-char *libtest_arg4 = NULL;
+const char *libtest_arg2 = NULL;
+const char *libtest_arg3 = NULL;
+const char *libtest_arg4 = NULL;
+const char *libtest_arg5 = NULL;
 int test_argc;
-char **test_argv;
+const char **test_argv;
 int testnum;
 
 struct curltime tv_test_start; /* for test timing */
 
 int unitfail; /* for unittests */
 
-#ifdef CURLDEBUG
+int coptind;
+const char *coptarg;
+
+int cgetopt(int argc, const char * const argv[], const char *optstring)
+{
+  static int optpos = 1;
+  int coptopt;
+  const char *arg;
+
+  if(coptind == 0) {  /* Reset? */
+    coptind = !!argc;
+    optpos = 1;
+  }
+
+  arg = argv[coptind];
+  if(arg && !strcmp(arg, "--")) {
+    coptind++;
+    return -1;
+  }
+  else if(!arg || arg[0] != '-') {
+    return -1;
+  }
+  else {
+    const char *opt = strchr(optstring, arg[optpos]);
+    coptopt = (unsigned char)arg[optpos];
+    if(!opt) {
+      if(!arg[++optpos]) {
+        coptind++;
+        optpos = 1;
+      }
+      return '?';
+    }
+    else if(opt[1] == ':') {
+      if(arg[optpos + 1]) {
+        coptarg = arg + optpos + 1;
+        coptind++;
+        optpos = 1;
+        return coptopt;
+      }
+      else if(argv[coptind + 1]) {
+        coptarg = argv[coptind + 1];
+        coptind += 2;
+        optpos = 1;
+        return coptopt;
+      }
+      else {
+        if(!arg[++optpos]) {
+          coptind++;
+          optpos = 1;
+        }
+        return *optstring == ':' ? ':' : '?';
+      }
+    }
+    else {
+      if(!arg[++optpos]) {
+        coptind++;
+        optpos = 1;
+      }
+      return coptopt;
+    }
+  }
+}
+
+#ifdef CURL_MEMDEBUG
 static void memory_tracking_init(void)
 {
-  char *env;
+  const char *env;
   /* if CURL_MEMDEBUG is set, this starts memory tracking message logging */
   env = getenv("CURL_MEMDEBUG");
   if(env) {
-    /* use the value as file name */
+    /* use the value as filename */
     curl_dbg_memdebug(env);
   }
   /* if CURL_MEMLIMIT is set, this enables fail-on-alloc-number-N feature */
   env = getenv("CURL_MEMLIMIT");
   if(env) {
-    char *endptr;
-    long num = strtol(env, &endptr, 10);
-    if((endptr != env) && (endptr == env + strlen(env)) && (num > 0))
-      curl_dbg_memlimit(num);
+    curl_off_t num;
+    if(!curlx_str_number(&env, &num, LONG_MAX) && num > 0)
+      curl_dbg_memlimit((long)num);
   }
 }
 #else
-#  define memory_tracking_init() Curl_nop_stmt
+#define memory_tracking_init() Curl_nop_stmt
 #endif
 
 /* returns a hexdump in a static memory area */
 char *hexdump(const unsigned char *buf, size_t len)
 {
-  static char dump[200 * 3 + 1];
+  static char dump[(200 * 3) + 1];
   char *p = dump;
   size_t i;
   if(len > 200)
@@ -97,17 +162,65 @@ char *hexdump(const unsigned char *buf, size_t len)
   return dump;
 }
 
-
-int main(int argc, char **argv)
+#ifndef CURL_DISABLE_WEBSOCKETS
+CURLcode ws_send_ping(CURL *curl, const char *send_payload)
 {
-  char *URL;
+  size_t sent;
+  CURLcode result = curl_ws_send(curl, send_payload, strlen(send_payload),
+                                 &sent, 0, CURLWS_PING);
+  curl_mfprintf(stderr, "ws: curl_ws_send returned %d, sent %zu\n",
+                (int)result, sent);
+  return result;
+}
+
+CURLcode ws_recv_pong(CURL *curl, const char *expected_payload)
+{
+  size_t rlen;
+  const struct curl_ws_frame *meta;
+  char buffer[256];
+  CURLcode result = curl_ws_recv(curl, buffer, sizeof(buffer), &rlen, &meta);
+  if(result) {
+    curl_mfprintf(stderr, "ws: curl_ws_recv returned %d, received %zu\n",
+                  (int)result, rlen);
+    return result;
+  }
+
+  if(!(meta->flags & CURLWS_PONG)) {
+    curl_mfprintf(stderr, "recv_pong: wrong frame, got %zu bytes rflags %x\n",
+                  rlen, (unsigned int)meta->flags);
+    return CURLE_RECV_ERROR;
+  }
+
+  curl_mfprintf(stderr, "ws: got PONG back\n");
+  if(rlen == strlen(expected_payload) &&
+     !memcmp(expected_payload, buffer, rlen)) {
+    curl_mfprintf(stderr, "ws: got the same payload back\n");
+    return CURLE_OK;
+  }
+  curl_mfprintf(stderr, "ws: did NOT get the same payload back\n");
+  return CURLE_RECV_ERROR;
+}
+
+/* close the connection */
+void ws_close(CURL *curl)
+{
+  size_t sent;
+  CURLcode result = curl_ws_send(curl, "", 0, &sent, 0, CURLWS_CLOSE);
+  curl_mfprintf(stderr, "ws: curl_ws_send returned %d, sent %zu\n",
+                (int)result, sent);
+}
+#endif /* CURL_DISABLE_WEBSOCKETS */
+
+int main(int argc, const char **argv)
+{
+  const char *URL = "";
   CURLcode result;
   entry_func_t entry_func;
-  char *entry_name;
-  char *env;
+  const char *entry_name;
+  const char *env;
   size_t tmp;
 
-  CURLX_SET_BINMODE(stdout);
+  CURL_BINMODE(stdout);
 
   memory_tracking_init();
 #ifdef _WIN32
@@ -126,15 +239,16 @@ int main(int argc, char **argv)
   test_argc = argc - 1;
   test_argv = argv + 1;
 
-  if(argc < 3) {
-    curl_mfprintf(stderr, "Pass testname and URL as arguments please\n");
+  if(argc < 2) {
+    curl_mfprintf(stderr, "Pass testname "
+                  "(and URL as argument for numbered tests) please\n");
     return 1;
   }
 
   entry_name = argv[1];
   entry_func = NULL;
   for(tmp = 0; s_entries[tmp].ptr; ++tmp) {
-    if(strcmp(entry_name, s_entries[tmp].name) == 0) {
+    if(!strcmp(entry_name, s_entries[tmp].name)) {
       entry_func = s_entries[tmp].ptr;
       break;
     }
@@ -143,6 +257,11 @@ int main(int argc, char **argv)
   if(!entry_func) {
     curl_mfprintf(stderr, "Test '%s' not found.\n", entry_name);
     return 1;
+  }
+
+  if(argc > 2) {
+    URL = argv[2];
+    curl_mfprintf(stderr, "URL: %s\n", URL);
   }
 
   if(argc > 3)
@@ -154,18 +273,23 @@ int main(int argc, char **argv)
   if(argc > 5)
     libtest_arg4 = argv[5];
 
-  URL = argv[2]; /* provide this to the rest */
+  if(argc > 6)
+    libtest_arg5 = argv[6];
 
+  testnum = 0;
   env = getenv("CURL_TESTNUM");
-  if(env)
-    testnum = atoi(env);
-  else
-    testnum = 0;
+  if(env) {
+    curl_off_t num;
+    if(!curlx_str_number(&env, &num, INT_MAX) && num > 0)
+      testnum = (int)num;
+  }
 
-  curl_mfprintf(stderr, "URL: %s\n", URL);
+#if defined(UNITTESTS) && !defined(BUILDING_LIBCURL)
+  tool_init_stderr();
+#endif
 
   result = entry_func(URL);
-  curl_mfprintf(stderr, "Test ended with result %d\n", result);
+  curl_mfprintf(stderr, "Test ended with result %d\n", (int)result);
 
 #ifdef _WIN32
   /* flush buffers of all streams regardless of mode */
@@ -174,5 +298,5 @@ int main(int argc, char **argv)
 
   /* Regular program status codes are limited to 0..127 and 126 and 127 have
    * special meanings by the shell, so limit a normal return code to 125 */
-  return (int)result <= 125 ? (int)result : 125;
+  return result <= 125 ? result : 125;
 }

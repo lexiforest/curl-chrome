@@ -19,6 +19,7 @@ ephiperfifo
 evhiperfifo
 externalsocket
 fileupload
+ftp-delete
 ftp-wildcard
 ftpget
 ftpgetinfo
@@ -34,7 +35,6 @@ getreferrer
 ghiper
 headerapi
 hiperfifo
-href_extractor
 hsts-preload
 htmltidy
 http-options
@@ -68,6 +68,7 @@ interface
 ipv6
 keepalive
 localport
+log_failed_transfers
 maxconnects
 multi-app
 multi-debugcallback
@@ -78,7 +79,6 @@ multi-legacy
 multi-post
 multi-single
 multi-uv
-multithread
 netrc
 parseurl
 persistent
@@ -122,11 +122,12 @@ smtp-tls
 smtp-vrfy
 sslbackend
 synctime
-threaded-ssl
+threaded
 unixsocket
 url2file
 urlapi
 usercertinmem
 websocket
 websocket-cb
+websocket-updown
 xmlstream

@@ -28,8 +28,6 @@
 
 #include "first.h"
 
-#include "memdebug.h"
-
 struct t1514_WriteThis {
   char *readptr;
   size_t sizeleft;
@@ -39,28 +37,27 @@ static size_t t1514_read_cb(char *ptr, size_t size, size_t nmemb, void *userp)
 {
   struct t1514_WriteThis *pooh = (struct t1514_WriteThis *)userp;
 
-  if(size*nmemb < 1)
+  if(size * nmemb < 1)
     return 0;
 
   if(pooh->sizeleft) {
-    *ptr = pooh->readptr[0]; /* copy one single byte */
-    pooh->readptr++;                 /* advance pointer */
-    pooh->sizeleft--;                /* less data left */
-    return 1;                        /* we return 1 byte at a time! */
+    *ptr = pooh->readptr[0];  /* copy one single byte */
+    pooh->readptr++;          /* advance pointer */
+    pooh->sizeleft--;         /* less data left */
+    return 1;                 /* we return 1 byte at a time! */
   }
 
-  return 0;                         /* no more data left to deliver */
+  return 0;                   /* no more data left to deliver */
 }
 
-static CURLcode test_lib1514(char *URL)
+static CURLcode test_lib1514(const char *URL)
 {
   CURL *curl;
   CURLcode result = CURLE_OK;
-  CURLcode res = CURLE_OK;
 
   static char testdata[] = "dummy";
 
-  struct t1514_WriteThis pooh = { testdata, sizeof(testdata)-1 };
+  struct t1514_WriteThis pooh = { testdata, sizeof(testdata) - 1 };
 
   global_init(CURL_GLOBAL_ALL);
 

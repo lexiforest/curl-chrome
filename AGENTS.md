@@ -11,25 +11,40 @@
 - `scripts/`: maintenance and lint helpers.
 - `CMake/` and top-level `CMakeLists.txt`: CMake build support.
 
-## Fork Delta (vs `curl-8_15_0`)
-Baseline check: `git diff --stat curl-8_15_0`.
-Current delta: **47 files changed, +4834/-183**.
+## Fork Delta (vs `curl-8_21_0`)
+Baseline check: `git diff --stat curl-8_21_0`.
+Current delta: **72 files changed, +7788/-462**.
 
-- New impersonation core: `lib/impersonate.c` + `lib/impersonate.h` with 35 preset targets (Chrome/Edge/Firefox/Safari/Tor/OkHttp variants).
+- Impersonation core: `lib/impersonate.c` + `lib/impersonate.h` with 38 preset targets (Chrome/Edge/Firefox/Safari/Tor/OkHttp variants).
 - Public API additions: `curl_easy_impersonate()` and new `CURLOPT_*` for TLS/HTTP2 fingerprints (`CURLOPT_IMPERSONATE`, `CURLOPT_HTTPBASEHEADER`, `CURLOPT_HTTP2_SETTINGS`, `CURLOPT_TLS_EXTENSION_ORDER`, etc.).
 - Tooling additions: `curl-impersonate` and tuning flags such as `--impersonate`, `--http2-pseudo-headers-order`, `--tls-permute-extensions`, and `--proxy-credential-no-reuse`.
-- Network behavior changes: HTTP/2 defaults/priority/pseudo-header ordering, browser-style header merge, and QUIC-over-SOCKS5 UDP ASSOCIATE (`socks5h` included).
+- Network behavior changes: HTTP/2 priority/pseudo-header ordering, browser-style header merge, WebSocket impersonation, HTTP/3 fingerprint switching, and QUIC-over-SOCKS5 UDP ASSOCIATE (`socks5h` included).
+- TLS/QUIC fingerprinting includes signature algorithms, extension order, ALPS codepoint selection, certificate compression, record/key-share limits, transport parameters, and session-cache separation for fingerprint-sensitive settings.
 - Build/package rename: artifacts are emitted as `curl-impersonate`, `libcurl-impersonate`, `curl-impersonate-config`, and `libcurl-impersonate.pc`.
 
 ## Build, Test, and Development Commands
 
-DO NOT BUILD, the user will build manually.
+Do not build unless the user explicitly requests it. The user normally builds
+and tests manually.
 
-CMake build:
+The packaging build consumes this repository as a generated patch. Always
+propagate changes with `./export.sh`; never edit
+`../curl-impersonate/build/deps/src/curl` directly.
 
 ```sh
-cmake -S . -B build
-cmake --build build
+./export.sh
+cd ../curl-impersonate
+make build
+```
+
+An existing CMake ExternalProject source tree does not automatically reapply a
+changed patch. When a clean patch application is required, clean the generated
+outputs after exporting, then rebuild:
+
+```sh
+cd ../curl-impersonate
+make build CMAKE_BUILD_ARGS="--target clean"
+make build
 ```
 
 ## Coding Style & Naming Conventions
@@ -41,7 +56,8 @@ cmake --build build
 
 ## Testing Guidelines
 
-DO NOT TEST, the user will test manually
+DO NOT TEST unless the user explicitly requests it; the user normally tests
+manually.
 
 ## Commit & Pull Request Guidelines
 - Commit subject format: `[area]: short effect` (imperative, present tense, no trailing period).
@@ -53,19 +69,29 @@ DO NOT TEST, the user will test manually
 
 For libcurl:
 
-- Add options in `impersonate.h`
-- Add new browser option in `impersonate.c`
-- Add the option `CURLOPT_XXX` in `curl.h`
-- Add the option in `urldata.h`. If it's a string option, note the `dupstring` struct.
-- Add the option in `easyoptions.c`, the alphabetical order should be kept. Also update the number at the end
-- Implement in `setopt.c`. Note, for integer and bool, use `setopt_long`, for string, use `setopt_cptr`
-- Implement in `easy.c` for `curl_easy_impersonate`.
-- Implement in `vtls/openssl.c` or `http2.c`.
+- Add the field in `lib/impersonate.h` and preset values in
+  `lib/impersonate.c`.
+- Add `CURLOPT_XXX` in `include/curl/curl.h`.
+- Add storage in `lib/urldata.h`. For strings, also update `struct dupstring`.
+- Add the option to `lib/easyoptions.c` in alphabetical order and update the
+  option count at the end.
+- Implement it in `lib/setopt.c`: use `setopt_long` for integers/booleans and
+  `setopt_cptr` for strings.
+- Apply preset values in `lib/easy.c` and use `long` values for long options.
+- Implement protocol behavior in the appropriate layer, normally
+  `lib/vtls/openssl.c`, `lib/http2.c`, `lib/ws.c`, or `lib/vquic/`.
+- For TLS-affecting configuration, review copy, completeness, matching, free,
+  connection reuse, and session-cache key handling in `lib/vtls/`.
 
 For curl:
 
-- Add the option in `tool_cfgable.c` and `tool_cfgable.h`
-- Add the option in `tool_getparam.h`
-- Add the option in `tool_getparam.c`, 2 places. note the argument type, like `ARG_BOOL`, etc.
-- Implement in `tool_operate.c`, note the difference between my_setopt and my_setopt_str
-- Add the option in `config2setopts.c`
+- Add storage and cleanup in `src/tool_cfgable.h` and
+  `src/tool_cfgable.c`.
+- Add the option identifier in `src/tool_getparam.h`.
+- Add both the option-table entry and parser case in `src/tool_getparam.c`,
+  using the correct argument type such as `ARG_BOOL` or `ARG_STRG`.
+- Apply it in `src/config2setopts.c`. Use `my_setopt_long` for long/boolean
+  values and `MY_SETOPT_STR` for strings so errors are handled.
+- Touch `src/tool_operate.c` only when the option needs transfer-lifecycle
+  behavior; ordinary option application belongs in `config2setopts.c`.
+- Keep generated/help option lists in their required alphabetical order.

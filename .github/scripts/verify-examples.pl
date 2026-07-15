@@ -23,23 +23,28 @@
 #
 ###########################################################################
 
+use strict;
+use warnings;
+
 my @files = @ARGV;
 my $cfile = "test.c";
 my $check = "./scripts/checksrc.pl";
-my $error;
+my $error = 0;
 
-if($files[0] eq "-h") {
+if(!@files || $files[0] eq "-h") {
     print "Usage: verify-examples [markdown pages]\n";
     exit;
 }
 
 sub testcompile {
-    my $rc = system("gcc -c test.c -DCURL_ALLOW_OLD_MULTI_SOCKET -DCURL_DISABLE_DEPRECATION -Wunused -Werror -Wall -Wno-unused-but-set-variable -I include") >> 8;
+    my $rc = system('gcc -c test.c -I include -W -Wall -pedantic -Werror ' .
+        '-Wno-unused-parameter -Wno-unused-but-set-variable ' .
+        '-DCURL_ALLOW_OLD_MULTI_SOCKET -DCURL_DISABLE_DEPRECATION') >> 8;
     return $rc;
 }
 
 sub checksrc {
-    my $rc = system("$check test.c") >> 8;
+    my $rc = system($check, ('test.c')) >> 8;
     return $rc;
 }
 
@@ -60,10 +65,10 @@ sub extract {
         elsif($syn == 1) {
             if(/^~~~/) {
                 $syn++;
-                print O "/* !checksrc! disable UNUSEDIGNORE all */\n";
+                print O "/* !checksrc! disable BANNEDFUNC all */\n";  # for fopen()
                 print O "/* !checksrc! disable COPYRIGHT all */\n";
-                print O "/* !checksrc! disable FOPENMODE all */\n";
-                printf O "#line %d \"$f\"\n", $iline+1;
+                print O "/* !checksrc! disable UNUSEDIGNORE all */\n";
+                printf O "#line %d \"$f\"\n", $iline + 1;
             }
         }
         elsif($syn == 2) {
@@ -82,7 +87,7 @@ sub extract {
     return ($fail ? 0 : $l);
 }
 
-my $count;
+my $count = 0;
 for my $m (@files) {
     #print "Verify $m\n";
     my $out = extract($m);

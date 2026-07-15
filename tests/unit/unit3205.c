@@ -22,10 +22,9 @@
  *
  ***************************************************************************/
 #include "unitcheck.h"
-
 #include "vtls/cipher_suite.h"
 
-static CURLcode test_unit3205(char *arg)
+static CURLcode test_unit3205(const char *arg)
 {
   UNITTEST_BEGIN_SIMPLE
 
@@ -60,7 +59,7 @@ static CURLcode test_unit3205(char *arg)
               "ECDHE-RSA-CHACHA20-POLY1305" },
     { 0xCCA9, "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
               "ECDHE-ECDSA-CHACHA20-POLY1305" },
-#if defined(USE_MBEDTLS)
+#ifdef USE_MBEDTLS
     { 0x002F, "TLS_RSA_WITH_AES_128_CBC_SHA",
               "AES128-SHA" },
     { 0x0035, "TLS_RSA_WITH_AES_256_CBC_SHA",
@@ -442,28 +441,28 @@ static CURLcode test_unit3205(char *arg)
     const char *str;
   };
   static const struct test_str_entry test_str_list[] = {
-    { 0x1301, "TLS_AES_128_GCM_SHA256"},
-    { 0x1302, "TLS_AES_256_GCM_SHA384"},
-    { 0x1303, "TLS_CHACHA20_POLY1305_SHA256"},
-    { 0xC02B, "ECDHE-ECDSA-AES128-GCM-SHA256"},
-    { 0xC02F, "ECDHE-RSA-AES128-GCM-SHA256"},
-    { 0xC02C, "ECDHE-ECDSA-AES256-GCM-SHA384"},
-    { 0xC030, "ECDHE-RSA-AES256-GCM-SHA384"},
-    { 0xCCA9, "ECDHE-ECDSA-CHACHA20-POLY1305"},
-    { 0xCCA8, "ECDHE-RSA-CHACHA20-POLY1305"},
-#if defined(USE_MBEDTLS)
-    { 0x009E, "DHE-RSA-AES128-GCM-SHA256"},
-    { 0x009F, "DHE-RSA-AES256-GCM-SHA384"},
+    { 0x1301, "TLS_AES_128_GCM_SHA256" },
+    { 0x1302, "TLS_AES_256_GCM_SHA384" },
+    { 0x1303, "TLS_CHACHA20_POLY1305_SHA256" },
+    { 0xC02B, "ECDHE-ECDSA-AES128-GCM-SHA256" },
+    { 0xC02F, "ECDHE-RSA-AES128-GCM-SHA256" },
+    { 0xC02C, "ECDHE-ECDSA-AES256-GCM-SHA384" },
+    { 0xC030, "ECDHE-RSA-AES256-GCM-SHA384" },
+    { 0xCCA9, "ECDHE-ECDSA-CHACHA20-POLY1305" },
+    { 0xCCA8, "ECDHE-RSA-CHACHA20-POLY1305" },
+#ifdef USE_MBEDTLS
+    { 0x009E, "DHE-RSA-AES128-GCM-SHA256" },
+    { 0x009F, "DHE-RSA-AES256-GCM-SHA384" },
 #else
-    { 0x0000, "DHE-RSA-AES128-GCM-SHA256"},
-    { 0x0000, "DHE-RSA-AES256-GCM-SHA384"},
+    { 0x0000, "DHE-RSA-AES128-GCM-SHA256" },
+    { 0x0000, "DHE-RSA-AES256-GCM-SHA384" },
 #endif
-#if defined(USE_MBEDTLS)
-    { 0xCCAA, "DHE-RSA-CHACHA20-POLY1305"},
+#ifdef USE_MBEDTLS
+    { 0xCCAA, "DHE-RSA-CHACHA20-POLY1305" },
 #else
-    { 0x0000, "DHE-RSA-CHACHA20-POLY1305"},
+    { 0x0000, "DHE-RSA-CHACHA20-POLY1305" },
 #endif
-#if defined(USE_MBEDTLS)
+#ifdef USE_MBEDTLS
     { 0xC023, "ECDHE-ECDSA-AES128-SHA256" },
     { 0xC027, "ECDHE-RSA-AES128-SHA256" },
     { 0xC009, "ECDHE-ECDSA-AES128-SHA" },
@@ -482,14 +481,14 @@ static CURLcode test_unit3205(char *arg)
     { 0x0000, "ECDHE-ECDSA-AES256-SHA" },
     { 0x0000, "ECDHE-RSA-AES256-SHA" },
 #endif
-#if defined(USE_MBEDTLS)
+#ifdef USE_MBEDTLS
     { 0x0067, "DHE-RSA-AES128-SHA256" },
     { 0x006B, "DHE-RSA-AES256-SHA256" },
 #else
     { 0x0000, "DHE-RSA-AES128-SHA256" },
     { 0x0000, "DHE-RSA-AES256-SHA256" },
 #endif
-#if defined(USE_MBEDTLS)
+#ifdef USE_MBEDTLS
     { 0x009C, "AES128-GCM-SHA256" },
     { 0x009D, "AES256-GCM-SHA384" },
     { 0x003C, "AES128-SHA256" },
@@ -543,9 +542,9 @@ static CURLcode test_unit3205(char *arg)
     buf[0] = '\0';
     expect = test->rfc ? test->rfc : test->openssl;
 
-    Curl_cipher_suite_get_str(test->id, buf, sizeof(buf), true);
+    Curl_cipher_suite_get_str(test->id, buf, sizeof(buf), TRUE);
 
-    if(expect && strcmp(buf, expect) != 0) {
+    if(expect && strcmp(buf, expect)) {
       curl_mfprintf(stderr, "Curl_cipher_suite_get_str FAILED for 0x%04x, "
                     "result = \"%s\", expected = \"%s\"\n",
                     test->id, buf, expect);
@@ -556,17 +555,21 @@ static CURLcode test_unit3205(char *arg)
     buf[0] = '\0';
     expect = test->openssl ? test->openssl : test->rfc;
 
-    Curl_cipher_suite_get_str(test->id, buf, sizeof(buf), false);
+    Curl_cipher_suite_get_str(test->id, buf, sizeof(buf), FALSE);
 
-    /* suites matched by EDH alias will return the DHE name */
+    /* suites matched by EDH alias return the DHE name */
     if(test->id >= 0x0011 && test->id < 0x0017) {
-      if(expect && memcmp(expect, "EDH-", 4) == 0)
-        expect = (char *) memcpy(strcpy(alt, expect), "DHE-", 4);
-      if(expect && memcmp(expect + 4, "EDH-", 4) == 0)
-        expect = (char *) memcpy(strcpy(alt, expect) + 4, "DHE-", 4) - 4;
+      if(expect && !memcmp(expect, "EDH-", 4)) {
+        curlx_strcopy(alt, sizeof(alt), expect, strlen(expect));
+        expect = (const char *)memcpy(alt, "DHE-", sizeof("DHE-") - 1);
+      }
+      if(expect && !memcmp(expect + 4, "EDH-", 4)) {
+        curlx_strcopy(alt, sizeof(alt), expect, strlen(expect));
+        expect = (const char *)memcpy(alt + 4, "DHE-", sizeof("DHE-") - 1) - 4;
+      }
     }
 
-    if(expect && strcmp(buf, expect) != 0) {
+    if(expect && strcmp(buf, expect)) {
       curl_mfprintf(stderr, "Curl_cipher_suite_get_str FAILED for 0x%04x, "
                     "result = \"%s\", expected = \"%s\"\n",
                     test->id, buf, expect);
@@ -595,7 +598,7 @@ static CURLcode test_unit3205(char *arg)
                       test->str, id, test->id);
         unitfail++;
       }
-      if(len > 64 || strncmp(ptr, test->str, len) != 0) {
+      if(len > 64 || strncmp(ptr, test->str, len)) {
         curl_mfprintf(stderr, "Curl_cipher_suite_walk_str ABORT for \"%s\" "
                       "unexpected pointers\n",
                       test->str);
@@ -605,7 +608,7 @@ static CURLcode test_unit3205(char *arg)
       j++;
     }
   }
-#endif /* defined(USE_MBEDTLS) || defined(USE_RUSTLS) */
+#endif /* USE_MBEDTLS || USE_RUSTLS */
 
   UNITTEST_END_SIMPLE
 }

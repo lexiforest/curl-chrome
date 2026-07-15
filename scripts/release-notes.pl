@@ -31,10 +31,10 @@
 #
 # $ ./scripts/release-notes.pl
 #
-# 2. Edit RELEASE-NOTES and remove all entries that don't belong.  Unused
-# references below will be cleaned up in the next step. Make sure to move
-# "changes" up to the changes section. All entries will by default be listed
-# under bug-fixes as this script can't know where to put them.
+# 2. Edit RELEASE-NOTES and remove all entries that do not belong.  Unused
+# references below are cleaned up in the next step. Make sure to move
+# "changes" up to the changes section. All entries are by default listed
+# under bug-fixes as this script cannot know where to put them.
 #
 # 3. Run the cleanup script and let it sort the entries and remove unused
 # references from lines you removed in step (2):
@@ -54,9 +54,12 @@
 #
 ################################################
 
-my $cleanup = ($ARGV[0] eq "cleanup");
-my @gitlog=`git log @^{/RELEASE-NOTES:.synced}..` if(!$cleanup);
-my @releasenotes=`cat RELEASE-NOTES`;
+use strict;
+use warnings;
+
+my $cleanup = (@ARGV && $ARGV[0] eq "cleanup");
+my @gitlog = qx(git log @^{/RELEASE-NOTES:.synced}..) if(!$cleanup);
+my @releasenotes = qx(cat RELEASE-NOTES);
 
 my @o; # the entire new RELEASE-NOTES
 my @refused; # [num] = [2 bits of use info]
@@ -65,7 +68,7 @@ my %dupe;
 for my $l (@releasenotes) {
     if($l =~ /^ o .*\[(\d+)\]/) {
         # referenced, set bit 0
-        $refused[$1]=1;
+        $refused[$1] = 1;
         my $m = $l;
         chomp $m;
         $m =~ s/^ o //;
@@ -104,7 +107,7 @@ sub getref {
 # 'https://elsewhere.example.com/discussion'
 
 sub extract {
-    my ($ref)=@_;
+    my ($ref) = @_;
     if($ref =~ /^(\#|)(\d+)/) {
         # return the plain number
         return $2;
@@ -119,6 +122,12 @@ sub extract {
     }
     # false alarm, not a valid line
 }
+
+my @fixes;
+my @closes;
+my @bug;
+my @line;
+my %moreinfo;
 
 my $short;
 my $first;
@@ -166,8 +175,8 @@ if($first) {
 
 # call at the end of a parsed commit
 sub onecommit {
-    my ($short)=@_;
-    my $ref;
+    my ($short) = @_;
+    my $ref = '';
 
     if($dupe{$short}) {
         # this git commit message was found in the file
@@ -190,7 +199,7 @@ sub onecommit {
     if($ref) {
         my $r = getref();
         $refs[$r] = $ref;
-        $moreinfo{$short}=$r;
+        $moreinfo{$short} = $r;
         $refused[$r] |= 1;
     }
 }
@@ -210,7 +219,9 @@ for my $l (@releasenotes) {
 
             push @o, sprintf " o %s%s\n", $f,
                 $moreinfo{$f}? sprintf(" [%d]", $moreinfo{$f}): "";
-            $refused[$moreinfo{$f}]=3;
+            if($moreinfo{$f}) {
+                $refused[$moreinfo{$f}] = 3;
+            }
         }
         push @o, " --- new entries are listed above this ---";
         next;

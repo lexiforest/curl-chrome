@@ -32,27 +32,29 @@ download files.
 **wcurl-impersonate** is a simple curl wrapper which lets you use
 curl-impersonate to download files without having to remember any parameters.
 
-Simply call **wcurl-impersonate** with a list of URLs you want to download and
+Call **wcurl-impersonate** with a list of URLs you want to download and
 **wcurl-impersonate** picks sane defaults.
 
 If you need anything more complex, you can provide any of curl-impersonate's
-supported
-parameters via the **--curl-options** option. Just beware that you likely
+supported parameters via the **--curl-options** option. Beware that you likely
 should be using curl-impersonate directly if your use case is not covered.
 
 By default, **wcurl-impersonate** does:
 
-## * Percent-encode whitespaces in URLs;
+## * Percent-encode whitespace in URLs;
 
 ## * Download multiple URLs in parallel
     if the installed curl-impersonate's version is \>= 7.66.0 (--parallel);
+
+## * Use a total number of 5 parallel connections to the same protocol + hostname + port number target
+    if the installed curl-impersonate's version is \>= 8.16.0 (--parallel-max-host);
 
 ## * Follow redirects;
 
 ## * Automatically choose a filename as output;
 
 ## * Avoid overwriting files
-     if the installed curl-impersonate's version is \>= 7.83.0 (--no-clobber);
+    if the installed curl-impersonate's version is \>= 7.83.0 (--no-clobber);
 
 ## * Perform retries;
 
@@ -86,12 +88,12 @@ times, only the last value is considered.
 
 ## --no-decode-filename
 
-Don't percent-decode the output filename, even if the percent-encoding in the
-URL was done by **wcurl-impersonate**, e.g.: The URL contained whitespaces.
+Do not percent-decode the output filename, even if the percent-encoding in the
+URL was done by **wcurl-impersonate**, e.g.: The URL contained whitespace.
 
 ## --dry-run
 
-Do not actually execute curl-impersonate, just print what would be invoked.
+Do not actually execute curl-impersonate, print what would be invoked.
 
 ## -V, \--version
 
@@ -110,7 +112,7 @@ invocation.
 # URL
 
 URL to be downloaded. Anything that is not a parameter is considered
-an URL. Whitespaces are percent-encoded and the URL is passed to
+an URL. Whitespace is percent-encoded and the URL is passed to
 curl-impersonate, which then performs the parsing. May be specified more than
 once.
 
@@ -129,10 +131,17 @@ curl-impersonate:
 
 **wcurl-impersonate --curl-options="--progress-bar --http2" example.com/filename.txt**
 
-Resume from an interrupted download (if more options are used, this needs to
-be the last one in the list):
+Resume from an interrupted download. The options necessary to resume the
+download (`--clobber --continue-at -`) must be the **last** options specified in
+`--curl-options`. Note that the only way to resume interrupted downloads is to
+allow wcurl-impersonate to overwrite the destination file:
 
-**wcurl-impersonate --curl-options="--continue-at -" example.com/filename.txt**
+**wcurl-impersonate --curl-options="--clobber --continue-at -" example.com/filename.txt**
+
+Download multiple files without a limit of concurrent connections per host
+(the default limit is 5):
+
+**wcurl-impersonate --curl-options="--parallel-max-host 0" example.com/filename1.txt example.com/filename2.txt**
 
 # AUTHORS
 
@@ -143,7 +152,7 @@ be the last one in the list):
 # REPORTING BUGS
 
 If you experience any problems with **wcurl-impersonate** that you do not
-experience with curl-impersonate, submit an issue on Github:
+experience with curl-impersonate, submit an issue on GitHub:
 https://github.com/curl/wcurl
 
 # COPYRIGHT

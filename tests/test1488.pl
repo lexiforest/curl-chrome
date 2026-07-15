@@ -27,6 +27,7 @@
 # a late evening in the #curl IRC channel.
 #
 
+use strict;
 use warnings;
 use vars qw($Cpreprocessor);
 use allversions;
@@ -47,12 +48,12 @@ if(!$rc) {
     $Cpreprocessor = 'cpp';
 }
 
-# we may get the dir root pointed out
-my $root=$ARGV[0] || ".";
+# we may get the directory root pointed out
+my $root = $ARGV[0] || ".";
 
 # need an include directory when building out-of-tree
 my $i = ($ARGV[1]) ? "-I$ARGV[1] " : '';
-my $error;
+my $error = 0;
 
 my $versions = $ARGV[2];
 
@@ -60,10 +61,12 @@ my @syms;
 my %manpage;
 my %symadded;
 
+our %pastversion;
+
 sub checkmanpage {
     my ($m) = @_;
 
-    open(my $mh, "<", "$m");
+    open(my $mh, "<", $m);
     my $line = 1;
     my $title;
     my $addedin;
@@ -94,8 +97,7 @@ sub checkmanpage {
 
 sub scanman_md_dir {
     my ($d) = @_;
-    opendir(my $dh, $d) ||
-        die "Can't opendir: $!";
+    opendir(my $dh, $d) or die "Cannot opendir: $!";
     my @mans = grep { /.md\z/ } readdir($dh);
     closedir $dh;
     for my $m (@mans) {
@@ -113,10 +115,10 @@ open my $s, "<", "$root/docs/libcurl/symbols-in-versions";
 while(<$s>) {
     chomp;
     if(/^(\S+) +([0-9.]*)/) {
-        my ($sym, $ver)=($1, $2);
+        my ($sym, $ver) = ($1, $2);
         push @syms, $sym;
 
-        $symadded{$sym}=$ver;
+        $symadded{$sym} = $ver;
         if(!$pastversion{$ver}) {
             printf "SIV: says $sym was added in non-existing %s\n", $ver;
             $error++;
@@ -125,7 +127,7 @@ while(<$s>) {
 }
 close $s;
 
-my $ignored=0;
+my $ignored = 0;
 for my $e (sort @syms) {
     if($manpage{$e}) {
         if($manpage{$e} ne $symadded{$e}) {
