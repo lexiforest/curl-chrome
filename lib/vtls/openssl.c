@@ -207,6 +207,9 @@ static const struct {
     {SSL_SIGN_RSA_PSS_RSAE_SHA384, "rsa_pss_rsae_sha384"},
     {SSL_SIGN_RSA_PSS_RSAE_SHA512, "rsa_pss_rsae_sha512"},
     {SSL_SIGN_ED25519, "ed25519"},
+    {SSL_SIGN_ML_DSA_44, "mldsa44"},
+    {SSL_SIGN_ML_DSA_65, "mldsa65"},
+    {SSL_SIGN_ML_DSA_87, "mldsa87"},
 };
 
 #define MAX_SIG_ALGS \

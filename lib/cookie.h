@@ -117,7 +117,8 @@ CURLcode Curl_cookie_add(struct Curl_easy *data,
                          const char *lineptr,
                          const char *domain,
                          const char *path,
-                         bool secure) WARN_UNUSED_RESULT;
+                         bool secure,
+                         bool record) WARN_UNUSED_RESULT;
 CURLcode Curl_cookie_getlist(struct Curl_easy *data,
                              bool *okay, const char *host,
                              struct Curl_llist *list) WARN_UNUSED_RESULT;

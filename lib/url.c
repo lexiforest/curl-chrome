@@ -270,6 +270,7 @@ CURLcode Curl_close(struct Curl_easy **datap)
   curlx_safefree(data->state.most_recent_ftp_entrypath);
   curlx_safefree(data->info.contenttype);
   curlx_safefree(data->info.wouldredirect);
+  curl_slist_free_all(data->info.cookiechanges);
 
   /* No longer a dirty share, if it exists */
   if(Curl_share_easy_unlink(data))

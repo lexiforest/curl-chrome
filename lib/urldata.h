@@ -426,6 +426,8 @@ struct PureInfo {
   uint32_t httpauthpicked;  /* selected host auth type */
   char *contenttype; /* the content type of the object */
   char *wouldredirect; /* URL this would have been redirected to if asked to */
+  struct curl_slist *cookiechanges; /* accepted Set-Cookie mutations */
+  struct curl_slist *cookiechanges_tail; /* last cookie change */
   curl_off_t retry_after; /* info from Retry-After: header */
   uint32_t header_size;  /* size of read header(s) in bytes */
 

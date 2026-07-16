@@ -1749,11 +1749,11 @@ static CURLcode cookielist(struct Curl_easy *data, const char *ptr)
     if(checkprefix("Set-Cookie:", ptr))
       /* HTTP Header format line */
       result = Curl_cookie_add(data, data->cookies, TRUE, FALSE, ptr + 11,
-                               NULL, NULL, TRUE);
+                               NULL, NULL, TRUE, FALSE);
     else
       /* Netscape format line */
       result = Curl_cookie_add(data, data->cookies, FALSE, FALSE, ptr, NULL,
-                               NULL, TRUE);
+                               NULL, TRUE, FALSE);
     Curl_share_unlock(data, CURL_LOCK_DATA_COOKIE);
   }
   return result;

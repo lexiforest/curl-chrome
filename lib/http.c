@@ -3264,8 +3264,7 @@ static CURLcode http_add_hd(struct Curl_easy *data,
     break;
 
   case H1_HD_ACCEPT:
-    if(!Curl_checkheaders(data, STRCONST("Accept")))
-      result = curlx_dyn_add(req, "Accept: */*\r\n");
+    /* curl-impersonate: Do not add a default Accept header. */
     break;
 
   case H1_HD_TE:
@@ -3894,7 +3893,7 @@ static CURLcode http_header_s(struct Curl_easy *data,
     CURLcode result;
     Curl_share_lock(data, CURL_LOCK_DATA_COOKIE, CURL_LOCK_ACCESS_SINGLE);
     result = Curl_cookie_add(data, data->cookies, TRUE, FALSE, v, host,
-                             data->state.up.path, secure_context);
+                             data->state.up.path, secure_context, TRUE);
     Curl_share_unlock(data, CURL_LOCK_DATA_COOKIE);
     return result;
   }

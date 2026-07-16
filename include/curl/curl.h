@@ -3147,7 +3147,11 @@ typedef enum {
   CURLINFO_HTTPAUTH_USED    = CURLINFO_LONG + 69,
   CURLINFO_PROXYAUTH_USED   = CURLINFO_LONG + 70,
   CURLINFO_SIZE_DELIVERED   = CURLINFO_OFF_T + 71,
-  CURLINFO_LASTONE          = 71
+  /* curl-impersonate: accepted server cookie mutations from the latest
+   * transfer, formatted as SET/DELETE plus Netscape cookie fields. Use a
+   * high number to avoid collisions with upstream infos. */
+  CURLINFO_COOKIECHANGES    = CURLINFO_SLIST + 1000,
+  CURLINFO_LASTONE          = 1000
 } CURLINFO;
 
 /* CURLINFO_RESPONSE_CODE is the new name for the option previously known as

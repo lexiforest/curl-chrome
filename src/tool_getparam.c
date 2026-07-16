@@ -2231,7 +2231,6 @@ static ParameterError opt_bool(struct OperationConfig *config,
   case C_LOCATION_SAFE: /* --location-safe */
     config->followlocation = toggle ? CURLFOLLOW_SAFE : 0;
     break;
-    break;
   case C_MANUAL: /* --manual */
     if(toggle)   /* --no-manual shows no manual... */
       return PARAM_MANUAL_REQUESTED;

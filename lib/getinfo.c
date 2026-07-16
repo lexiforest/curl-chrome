@@ -29,6 +29,7 @@
 #include "vtls/vtls.h"
 #include "connect.h" /* Curl_getconnectinfo() */
 #include "bufref.h"
+#include "slist.h"
 #include "curlx/strparse.h"
 
 /*
@@ -69,6 +70,9 @@ void Curl_initinfo(struct Curl_easy *data)
 
   curlx_safefree(info->contenttype);
   curlx_safefree(info->wouldredirect);
+  curl_slist_free_all(info->cookiechanges);
+  info->cookiechanges = NULL;
+  info->cookiechanges_tail = NULL;
 
   memset(&info->primary, 0, sizeof(info->primary));
   info->retry_after = 0;
@@ -574,6 +578,11 @@ static CURLcode getinfo_slist(struct Curl_easy *data, CURLINFO info,
     break;
   case CURLINFO_COOKIELIST:
     *param_slistp = Curl_cookie_list(data);
+    break;
+  case CURLINFO_COOKIECHANGES:
+    *param_slistp = Curl_slist_duplicate(data->info.cookiechanges);
+    if(data->info.cookiechanges && !*param_slistp)
+      return CURLE_OUT_OF_MEMORY;
     break;
   case CURLINFO_CERTINFO:
     /* Return the a pointer to the certinfo struct. Not really an slist
