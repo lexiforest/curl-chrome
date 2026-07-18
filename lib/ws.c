@@ -85,11 +85,11 @@
 #define WSBIT_MASK 0x80
 
 /* buffer dimensioning */
-#define WS_CHUNK_SIZE  65535
-#define WS_CHUNK_COUNT 2
+#define WS_CHUNK_SIZE  131072
+#define WS_CHUNK_COUNT 4
 
 #ifndef WS_ENC_XBUF_SIZE
-#define WS_ENC_XBUF_SIZE 4096
+#define WS_ENC_XBUF_SIZE 8192
 #endif
 
 /* Feature bitmask constants. */
