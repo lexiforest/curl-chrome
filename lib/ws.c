@@ -85,11 +85,11 @@
 #define WSBIT_MASK 0x80
 
 /* buffer dimensioning */
-#define WS_CHUNK_SIZE  131072
-#define WS_CHUNK_COUNT 4
+#define WS_CHUNK_SIZE  65535
+#define WS_CHUNK_COUNT 2
 
 #ifndef WS_ENC_XBUF_SIZE
-#define WS_ENC_XBUF_SIZE 8192
+#define WS_ENC_XBUF_SIZE 4096
 #endif
 
 /* Feature bitmask constants. */
@@ -596,25 +596,28 @@ static CURLcode ws_dec_read_head(struct ws_decoder *dec,
 {
   const uint8_t *inbuf;
   size_t inlen;
+  uint8_t len_byte;
+  int hlen;
 
   while(Curl_bufq_peek(inraw, &inbuf, &inlen)) {
     if(dec->head_len == 0) {
+      /* Contiguous header parsing fast path */
+      if(inlen >= 2) {
+        len_byte = inbuf[1] & 0x7F;
+        hlen = (len_byte == 127) ? 10 : ((len_byte == 126) ? 4 : 2);
+
+        if(inlen >= (size_t)hlen) {
+          memcpy(dec->head, inbuf, hlen);
+          Curl_bufq_skip(inraw, hlen);
+          dec->head_len = hlen;
+          dec->head_total = hlen;
+          goto parse_complete;
+        }
+      }
+
+      /* Slow path, first byte */
       dec->head[0] = *inbuf;
       Curl_bufq_skip(inraw, 1);
-
-      dec->frame_flags = ws_frame_firstbyte2flags(data, dec->head[0],
-                                                  dec->cont_flags);
-      if(!dec->frame_flags) {
-        ws_dec_reset(dec);
-        return CURLE_RECV_ERROR;
-      }
-
-      /* fragmentation only applies to data frames (text/binary);
-       * control frames (close/ping/pong) do not affect the CONT status */
-      if(dec->frame_flags & (CURLWS_TEXT | CURLWS_BINARY)) {
-        dec->cont_flags = dec->frame_flags;
-      }
-
       dec->head_len = 1;
 #if 0
       ws_dec_info(dec, data, "seeing opcode");
@@ -622,41 +625,17 @@ static CURLcode ws_dec_read_head(struct ws_decoder *dec,
       continue;
     }
     else if(dec->head_len == 1) {
+      /* Slow path, second byte */
       dec->head[1] = *inbuf;
       Curl_bufq_skip(inraw, 1);
       dec->head_len = 2;
 
-      if(dec->head[1] & WSBIT_MASK) {
-        /* A client MUST close a connection if it detects a masked frame. */
-        failf(data, "[WS] masked input frame");
-        ws_dec_reset(dec);
-        return CURLE_RECV_ERROR;
-      }
-      if(dec->frame_flags & CURLWS_PING && dec->head[1] > WS_MAX_CNTRL_LEN) {
-        /* The maximum valid size of PING frames is 125 bytes.
-           Accepting overlong pings would mean sending equivalent pongs! */
-        failf(data, "[WS] received PING frame is too big");
-        ws_dec_reset(dec);
-        return CURLE_RECV_ERROR;
-      }
-      if(dec->frame_flags & CURLWS_PONG && dec->head[1] > WS_MAX_CNTRL_LEN) {
-        /* The maximum valid size of PONG frames is 125 bytes. */
-        failf(data, "[WS] received PONG frame is too big");
-        ws_dec_reset(dec);
-        return CURLE_RECV_ERROR;
-      }
-      if(dec->frame_flags & CURLWS_CLOSE && dec->head[1] > WS_MAX_CNTRL_LEN) {
-        failf(data, "[WS] received CLOSE frame is too big");
-        ws_dec_reset(dec);
-        return CURLE_RECV_ERROR;
-      }
-
       /* How long is the frame head? */
-      if(dec->head[1] == 126) {
+      if((dec->head[1] & 0x7F) == 126) {
         dec->head_total = 4;
         continue;
       }
-      else if(dec->head[1] == 127) {
+      else if((dec->head[1] & 0x7F) == 127) {
         dec->head_total = 10;
         continue;
       }
@@ -666,6 +645,7 @@ static CURLcode ws_dec_read_head(struct ws_decoder *dec,
     }
 
     if(dec->head_len < dec->head_total) {
+      /* Slow path, bytes 2-9 */
       dec->head[dec->head_len] = *inbuf;
       Curl_bufq_skip(inraw, 1);
       ++dec->head_len;
@@ -676,11 +656,57 @@ static CURLcode ws_dec_read_head(struct ws_decoder *dec,
         continue;
       }
     }
-    /* got the complete frame head */
+
+parse_complete:
+    /* COMMON HEADER VALIDATION & DECODING */
+    /* The complete frame header was received */
     DEBUGASSERT(dec->head_len == dec->head_total);
+
+    dec->frame_flags = ws_frame_firstbyte2flags(data, dec->head[0],
+                                                dec->cont_flags);
+    if(!dec->frame_flags) {
+      ws_dec_reset(dec);
+      return CURLE_RECV_ERROR;
+    }
+
+    /* fragmentation only applies to data frames (text/binary);
+     * control frames (close/ping/pong) do not affect the CONT status */
+    if(dec->frame_flags & (CURLWS_TEXT | CURLWS_BINARY)) {
+      dec->cont_flags = dec->frame_flags;
+    }
+
+    if(dec->head[1] & WSBIT_MASK) {
+      /* A client MUST close a connection if it detects a masked frame. */
+      failf(data, "[WS] masked input frame");
+      ws_dec_reset(dec);
+      return CURLE_RECV_ERROR;
+    }
+
+    if((dec->head[1] & 0x7F) > WS_MAX_CNTRL_LEN) {
+      if(dec->frame_flags & CURLWS_PING) {
+        /* The maximum valid size of PING frames is 125 bytes.
+           Accepting overlong pings would mean sending equivalent pongs! */
+        failf(data, "[WS] received PING frame is too big");
+        ws_dec_reset(dec);
+        return CURLE_RECV_ERROR;
+      }
+      if(dec->frame_flags & CURLWS_PONG) {
+        /* The maximum valid size of PONG frames is 125 bytes. */
+        failf(data, "[WS] received PONG frame is too big");
+        ws_dec_reset(dec);
+        return CURLE_RECV_ERROR;
+      }
+      if(dec->frame_flags & CURLWS_CLOSE) {
+        /* The maximum valid size of CLOSE frames is 125 bytes. */
+        failf(data, "[WS] received CLOSE frame is too big");
+        ws_dec_reset(dec);
+        return CURLE_RECV_ERROR;
+      }
+    }
+
     switch(dec->head_total) {
     case 2:
-      dec->payload_len = dec->head[1];
+      dec->payload_len = dec->head[1] & 0x7F;
       break;
     case 4:
       dec->payload_len = (dec->head[2] << 8) | dec->head[3];
@@ -1188,9 +1214,21 @@ static CURLcode ws_enc_write_payload(struct ws_encoder *enc,
   size_t i = 0;
   size_t len;
   size_t remain;
+  uint8_t mask[4];
+  size_t chunk;
+  size_t j;
+  size_t xbuf_idx;
 #if defined(WS_HAVE_X86_SIMD) && WS_IS_LITTLE_ENDIAN
-  static uint32_t cpu_feats;
+  static uint32_t cpu_feats = 0;
   uint32_t features;
+#endif
+#if WS_IS_LITTLE_ENDIAN
+  uint32_t mask32;
+  uint32_t data32;
+#endif
+#if WS_IS_LITTLE_ENDIAN && WS_64BIT_NATIVE
+  uint64_t mask64;
+  uint64_t data64;
 #endif
 
   *pnwritten = 0;
@@ -1219,13 +1257,9 @@ static CURLcode ws_enc_write_payload(struct ws_encoder *enc,
 #endif
 
   while(i < len) {
-    uint8_t mask[4];
-    size_t chunk = CURLMIN(len - i, (size_t)WS_ENC_XBUF_SIZE);
-    size_t j = 0;
-    size_t xbuf_idx = 0;
-#if WS_IS_LITTLE_ENDIAN
-    uint32_t mask32;
-#endif
+    chunk = CURLMIN(len - i, (size_t)WS_ENC_XBUF_SIZE);
+    j = 0;
+    xbuf_idx = 0;
 
     /* Rotate the four-byte mask to the current frame offset. */
     mask[0] = enc->mask[enc->xori];
@@ -1236,34 +1270,32 @@ static CURLcode ws_enc_write_payload(struct ws_encoder *enc,
 #if WS_IS_LITTLE_ENDIAN
     memcpy(&mask32, mask, sizeof(mask32));
 
-    /* SIMD ladder: 128, 64 or 32 bytes per iteration. */
+    /* SIMD ladder: 128, 64 or 32 bytes per iteration.
+     * Only invoke SIMD functions if we have enough payload to execute */
 #ifdef WS_HAVE_X86_SIMD
 #if defined(WS_SUPPORT_AVX_RUNTIME) || defined(__AVX512F__)
-    if(features & WS_CPU_FEAT_AVX512)
+    if((features & WS_CPU_FEAT_AVX512) && chunk >= 128)
       j = ws_xor_avx512(buf + i, enc->xbuf, chunk, mask32);
 #endif
 #if defined(WS_SUPPORT_AVX_RUNTIME) || defined(__AVX2__)
-    if(!j && (features & WS_CPU_FEAT_AVX2))
+    if(!j && (features & WS_CPU_FEAT_AVX2) && chunk >= 64)
       j = ws_xor_avx2(buf + i, enc->xbuf, chunk, mask32);
 #endif
 #elif defined(WS_HAVE_ARM_SIMD)
-    j = ws_xor_neon(buf + i, enc->xbuf, chunk, mask32);
+    if(chunk >= 32)
+      j = ws_xor_neon(buf + i, enc->xbuf, chunk, mask32);
 #endif
 
     /* Scalar ladder: eight or four bytes per iteration. */
 #if WS_64BIT_NATIVE
-    {
-      uint64_t mask64 = ((uint64_t)mask32 << 32) | mask32;
-      for(; j + 8 <= chunk; j += 8) {
-        uint64_t data64;
-        memcpy(&data64, buf + i + j, sizeof(data64));
-        data64 ^= mask64;
-        memcpy(enc->xbuf + j, &data64, sizeof(data64));
-      }
+    mask64 = ((uint64_t)mask32 << 32) | mask32;
+    for(; j + 8 <= chunk; j += 8) {
+      memcpy(&data64, buf + i + j, sizeof(data64));
+      data64 ^= mask64;
+      memcpy(enc->xbuf + j, &data64, sizeof(data64));
     }
 #endif
     for(; j + 4 <= chunk; j += 4) {
-      uint32_t data32;
       memcpy(&data32, buf + i + j, sizeof(data32));
       data32 ^= mask32;
       memcpy(enc->xbuf + j, &data32, sizeof(data32));
