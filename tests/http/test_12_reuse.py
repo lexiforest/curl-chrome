@@ -71,3 +71,18 @@ class TestReuse:
         r.check_response(count=count, http_status=200)
         # Connections time out on server before we send another request,
         assert r.total_connects == count
+
+    @pytest.mark.skipif(condition=not Env.have_h3(), reason="h3 not supported")
+    def test_12_03_h3_local_conn_timeout(self, env: Env, httpd, nghttpx):
+        count = 2
+        curl = CurlClient(env=env)
+        urln = f'https://{env.authority_for(env.domain1, "h3")}' \
+            f'/data.json?[0-{count - 1}]'
+        r = curl.http_download(urls=[urln], alpn_proto='h3', extra_args=[
+            '--quic-transport-params', '1:1000',
+            '--rate', '30/m',
+            '--max-time', '5',
+        ])
+        r.check_response(count=count, http_status=200)
+        # The local idle timeout expires before the second request.
+        assert r.total_connects == count
