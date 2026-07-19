@@ -250,6 +250,11 @@ CURLINFO_QUEUE_TIME_T(3)
 
 Total number of redirects that were followed. See CURLINFO_REDIRECT_COUNT(3)
 
+## CURLINFO_REDIRECT_HISTORY
+
+Status codes and request URLs for redirects followed during the latest
+transfer. See CURLINFO_REDIRECT_HISTORY(3)
+
 ## CURLINFO_REDIRECT_TIME
 
 The time it took for all redirection steps include name lookup, connect,

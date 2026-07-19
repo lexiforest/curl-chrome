@@ -48,6 +48,7 @@
 #endif
 
 #include "transfer.h"
+#include "getinfo.h"
 #include "sendf.h"
 #include "curl_trc.h"
 #include "formdata.h"
@@ -1267,6 +1268,17 @@ CURLcode Curl_http_follow(struct Curl_easy *data, const char *newurl,
       return CURLE_TOO_MANY_REDIRECTS;
     }
     return CURLE_OK;
+  }
+
+  if((type == FOLLOW_REDIR) &&
+     (data->req.httpcode >= 300) && (data->req.httpcode < 400)) {
+    CURLcode result = Curl_add_redirect(data,
+                                        Curl_bufref_ptr(&data->state.url),
+                                        (long)data->req.httpcode);
+    if(result) {
+      curl_free(follow_url);
+      return result;
+    }
   }
 
   if(disallowport)

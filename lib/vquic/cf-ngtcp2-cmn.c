@@ -2650,7 +2650,8 @@ bool Curl_cf_ngtcp2_cmn_conn_is_alive(struct Curl_cfilter *cf,
 {
   struct cf_ngtcp2_ctx *ctx = cf->ctx;
   bool alive = FALSE;
-  ngtcp2_tstamp idle_expiry;
+  bool expiry_handled = FALSE;
+  ngtcp2_tstamp expiry;
   ngtcp2_tstamp now_ts;
   const struct curltime *now;
   struct cf_call_data save;
@@ -2660,14 +2661,20 @@ bool Curl_cf_ngtcp2_cmn_conn_is_alive(struct Curl_cfilter *cf,
   if(!ctx->qconn || ctx->shutdown_started)
     goto out;
 
-  /* Let ngtcp2 apply the negotiated timeout, the 3 PTO minimum and the
-   * QUIC idle timer reset rules. */
+  /* Let ngtcp2 apply all timer rules, including the negotiated idle timeout,
+   * the 3 PTO minimum and the QUIC idle timer reset rules. */
   now = Curl_pgrs_now(data);
   now_ts = ((ngtcp2_tstamp)now->tv_sec * NGTCP2_SECONDS) +
            ((ngtcp2_tstamp)now->tv_usec * NGTCP2_MICROSECONDS);
-  idle_expiry = ngtcp2_conn_get_idle_expiry(ctx->qconn);
-  if((idle_expiry != UINT64_MAX) && (idle_expiry <= now_ts))
-    goto out;
+  expiry = ngtcp2_conn_get_expiry(ctx->qconn);
+  if((expiry != UINT64_MAX) && (expiry <= now_ts)) {
+    int rv = ngtcp2_conn_handle_expiry(ctx->qconn, now_ts);
+    if(rv) {
+      Curl_cf_ngtcp2_cmn_err_set(cf, data, rv);
+      goto out;
+    }
+    expiry_handled = TRUE;
+  }
 
   if(!cf->next || !cf->next->cft->is_alive(cf->next, data, input_pending))
     goto out;
@@ -2681,6 +2688,11 @@ bool Curl_cf_ngtcp2_cmn_conn_is_alive(struct Curl_cfilter *cf,
     *input_pending = FALSE;
     result = Curl_cf_ngtcp2_progress_ingress(cf, data, NULL);
     CURL_TRC_CF(data, cf, "is_alive, progress ingress -> %d", (int)result);
+    alive = result ? FALSE : TRUE;
+  }
+  if(alive && expiry_handled) {
+    CURLcode result = Curl_cf_ngtcp2_progress_egress(cf, data, NULL);
+    CURL_TRC_CF(data, cf, "is_alive, progress egress -> %d", (int)result);
     alive = result ? FALSE : TRUE;
   }
 

@@ -3151,7 +3151,10 @@ typedef enum {
    * transfer, formatted as SET/DELETE plus Netscape cookie fields. Use a
    * high number to avoid collisions with upstream infos. */
   CURLINFO_COOKIECHANGES    = CURLINFO_SLIST + 1000,
-  CURLINFO_LASTONE          = 1000
+  /* curl-impersonate: followed HTTP redirect responses from the latest
+   * transfer, formatted as status-code plus tab plus request URL. */
+  CURLINFO_REDIRECT_HISTORY = CURLINFO_SLIST + 1001,
+  CURLINFO_LASTONE          = 1001
 } CURLINFO;
 
 /* CURLINFO_RESPONSE_CODE is the new name for the option previously known as

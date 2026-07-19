@@ -32,6 +32,36 @@
 #include "slist.h"
 #include "curlx/strparse.h"
 
+void Curl_free_redirects(struct Curl_easy *data)
+{
+  curl_slist_free_all(data->info.redirect_history);
+  data->info.redirect_history = NULL;
+  data->info.redirect_history_tail = NULL;
+}
+
+CURLcode Curl_add_redirect(struct Curl_easy *data, const char *url,
+                           long status_code)
+{
+  struct curl_slist *list;
+  char *entry = curl_maprintf("%ld\t%s", status_code, url);
+
+  if(!entry)
+    return CURLE_OUT_OF_MEMORY;
+
+  list = Curl_slist_append_nodup(NULL, entry);
+  if(!list) {
+    curlx_free(entry);
+    return CURLE_OUT_OF_MEMORY;
+  }
+
+  if(data->info.redirect_history_tail)
+    data->info.redirect_history_tail->next = list;
+  else
+    data->info.redirect_history = list;
+  data->info.redirect_history_tail = list;
+  return CURLE_OK;
+}
+
 /*
  * Initialize statistical and informational data.
  *
@@ -73,6 +103,7 @@ void Curl_initinfo(struct Curl_easy *data)
   curl_slist_free_all(info->cookiechanges);
   info->cookiechanges = NULL;
   info->cookiechanges_tail = NULL;
+  Curl_free_redirects(data);
 
   memset(&info->primary, 0, sizeof(info->primary));
   info->retry_after = 0;
@@ -589,6 +620,11 @@ static CURLcode getinfo_slist(struct Curl_easy *data, CURLINFO info,
        pointer but we can pretend it is here */
     ptr.to_certinfo = &data->info.certs;
     *param_slistp = ptr.to_slist;
+    break;
+  case CURLINFO_REDIRECT_HISTORY:
+    *param_slistp = Curl_slist_duplicate(data->info.redirect_history);
+    if(data->info.redirect_history && !*param_slistp)
+      return CURLE_OUT_OF_MEMORY;
     break;
   case CURLINFO_TLS_SESSION:
   case CURLINFO_TLS_SSL_PTR: {
