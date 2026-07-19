@@ -25,5 +25,8 @@
  ***************************************************************************/
 CURLcode Curl_getinfo(struct Curl_easy *data, CURLINFO info, ...);
 void Curl_initinfo(struct Curl_easy *data);
+CURLcode Curl_add_redirect(struct Curl_easy *data, const char *url,
+                           long status_code);
+void Curl_free_redirects(struct Curl_easy *data);
 
 #endif /* HEADER_CURL_GETINFO_H */

@@ -71,6 +71,7 @@ man_MANS =                                      \
   CURLINFO_PROXYAUTH_USED.3                     \
   CURLINFO_QUEUE_TIME_T.3                       \
   CURLINFO_REDIRECT_COUNT.3                     \
+  CURLINFO_REDIRECT_HISTORY.3                   \
   CURLINFO_REDIRECT_TIME.3                      \
   CURLINFO_REDIRECT_TIME_T.3                    \
   CURLINFO_REDIRECT_URL.3                       \

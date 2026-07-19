@@ -2512,14 +2512,34 @@ CURLcode Curl_cf_ngtcp2_cmn_set_expiry(struct Curl_cfilter *cf,
   return CURLE_OK;
 }
 
+static ngtcp2_duration
+cf_ngtcp2_effective_idle_timeout(struct cf_ngtcp2_ctx *ctx)
+{
+  const ngtcp2_transport_params *lp;
+  const ngtcp2_transport_params *rp;
+  ngtcp2_duration timeout = 0;
+
+  if(!ctx->qconn)
+    return 0;
+
+  lp = ngtcp2_conn_get_local_transport_params(ctx->qconn);
+  rp = ngtcp2_conn_get_remote_transport_params(ctx->qconn);
+  if(lp)
+    timeout = lp->max_idle_timeout;
+  if(rp && rp->max_idle_timeout &&
+     (!timeout || rp->max_idle_timeout < timeout))
+    timeout = rp->max_idle_timeout;
+  return timeout;
+}
+
 static void cf_ngtcp2_setup_keep_alive(struct Curl_cfilter *cf,
                                        struct Curl_easy *data)
 {
   struct cf_ngtcp2_ctx *ctx = cf->ctx;
-  const ngtcp2_transport_params *rp;
-  /* Peer should have sent us its transport parameters. If it
-   * announces a positive `max_idle_timeout` it closes the
-   * connection when it does not hear from us for that time.
+  ngtcp2_duration idle_timeout;
+
+  /* If either endpoint announces a positive `max_idle_timeout`, the
+   * connection closes when it remains idle for the effective timeout.
    *
    * Some servers use this as a keep-alive timer at a rather low
    * value. We are doing HTTP/3 here and waiting for the response
@@ -2529,10 +2549,10 @@ static void cf_ngtcp2_setup_keep_alive(struct Curl_cfilter *cf,
   if(!ctx->qconn)
     return;
 
-  rp = ngtcp2_conn_get_remote_transport_params(ctx->qconn);
-  if(!rp || !rp->max_idle_timeout) {
+  idle_timeout = cf_ngtcp2_effective_idle_timeout(ctx);
+  if(!idle_timeout) {
     ngtcp2_conn_set_keep_alive_timeout(ctx->qconn, UINT64_MAX);
-    CURL_TRC_CF(data, cf, "no peer idle timeout, unset keep-alive");
+    CURL_TRC_CF(data, cf, "no idle timeout, unset keep-alive");
   }
   else if(!Curl_uint32_hash_count(&ctx->streams)) {
     ngtcp2_conn_set_keep_alive_timeout(ctx->qconn, UINT64_MAX);
@@ -2540,11 +2560,11 @@ static void cf_ngtcp2_setup_keep_alive(struct Curl_cfilter *cf,
   }
   else {
     ngtcp2_duration keep_ns;
-    keep_ns = (rp->max_idle_timeout > 1) ? (rp->max_idle_timeout / 2) : 1;
+    keep_ns = (idle_timeout > 1) ? (idle_timeout / 2) : 1;
     ngtcp2_conn_set_keep_alive_timeout(ctx->qconn, keep_ns);
-    CURL_TRC_CF(data, cf, "peer idle timeout is %" PRIu64 "ms, "
+    CURL_TRC_CF(data, cf, "effective idle timeout is %" PRIu64 "ms, "
                 "set keep-alive to %" PRIu64 " ms.",
-                (rp->max_idle_timeout / NGTCP2_MILLISECONDS),
+                (idle_timeout / NGTCP2_MILLISECONDS),
                 (keep_ns / NGTCP2_MILLISECONDS));
   }
 }
@@ -2630,7 +2650,10 @@ bool Curl_cf_ngtcp2_cmn_conn_is_alive(struct Curl_cfilter *cf,
 {
   struct cf_ngtcp2_ctx *ctx = cf->ctx;
   bool alive = FALSE;
-  const ngtcp2_transport_params *rp;
+  bool expiry_handled = FALSE;
+  ngtcp2_tstamp expiry;
+  ngtcp2_tstamp now_ts;
+  const struct curltime *now;
   struct cf_call_data save;
 
   CF_DATA_SAVE(save, cf, data);
@@ -2638,18 +2661,19 @@ bool Curl_cf_ngtcp2_cmn_conn_is_alive(struct Curl_cfilter *cf,
   if(!ctx->qconn || ctx->shutdown_started)
     goto out;
 
-  /* We do not announce a max idle timeout, but when the peer does
-   * it closes the connection when it expires. */
-  rp = ngtcp2_conn_get_remote_transport_params(ctx->qconn);
-  if(rp && rp->max_idle_timeout) {
-    timediff_t idletime_ms =
-      curlx_ptimediff_ms(Curl_pgrs_now(data), &ctx->q.last_io);
-    if(idletime_ms > 0) {
-      uint64_t max_idle_ms =
-        (uint64_t)(rp->max_idle_timeout / NGTCP2_MILLISECONDS);
-      if((uint64_t)idletime_ms > max_idle_ms)
-        goto out;
+  /* Let ngtcp2 apply all timer rules, including the negotiated idle timeout,
+   * the 3 PTO minimum and the QUIC idle timer reset rules. */
+  now = Curl_pgrs_now(data);
+  now_ts = ((ngtcp2_tstamp)now->tv_sec * NGTCP2_SECONDS) +
+           ((ngtcp2_tstamp)now->tv_usec * NGTCP2_MICROSECONDS);
+  expiry = ngtcp2_conn_get_expiry(ctx->qconn);
+  if((expiry != UINT64_MAX) && (expiry <= now_ts)) {
+    int rv = ngtcp2_conn_handle_expiry(ctx->qconn, now_ts);
+    if(rv) {
+      Curl_cf_ngtcp2_cmn_err_set(cf, data, rv);
+      goto out;
     }
+    expiry_handled = TRUE;
   }
 
   if(!cf->next || !cf->next->cft->is_alive(cf->next, data, input_pending))
@@ -2664,6 +2688,11 @@ bool Curl_cf_ngtcp2_cmn_conn_is_alive(struct Curl_cfilter *cf,
     *input_pending = FALSE;
     result = Curl_cf_ngtcp2_progress_ingress(cf, data, NULL);
     CURL_TRC_CF(data, cf, "is_alive, progress ingress -> %d", (int)result);
+    alive = result ? FALSE : TRUE;
+  }
+  if(alive && expiry_handled) {
+    CURLcode result = Curl_cf_ngtcp2_progress_egress(cf, data, NULL);
+    CURL_TRC_CF(data, cf, "is_alive, progress egress -> %d", (int)result);
     alive = result ? FALSE : TRUE;
   }
 

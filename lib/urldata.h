@@ -428,6 +428,8 @@ struct PureInfo {
   char *wouldredirect; /* URL this would have been redirected to if asked to */
   struct curl_slist *cookiechanges; /* accepted Set-Cookie mutations */
   struct curl_slist *cookiechanges_tail; /* last cookie change */
+  struct curl_slist *redirect_history; /* followed redirects */
+  struct curl_slist *redirect_history_tail; /* last followed redirect */
   curl_off_t retry_after; /* info from Retry-After: header */
   uint32_t header_size;  /* size of read header(s) in bytes */
 
