@@ -596,25 +596,28 @@ static CURLcode ws_dec_read_head(struct ws_decoder *dec,
 {
   const uint8_t *inbuf;
   size_t inlen;
+  uint8_t len_byte;
+  int hlen;
 
   while(Curl_bufq_peek(inraw, &inbuf, &inlen)) {
     if(dec->head_len == 0) {
+      /* Contiguous header parsing fast path */
+      if(inlen >= 2) {
+        len_byte = inbuf[1] & 0x7F;
+        hlen = (len_byte == 127) ? 10 : ((len_byte == 126) ? 4 : 2);
+
+        if(inlen >= (size_t)hlen) {
+          memcpy(dec->head, inbuf, hlen);
+          Curl_bufq_skip(inraw, hlen);
+          dec->head_len = hlen;
+          dec->head_total = hlen;
+          goto parse_complete;
+        }
+      }
+
+      /* Slow path, first byte */
       dec->head[0] = *inbuf;
       Curl_bufq_skip(inraw, 1);
-
-      dec->frame_flags = ws_frame_firstbyte2flags(data, dec->head[0],
-                                                  dec->cont_flags);
-      if(!dec->frame_flags) {
-        ws_dec_reset(dec);
-        return CURLE_RECV_ERROR;
-      }
-
-      /* fragmentation only applies to data frames (text/binary);
-       * control frames (close/ping/pong) do not affect the CONT status */
-      if(dec->frame_flags & (CURLWS_TEXT | CURLWS_BINARY)) {
-        dec->cont_flags = dec->frame_flags;
-      }
-
       dec->head_len = 1;
 #if 0
       ws_dec_info(dec, data, "seeing opcode");
@@ -622,41 +625,17 @@ static CURLcode ws_dec_read_head(struct ws_decoder *dec,
       continue;
     }
     else if(dec->head_len == 1) {
+      /* Slow path, second byte */
       dec->head[1] = *inbuf;
       Curl_bufq_skip(inraw, 1);
       dec->head_len = 2;
 
-      if(dec->head[1] & WSBIT_MASK) {
-        /* A client MUST close a connection if it detects a masked frame. */
-        failf(data, "[WS] masked input frame");
-        ws_dec_reset(dec);
-        return CURLE_RECV_ERROR;
-      }
-      if(dec->frame_flags & CURLWS_PING && dec->head[1] > WS_MAX_CNTRL_LEN) {
-        /* The maximum valid size of PING frames is 125 bytes.
-           Accepting overlong pings would mean sending equivalent pongs! */
-        failf(data, "[WS] received PING frame is too big");
-        ws_dec_reset(dec);
-        return CURLE_RECV_ERROR;
-      }
-      if(dec->frame_flags & CURLWS_PONG && dec->head[1] > WS_MAX_CNTRL_LEN) {
-        /* The maximum valid size of PONG frames is 125 bytes. */
-        failf(data, "[WS] received PONG frame is too big");
-        ws_dec_reset(dec);
-        return CURLE_RECV_ERROR;
-      }
-      if(dec->frame_flags & CURLWS_CLOSE && dec->head[1] > WS_MAX_CNTRL_LEN) {
-        failf(data, "[WS] received CLOSE frame is too big");
-        ws_dec_reset(dec);
-        return CURLE_RECV_ERROR;
-      }
-
       /* How long is the frame head? */
-      if(dec->head[1] == 126) {
+      if((dec->head[1] & 0x7F) == 126) {
         dec->head_total = 4;
         continue;
       }
-      else if(dec->head[1] == 127) {
+      else if((dec->head[1] & 0x7F) == 127) {
         dec->head_total = 10;
         continue;
       }
@@ -666,6 +645,7 @@ static CURLcode ws_dec_read_head(struct ws_decoder *dec,
     }
 
     if(dec->head_len < dec->head_total) {
+      /* Slow path, bytes 2-9 */
       dec->head[dec->head_len] = *inbuf;
       Curl_bufq_skip(inraw, 1);
       ++dec->head_len;
@@ -676,11 +656,57 @@ static CURLcode ws_dec_read_head(struct ws_decoder *dec,
         continue;
       }
     }
-    /* got the complete frame head */
+
+parse_complete:
+    /* COMMON HEADER VALIDATION & DECODING */
+    /* The complete frame header was received */
     DEBUGASSERT(dec->head_len == dec->head_total);
+
+    dec->frame_flags = ws_frame_firstbyte2flags(data, dec->head[0],
+                                                dec->cont_flags);
+    if(!dec->frame_flags) {
+      ws_dec_reset(dec);
+      return CURLE_RECV_ERROR;
+    }
+
+    /* fragmentation only applies to data frames (text/binary);
+     * control frames (close/ping/pong) do not affect the CONT status */
+    if(dec->frame_flags & (CURLWS_TEXT | CURLWS_BINARY)) {
+      dec->cont_flags = dec->frame_flags;
+    }
+
+    if(dec->head[1] & WSBIT_MASK) {
+      /* A client MUST close a connection if it detects a masked frame. */
+      failf(data, "[WS] masked input frame");
+      ws_dec_reset(dec);
+      return CURLE_RECV_ERROR;
+    }
+
+    if((dec->head[1] & 0x7F) > WS_MAX_CNTRL_LEN) {
+      if(dec->frame_flags & CURLWS_PING) {
+        /* The maximum valid size of PING frames is 125 bytes.
+           Accepting overlong pings would mean sending equivalent pongs! */
+        failf(data, "[WS] received PING frame is too big");
+        ws_dec_reset(dec);
+        return CURLE_RECV_ERROR;
+      }
+      if(dec->frame_flags & CURLWS_PONG) {
+        /* The maximum valid size of PONG frames is 125 bytes. */
+        failf(data, "[WS] received PONG frame is too big");
+        ws_dec_reset(dec);
+        return CURLE_RECV_ERROR;
+      }
+      if(dec->frame_flags & CURLWS_CLOSE) {
+        /* The maximum valid size of CLOSE frames is 125 bytes. */
+        failf(data, "[WS] received CLOSE frame is too big");
+        ws_dec_reset(dec);
+        return CURLE_RECV_ERROR;
+      }
+    }
+
     switch(dec->head_total) {
     case 2:
-      dec->payload_len = dec->head[1];
+      dec->payload_len = dec->head[1] & 0x7F;
       break;
     case 4:
       dec->payload_len = (dec->head[2] << 8) | dec->head[3];
