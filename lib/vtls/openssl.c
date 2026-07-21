@@ -4238,7 +4238,8 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
 #endif
 
   {
-    const char *curves = conn_config->curves;
+    const char *curves =
+      Curl_ssl_config_get_curves(conn_config, peer->transport);
     if(curves) {
 #ifdef HAVE_BORINGSSL_LIKE
 #define OSSL_CURVE_CAST(x) (x)
@@ -4256,7 +4257,8 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
   !defined(OPENSSL_IS_BORINGSSL)
 #define OSSL_SIGALG_CAST(x) OSSL_CURVE_CAST(x)
   {
-    const char *signature_algorithms = conn_config->signature_algorithms;
+    const char *signature_algorithms =
+      Curl_ssl_config_get_signature_algorithms(conn_config, peer->transport);
     if(signature_algorithms) {
       if(!SSL_CTX_set1_sigalgs_list(octx->ssl_ctx,
                                     OSSL_SIGALG_CAST(signature_algorithms))) {
@@ -4273,7 +4275,8 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
     uint16_t algs[MAX_SIG_ALGS];
     size_t nalgs;
     /* curl-impersonate: Set the signature algorithms (TLS extension 13). */
-    const char *signature_algorithms = conn_config->signature_algorithms;
+    const char *signature_algorithms =
+      Curl_ssl_config_get_signature_algorithms(conn_config, peer->transport);
     if(signature_algorithms) {
       CURLcode result = parse_sig_algs(data, signature_algorithms, algs,
                                        &nalgs);
@@ -4342,9 +4345,16 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
     SSL_CTX_set_permute_extensions(octx->ssl_ctx, 1);
 
   /* curl-impersonate: Set TLS extensions order. */
-  if(conn_config->tls_extension_order)
-    SSL_CTX_set_extension_order(octx->ssl_ctx,
-                                conn_config->tls_extension_order);
+  {
+    const char *extension_order = Curl_ssl_config_get_tls_extension_order(
+      conn_config, peer->transport);
+    if(extension_order &&
+       !SSL_CTX_set_extension_order(octx->ssl_ctx,
+                                    (char *)CURL_UNCONST(extension_order))) {
+      failf(data, "Invalid TLS extension order: '%s'", extension_order);
+      return CURLE_SSL_CONNECT_ERROR;
+    }
+  }
 
   if(data->set.str[STRING_TLS_DELEGATED_CREDENTIALS])
     SSL_CTX_set_delegated_credentials(
