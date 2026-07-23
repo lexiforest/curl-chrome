@@ -399,11 +399,11 @@ static const struct LongShort aliases[]= {
 #ifdef USE_WATT32
   {"wdebug",                     ARG_BOOL, ' ', C_WDEBUG},
 #endif
+  {"write-out",                  ARG_STRG, 'w', C_WRITE_OUT},
   {"ws-cert-compression",        ARG_STRG|ARG_TLS, ' ', C_WS_CERT_COMPRESSION},  // curl-impersonate
   {"ws-disable-session-ticket",  ARG_BOOL, ' ', C_WS_DISABLE_SESSION_TICKET},  // curl-impersonate
   {"ws-httpheader",              ARG_STRG, ' ', C_WS_HTTPHEADER},  // curl-impersonate
   {"ws-httpheader-order",        ARG_STRG, ' ', C_WS_HTTPHEADER_ORDER},  // curl-impersonate
-  {"write-out",                  ARG_STRG, 'w', C_WRITE_OUT},
   {"xattr",                      ARG_BOOL, ' ', C_XATTR},
 };
 

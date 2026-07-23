@@ -4721,8 +4721,10 @@ static CURLcode ossl_connect_step2(struct Curl_cfilter *cf,
 #endif
       else {
         result = CURLE_SSL_CONNECT_ERROR;
-        failf(data, "TLS connect error: %s",
-              ossl_strerror(errdetail, error_buffer, sizeof(error_buffer)));
+        if(errdetail)
+          failf(data, "TLS connect error: %s",
+                ossl_strerror(errdetail, error_buffer,
+                              sizeof(error_buffer)));
       }
 
       /* detail is already set to the SSL error above */
@@ -4735,10 +4737,20 @@ static CURLcode ossl_connect_step2(struct Curl_cfilter *cf,
         char extramsg[80] = "";
         int sockerr = SOCKERRNO;
 
-        if(sockerr && detail == SSL_ERROR_SYSCALL)
+        if(octx->io_result && octx->io_result != CURLE_AGAIN)
+          curl_msnprintf(extramsg, sizeof(extramsg), "%s",
+                         curl_easy_strerror(octx->io_result));
+        else if(connssl->peer_closed)
+          curl_msnprintf(extramsg, sizeof(extramsg),
+                         "Connection closed abruptly");
+        else if(sockerr && detail == SSL_ERROR_SYSCALL)
           curlx_strerror(sockerr, extramsg, sizeof(extramsg));
-        failf(data, OSSL_PACKAGE " SSL_connect: %s in connection to %s:%d ",
-              extramsg[0] ? extramsg : SSL_ERROR_to_str(detail),
+        else
+          curl_msnprintf(extramsg, sizeof(extramsg),
+                         "no transport error details available");
+        failf(data, OSSL_PACKAGE " SSL_connect: %s (%s; error queue empty) "
+              "in connection to %s:%d",
+              extramsg, SSL_ERROR_to_str(detail),
               connssl->peer.origin->hostname, connssl->peer.origin->port);
       }
 
