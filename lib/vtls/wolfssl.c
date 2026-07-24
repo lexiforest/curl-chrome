@@ -1129,9 +1129,11 @@ static CURLcode wssl_init_ciphers(struct Curl_easy *data,
 
 static CURLcode wssl_init_curves(struct Curl_easy *data,
                                  struct wssl_ctx *wctx,
-                                 struct ssl_primary_config *conn_config)
+                                 struct ssl_primary_config *conn_config,
+                                 uint8_t transport)
 {
-  char *curves = conn_config->curves;
+  char *curves = (char *)CURL_UNCONST(
+    Curl_ssl_config_get_curves(conn_config, transport));
   /* Without an explicit list, leave the key share group selection to
      wolfSSL's own default. */
   if(curves && !wssl_CTX_set1_groups_list(wctx->ssl_ctx, curves)) {
@@ -1338,7 +1340,7 @@ CURLcode Curl_wssl_ctx_init(struct wssl_ctx *wctx,
   if(result)
     goto out;
 
-  result = wssl_init_curves(data, wctx, conn_config);
+  result = wssl_init_curves(data, wctx, conn_config, transport);
   if(result)
     goto out;
 

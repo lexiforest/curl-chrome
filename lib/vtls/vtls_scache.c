@@ -233,6 +233,11 @@ static CURLcode ssl_peer_key_build(struct ssl_primary_config *ssl,
                                    char **ppeer_key)
 {
   struct dynbuf buf;
+  const char *curves = Curl_ssl_config_get_curves(ssl, peer->transport);
+  const char *signature_algorithms =
+    Curl_ssl_config_get_signature_algorithms(ssl, peer->transport);
+  const char *tls_extension_order =
+    Curl_ssl_config_get_tls_extension_order(ssl, peer->transport);
   size_t key_len;
   bool is_local = FALSE;
   CURLcode result;
@@ -276,14 +281,23 @@ static CURLcode ssl_peer_key_build(struct ssl_primary_config *ssl,
     if(result)
       goto out;
   }
-  if(ssl->curves) {
-    result = curlx_dyn_addf(&buf, ":CURVES-%s", ssl->curves);
+  if(curves) {
+    result = curlx_dyn_addf(&buf, ":CURVES-%s", curves);
     if(result)
       goto out;
   }
-  if(ssl->signature_algorithms) {
-    result = curlx_dyn_addf(&buf, ":SIGALGS-%s",
-                            ssl->signature_algorithms);
+  if(signature_algorithms) {
+    result = curlx_dyn_addf(&buf, ":SIGALGS-%s", signature_algorithms);
+    if(result)
+      goto out;
+  }
+  if(tls_extension_order) {
+    result = curlx_dyn_addf(&buf, ":EXTORDER-%s", tls_extension_order);
+    if(result)
+      goto out;
+  }
+  if(ssl->cert_compression) {
+    result = curlx_dyn_addf(&buf, ":CERTCOMP-%s", ssl->cert_compression);
     if(result)
       goto out;
   }

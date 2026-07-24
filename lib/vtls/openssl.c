@@ -4238,7 +4238,8 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
 #endif
 
   {
-    const char *curves = conn_config->curves;
+    const char *curves =
+      Curl_ssl_config_get_curves(conn_config, peer->transport);
     if(curves) {
 #ifdef HAVE_BORINGSSL_LIKE
 #define OSSL_CURVE_CAST(x) (x)
@@ -4256,7 +4257,8 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
   !defined(OPENSSL_IS_BORINGSSL)
 #define OSSL_SIGALG_CAST(x) OSSL_CURVE_CAST(x)
   {
-    const char *signature_algorithms = conn_config->signature_algorithms;
+    const char *signature_algorithms =
+      Curl_ssl_config_get_signature_algorithms(conn_config, peer->transport);
     if(signature_algorithms) {
       if(!SSL_CTX_set1_sigalgs_list(octx->ssl_ctx,
                                     OSSL_SIGALG_CAST(signature_algorithms))) {
@@ -4273,7 +4275,8 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
     uint16_t algs[MAX_SIG_ALGS];
     size_t nalgs;
     /* curl-impersonate: Set the signature algorithms (TLS extension 13). */
-    const char *signature_algorithms = conn_config->signature_algorithms;
+    const char *signature_algorithms =
+      Curl_ssl_config_get_signature_algorithms(conn_config, peer->transport);
     if(signature_algorithms) {
       CURLcode result = parse_sig_algs(data, signature_algorithms, algs,
                                        &nalgs);
@@ -4342,9 +4345,16 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
     SSL_CTX_set_permute_extensions(octx->ssl_ctx, 1);
 
   /* curl-impersonate: Set TLS extensions order. */
-  if(conn_config->tls_extension_order)
-    SSL_CTX_set_extension_order(octx->ssl_ctx,
-                                conn_config->tls_extension_order);
+  {
+    const char *extension_order = Curl_ssl_config_get_tls_extension_order(
+      conn_config, peer->transport);
+    if(extension_order &&
+       !SSL_CTX_set_extension_order(octx->ssl_ctx,
+                                    (char *)CURL_UNCONST(extension_order))) {
+      failf(data, "Invalid TLS extension order: '%s'", extension_order);
+      return CURLE_SSL_CONNECT_ERROR;
+    }
+  }
 
   if(data->set.str[STRING_TLS_DELEGATED_CREDENTIALS])
     SSL_CTX_set_delegated_credentials(
@@ -4711,8 +4721,10 @@ static CURLcode ossl_connect_step2(struct Curl_cfilter *cf,
 #endif
       else {
         result = CURLE_SSL_CONNECT_ERROR;
-        failf(data, "TLS connect error: %s",
-              ossl_strerror(errdetail, error_buffer, sizeof(error_buffer)));
+        if(errdetail)
+          failf(data, "TLS connect error: %s",
+                ossl_strerror(errdetail, error_buffer,
+                              sizeof(error_buffer)));
       }
 
       /* detail is already set to the SSL error above */
@@ -4725,10 +4737,20 @@ static CURLcode ossl_connect_step2(struct Curl_cfilter *cf,
         char extramsg[80] = "";
         int sockerr = SOCKERRNO;
 
-        if(sockerr && detail == SSL_ERROR_SYSCALL)
+        if(octx->io_result && octx->io_result != CURLE_AGAIN)
+          curl_msnprintf(extramsg, sizeof(extramsg), "%s",
+                         curl_easy_strerror(octx->io_result));
+        else if(connssl->peer_closed)
+          curl_msnprintf(extramsg, sizeof(extramsg),
+                         "Connection closed abruptly");
+        else if(sockerr && detail == SSL_ERROR_SYSCALL)
           curlx_strerror(sockerr, extramsg, sizeof(extramsg));
-        failf(data, OSSL_PACKAGE " SSL_connect: %s in connection to %s:%d ",
-              extramsg[0] ? extramsg : SSL_ERROR_to_str(detail),
+        else
+          curl_msnprintf(extramsg, sizeof(extramsg),
+                         "no transport error details available");
+        failf(data, OSSL_PACKAGE " SSL_connect: %s (%s; error queue empty) "
+              "in connection to %s:%d",
+              extramsg, SSL_ERROR_to_str(detail),
               connssl->peer.origin->hostname, connssl->peer.origin->port);
       }
 

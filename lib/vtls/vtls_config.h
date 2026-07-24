@@ -54,6 +54,9 @@ struct ssl_primary_config {
   char *curves;          /* list of curves to use */
   char *tls_extension_order; /* TLS extension order to use */
   char *cert_compression; /* certificate compression algorithms */
+  char *http3_curves;    /* HTTP/3 list of curves to use */
+  char *http3_signature_algorithms; /* HTTP/3 signature algorithms */
+  char *http3_tls_extension_order; /* HTTP/3 TLS extension order */
   uint32_t version_max; /* max supported version the client wants to use */
   uint8_t ssl_options;  /* the CURLOPT_SSL_OPTIONS bitmask */
   uint8_t version;    /* what version the client wants to use */
@@ -91,6 +94,13 @@ struct ssl_general_config {
 
 void Curl_ssl_config_init(struct ssl_primary_config *sslc);
 void Curl_ssl_config_cleanup(struct ssl_primary_config *sslc);
+
+const char *Curl_ssl_config_get_curves(
+  const struct ssl_primary_config *sslc, uint8_t transport);
+const char *Curl_ssl_config_get_signature_algorithms(
+  const struct ssl_primary_config *sslc, uint8_t transport);
+const char *Curl_ssl_config_get_tls_extension_order(
+  const struct ssl_primary_config *sslc, uint8_t transport);
 
 /**
  * Init the `data->set.ssl` and `data->set.proxy_ssl` for
