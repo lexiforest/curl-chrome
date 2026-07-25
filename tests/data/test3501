@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="US-ASCII"?>
+<testcase>
+<info>
+<keywords>
+curl-impersonate
+fingerprints.json
+</keywords>
+</info>
+
+<client>
+<name>
+Reject an invalid field in the selected local fingerprint
+</name>
+<setenv>
+IMPERSONATE_CONFIG_DIR=%PWD/%LOGDIR
+</setenv>
+<command>
+--impersonate invalid-json-fingerprint http://example.invalid/
+</command>
+<file name="%LOGDIR/fingerprints.json">
+{
+  "invalid-json-fingerprint": {
+    "tls_alpn": "not-a-boolean"
+  }
+}
+</file>
+</client>
+
+<verify>
+<errorcode>
+43
+</errorcode>
+<stderr mode="text">
+curl: (43) Invalid fingerprint target 'invalid-json-fingerprint' field 'tls_alpn'
+</stderr>
+</verify>
+</testcase>

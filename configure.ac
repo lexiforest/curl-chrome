@@ -2254,6 +2254,16 @@ AS_HELP_STRING([--disable-ca-search-safe],[Disable safe CA bundle search (defaul
 fi
 
 dnl **********************************************************************
+dnl Check for cJSON
+dnl **********************************************************************
+
+AC_CHECK_HEADERS([cjson/cJSON.h], [],
+  [AC_MSG_ERROR([cJSON headers are required for fingerprint JSON support])])
+AC_CHECK_LIB([cjson], [cJSON_ParseWithLengthOpts], [],
+  [AC_MSG_ERROR([cJSON is required for fingerprint JSON support])])
+LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE libcjson"
+
+dnl **********************************************************************
 dnl Check for libpsl
 dnl **********************************************************************
 

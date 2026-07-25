@@ -281,6 +281,8 @@ void curl_global_cleanup(void)
 
   Curl_ssh_cleanup();
 
+  Curl_impersonate_cleanup();
+
 #ifdef DEBUGBUILD
   curlx_free(leakpointer);
 #endif
@@ -331,13 +333,41 @@ CURLsslset curl_global_sslset(curl_sslbackend id, const char *name,
 /*
  * curl-impersonate: Actually call curl_easy_setopt() with all the needed options
  */
+static CURLcode set_impersonate_headers(
+  struct Curl_easy *data, CURLoption option,
+  const struct curl_slist *dynamic_headers,
+  const char * const static_headers[IMPERSONATE_MAX_HEADERS])
+{
+  struct curl_slist *headers = NULL;
+  CURLcode result = CURLE_OK;
+  int i;
+
+  if(dynamic_headers)
+    return curl_easy_setopt(data, option,
+                            (struct curl_slist *)dynamic_headers);
+
+  for(i = 0; i < IMPERSONATE_MAX_HEADERS; i++) {
+    if(static_headers[i]) {
+      struct curl_slist *newlist =
+        curl_slist_append(headers, static_headers[i]);
+      if(!newlist) {
+        result = CURLE_OUT_OF_MEMORY;
+        break;
+      }
+      headers = newlist;
+    }
+  }
+  if(!result && headers)
+    result = curl_easy_setopt(data, option, headers);
+  curl_slist_free_all(headers);
+  return result;
+}
+
 static CURLcode _do_impersonate(struct Curl_easy *data,
                         const struct impersonate_opts *opts,
                         int default_headers)
 {
-  int i;
   int ret;
-  struct curl_slist *headers = NULL;
 
   if(opts->target == NULL) {
     DEBUGF(fprintf(stderr, "Error: unknown impersonation target '%s'\n",
@@ -458,21 +488,21 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
 
   if(default_headers) {
     /* Build a linked list out of the static array of headers. */
-    for(i = 0; i < IMPERSONATE_MAX_HEADERS; i++) {
-      if(opts->http_headers[i]) {
-        headers = curl_slist_append(headers, opts->http_headers[i]);
-        if(!headers) {
-          return CURLE_OUT_OF_MEMORY;
-        }
-      }
-    }
-
-    if(headers) {
-      ret = curl_easy_setopt(data, CURLOPT_HTTPBASEHEADER, headers);
-      curl_slist_free_all(headers);
-      if(ret)
-        return ret;
-    }
+    ret = set_impersonate_headers(data, CURLOPT_HTTPBASEHEADER,
+                                  opts->dynamic_http_headers,
+                                  opts->http_headers);
+    if(ret)
+      return ret;
+    ret = set_impersonate_headers(data, CURLOPT_HTTP3_HTTPHEADER,
+                                  opts->dynamic_http3_headers,
+                                  opts->http3_headers);
+    if(ret)
+      return ret;
+    ret = set_impersonate_headers(data, CURLOPT_WS_HTTPHEADER,
+                                  opts->dynamic_ws_headers,
+                                  opts->ws_headers);
+    if(ret)
+      return ret;
   }
 
   if(opts->http2_pseudo_headers_order) {
@@ -681,6 +711,11 @@ CURLcode curl_easy_impersonate(CURL *data, const char *target,
   int ret;
   const struct impersonate_opts *opts = NULL;
   struct Curl_easy *_data = (struct Curl_easy *)data;
+  struct custom_impersonation custom;
+  bool custom_found = FALSE;
+
+  if(!_data || !target)
+    return CURLE_BAD_FUNCTION_ARGUMENT;
 
   opts = binary_search(num_impersonations, target);
 
@@ -695,6 +730,16 @@ CURLcode curl_easy_impersonate(CURL *data, const char *target,
   }
 
   if(opts == NULL) {
+    global_init_lock();
+    ret = Curl_impersonate_load_custom(_data, target, &custom, &custom_found);
+    global_init_unlock();
+    if(ret)
+      return ret;
+    if(custom_found)
+      opts = &custom.opts;
+  }
+
+  if(opts == NULL) {
     failf(_data, "Unknown impersonation target '%s'. "
           "Use a valid --impersonate target such as firefox147.", target);
     DEBUGF(fprintf(stderr, "Error: unknown impersonation target '%s'\n",
@@ -703,6 +748,8 @@ CURLcode curl_easy_impersonate(CURL *data, const char *target,
   }
 
   ret = _do_impersonate(_data, opts, default_headers);
+  if(custom_found)
+    Curl_impersonate_free_custom(&custom);
   if(ret)
     return ret;
 

@@ -1012,6 +1012,18 @@ if(ZSTD_FOUND)
   endif()
 endif()
 
+find_path(CJSON_INCLUDE_DIR NAMES cjson/cJSON.h)
+find_library(CJSON_LIBRARY NAMES cjson libcjson)
+if(NOT CJSON_INCLUDE_DIR OR NOT CJSON_LIBRARY)
+  message(FATAL_ERROR "cJSON is required for fingerprint JSON support.")
+endif()
+add_library(CURL::cjson UNKNOWN IMPORTED)
+set_target_properties(CURL::cjson PROPERTIES
+  IMPORTED_LOCATION "${CJSON_LIBRARY}"
+  INTERFACE_INCLUDE_DIRECTORIES "${CJSON_INCLUDE_DIR}")
+list(APPEND CURL_LIBS CURL::cjson)
+mark_as_advanced(CJSON_INCLUDE_DIR CJSON_LIBRARY)
+
 # Check function in an OpenSSL-like TLS backend.
 macro(curl_openssl_check_exists)
   cmake_push_check_state()
