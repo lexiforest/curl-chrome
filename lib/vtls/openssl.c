@@ -4762,6 +4762,22 @@ static CURLcode ossl_connect_step2(struct Curl_cfilter *cf,
     connssl->connecting_state = ssl_connect_3;
     Curl_ossl_report_handshake(data, octx);
 
+#ifdef OPENSSL_IS_BORINGSSL
+    {
+      const unsigned char *neg_protocol;
+      unsigned int len;
+
+      SSL_get0_alpn_selected(octx->ssl, &neg_protocol, &len);
+      if(!len ||
+         (len == ALPN_HTTP_1_1_LENGTH &&
+          !memcmp(neg_protocol, ALPN_HTTP_1_1, len))) {
+        /* Chrome permits renegotiation for HTTP/1.1 connections. Limit it
+         * to one server-initiated renegotiation. */
+        SSL_set_renegotiate_mode(octx->ssl, ssl_renegotiate_once);
+      }
+    }
+#endif
+
 #if defined(HAVE_SSL_SET1_ECH_CONFIG_LIST) && !defined(HAVE_BORINGSSL_LIKE)
     if(CURLECH_ENABLED(data)) {
       char *inner = NULL, *outer = NULL;
