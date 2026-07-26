@@ -292,6 +292,8 @@ CURLcode Curl_close(struct Curl_easy **datap)
 #endif
   /* curl-impersonate: Free the list set by CURLOPT_HTTPBASEHEADER. */
   curl_slist_free_all(data->state.base_headers);
+  curl_slist_free_all(data->state.impersonate_http3_headers);
+  curl_slist_free_all(data->state.impersonate_ws_headers);
   /* curl-impersonate: Free the dynamic list of headers. */
   curl_slist_free_all(data->state.merged_headers);
 

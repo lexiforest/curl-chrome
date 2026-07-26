@@ -335,21 +335,17 @@ CURLsslset curl_global_sslset(curl_sslbackend id, const char *name,
  */
 static CURLcode set_impersonate_headers(
   struct Curl_easy *data, CURLoption option,
-  const struct curl_slist *dynamic_headers,
-  const char * const static_headers[IMPERSONATE_MAX_HEADERS])
+  const char * const profile_headers[IMPERSONATE_MAX_HEADERS],
+  struct curl_slist **owned_headers)
 {
   struct curl_slist *headers = NULL;
   CURLcode result = CURLE_OK;
   int i;
 
-  if(dynamic_headers)
-    return curl_easy_setopt(data, option,
-                            (struct curl_slist *)dynamic_headers);
-
   for(i = 0; i < IMPERSONATE_MAX_HEADERS; i++) {
-    if(static_headers[i]) {
+    if(profile_headers[i]) {
       struct curl_slist *newlist =
-        curl_slist_append(headers, static_headers[i]);
+        curl_slist_append(headers, profile_headers[i]);
       if(!newlist) {
         result = CURLE_OUT_OF_MEMORY;
         break;
@@ -357,8 +353,13 @@ static CURLcode set_impersonate_headers(
       headers = newlist;
     }
   }
-  if(!result && headers)
+  if(!result)
     result = curl_easy_setopt(data, option, headers);
+  if(!result && owned_headers) {
+    curl_slist_free_all(*owned_headers);
+    *owned_headers = headers;
+    headers = NULL;
+  }
   curl_slist_free_all(headers);
   return result;
 }
@@ -487,20 +488,19 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
   }
 
   if(default_headers) {
-    /* Build a linked list out of the static array of headers. */
+    /* Build linked lists out of the profile header arrays. */
     ret = set_impersonate_headers(data, CURLOPT_HTTPBASEHEADER,
-                                  opts->dynamic_http_headers,
-                                  opts->http_headers);
+                                  opts->http_headers, NULL);
     if(ret)
       return ret;
     ret = set_impersonate_headers(data, CURLOPT_HTTP3_HTTPHEADER,
-                                  opts->dynamic_http3_headers,
-                                  opts->http3_headers);
+                                  opts->http3_headers,
+                                  &data->state.impersonate_http3_headers);
     if(ret)
       return ret;
     ret = set_impersonate_headers(data, CURLOPT_WS_HTTPHEADER,
-                                  opts->dynamic_ws_headers,
-                                  opts->ws_headers);
+                                  opts->ws_headers,
+                                  &data->state.impersonate_ws_headers);
     if(ret)
       return ret;
   }
@@ -711,8 +711,9 @@ CURLcode curl_easy_impersonate(CURL *data, const char *target,
   int ret;
   const struct impersonate_opts *opts = NULL;
   struct Curl_easy *_data = (struct Curl_easy *)data;
-  struct custom_impersonation custom;
-  bool custom_found = FALSE;
+  struct impersonate_opts json_opts;
+  struct curl_slist *json_strings = NULL;
+  bool json_found = FALSE;
 
   if(!_data || !target)
     return CURLE_BAD_FUNCTION_ARGUMENT;
@@ -731,12 +732,13 @@ CURLcode curl_easy_impersonate(CURL *data, const char *target,
 
   if(opts == NULL) {
     global_init_lock();
-    ret = Curl_impersonate_load_custom(_data, target, &custom, &custom_found);
+    ret = Curl_impersonate_load_json(_data, target, &json_opts,
+                                     &json_strings, &json_found);
     global_init_unlock();
     if(ret)
       return ret;
-    if(custom_found)
-      opts = &custom.opts;
+    if(json_found)
+      opts = &json_opts;
   }
 
   if(opts == NULL) {
@@ -748,8 +750,8 @@ CURLcode curl_easy_impersonate(CURL *data, const char *target,
   }
 
   ret = _do_impersonate(_data, opts, default_headers);
-  if(custom_found)
-    Curl_impersonate_free_custom(&custom);
+  if(json_found)
+    Curl_impersonate_free_json(&json_strings);
   if(ret)
     return ret;
 
@@ -1493,6 +1495,23 @@ CURL *curl_easy_duphandle(CURL *curl)
     if(!outcurl->state.base_headers)
       goto fail;
   }
+  if(data->state.impersonate_http3_headers) {
+    outcurl->state.impersonate_http3_headers =
+      Curl_slist_duplicate(data->state.impersonate_http3_headers);
+    if(!outcurl->state.impersonate_http3_headers)
+      goto fail;
+    if(data->set.http3_headers == data->state.impersonate_http3_headers)
+      outcurl->set.http3_headers =
+        outcurl->state.impersonate_http3_headers;
+  }
+  if(data->state.impersonate_ws_headers) {
+    outcurl->state.impersonate_ws_headers =
+      Curl_slist_duplicate(data->state.impersonate_ws_headers);
+    if(!outcurl->state.impersonate_ws_headers)
+      goto fail;
+    if(data->set.ws_headers == data->state.impersonate_ws_headers)
+      outcurl->set.ws_headers = outcurl->state.impersonate_ws_headers;
+  }
 
   /* Reinitialize an SSL engine for the new handle
    * note: the engine name has already been copied by dupset */
@@ -1542,6 +1561,9 @@ fail:
     curlx_dyn_free(&outcurl->state.headerb);
     Curl_altsvc_cleanup(&outcurl->asi);
     Curl_hsts_cleanup(&outcurl->hsts);
+    curl_slist_free_all(outcurl->state.base_headers);
+    curl_slist_free_all(outcurl->state.impersonate_http3_headers);
+    curl_slist_free_all(outcurl->state.impersonate_ws_headers);
     Curl_freeset(outcurl);
     curlx_free(outcurl);
   }
@@ -1567,6 +1589,14 @@ void curl_easy_reset(CURL *curl)
 
   /* clear all meta data */
   Curl_meta_reset(data);
+  curl_slist_free_all(data->state.base_headers);
+  data->state.base_headers = NULL;
+  curl_slist_free_all(data->state.impersonate_http3_headers);
+  data->state.impersonate_http3_headers = NULL;
+  curl_slist_free_all(data->state.impersonate_ws_headers);
+  data->state.impersonate_ws_headers = NULL;
+  curl_slist_free_all(data->state.merged_headers);
+  data->state.merged_headers = NULL;
   /* zero out UserDefined data: */
   Curl_freeset(data);
   memset(&data->set, 0, sizeof(struct UserDefined));

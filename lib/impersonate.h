@@ -70,20 +70,9 @@ struct impersonate_opts {
   bool proxy_credential_no_reuse;  // do not reuse TLS sessions or connections from different proxy credentials
   bool split_cookies;  // split cookies into one Cookie header per pair
   const char *form_boundary;
-  const struct curl_slist *dynamic_http_headers;
-  const struct curl_slist *dynamic_http3_headers;
-  const struct curl_slist *dynamic_ws_headers;
 
   /* Other TLS options will come here in the future once they are
    * configurable through curl_easy_setopt() */
-};
-
-struct custom_impersonation {
-  struct impersonate_opts opts;
-  struct curl_slist *owned_strings;
-  struct curl_slist *http_headers;
-  struct curl_slist *http3_headers;
-  struct curl_slist *ws_headers;
 };
 
 /*
@@ -93,11 +82,12 @@ struct custom_impersonation {
 extern const struct impersonate_opts impersonations[];
 extern const size_t num_impersonations;
 
-CURLcode Curl_impersonate_load_custom(struct Curl_easy *data,
-                                      const char *target,
-                                      struct custom_impersonation *custom,
-                                      bool *found);
-void Curl_impersonate_free_custom(struct custom_impersonation *custom);
+CURLcode Curl_impersonate_load_json(struct Curl_easy *data,
+                                    const char *target,
+                                    struct impersonate_opts *opts,
+                                    struct curl_slist **owned_strings,
+                                    bool *found);
+void Curl_impersonate_free_json(struct curl_slist **owned_strings);
 void Curl_impersonate_cleanup(void);
 
 #endif /* HEADER_CURL_IMPERSONATE_H */

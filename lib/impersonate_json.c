@@ -145,25 +145,25 @@ static CURLcode cache_load(void)
   return result;
 }
 
-static CURLcode custom_take_string(struct custom_impersonation *custom,
-                                   char *value, const char **stored)
+static CURLcode owned_take_string(struct curl_slist **owned_strings,
+                                  char *value, const char **stored)
 {
   struct curl_slist *list;
   if(!value)
     return CURLE_OUT_OF_MEMORY;
-  list = Curl_slist_append_nodup(custom->owned_strings, value);
+  list = Curl_slist_append_nodup(*owned_strings, value);
   if(!list) {
     curlx_free(value);
     return CURLE_OUT_OF_MEMORY;
   }
-  custom->owned_strings = list;
+  *owned_strings = list;
   *stored = value;
   return CURLE_OK;
 }
 
-static CURLcode custom_store_string(struct custom_impersonation *custom,
-                                    const char *value, bool empty_is_null,
-                                    const char **stored)
+static CURLcode owned_store_string(struct curl_slist **owned_strings,
+                                   const char *value, bool empty_is_null,
+                                   const char **stored)
 {
   char *copy;
 
@@ -172,7 +172,7 @@ static CURLcode custom_store_string(struct custom_impersonation *custom,
     return CURLE_OK;
   }
   copy = curlx_strdup(value);
-  return custom_take_string(custom, copy, stored);
+  return owned_take_string(owned_strings, copy, stored);
 }
 
 static CURLcode append_normalized_group(struct dynbuf *out,
@@ -184,7 +184,7 @@ static CURLcode append_normalized_group(struct dynbuf *out,
 }
 
 static CURLcode value_string_array(const cJSON *value,
-                                   struct custom_impersonation *custom,
+                                   struct curl_slist **owned_strings,
                                    char separator, bool normalize_groups,
                                    bool empty_is_null,
                                    const char **stored)
@@ -220,7 +220,7 @@ static CURLcode value_string_array(const cJSON *value,
   else {
     char *joined_value = first ? curlx_strdup("") :
       curlx_dyn_take(&joined, NULL);
-    result = custom_take_string(custom, joined_value, stored);
+    result = owned_take_string(owned_strings, joined_value, stored);
   }
 out:
   curlx_dyn_free(&joined);
@@ -228,55 +228,53 @@ out:
 }
 
 static CURLcode value_headers(const cJSON *value,
-                              struct curl_slist **headers,
+                              struct curl_slist **owned_strings,
+                              const char *headers[IMPERSONATE_MAX_HEADERS],
                               bool skip_empty_host)
 {
   const cJSON *item;
+  size_t index = 0;
 
   if(!cJSON_IsObject(value))
     return CURLE_BAD_FUNCTION_ARGUMENT;
   cJSON_ArrayForEach(item, value) {
     char *line;
-    struct curl_slist *list;
 
     if(!item->string || !item->string[0] || !cJSON_IsString(item))
       return CURLE_BAD_FUNCTION_ARGUMENT;
     if(skip_empty_host && !item->valuestring[0] &&
        curl_strequal(item->string, "Host"))
       continue;
+    if(index == IMPERSONATE_MAX_HEADERS)
+      return CURLE_BAD_FUNCTION_ARGUMENT;
     line = curl_maprintf("%s: %s", item->string, item->valuestring);
-    if(!line)
+    if(owned_take_string(owned_strings, line, &headers[index]))
       return CURLE_OUT_OF_MEMORY;
-    list = Curl_slist_append_nodup(*headers, line);
-    if(!list) {
-      curlx_free(line);
-      return CURLE_OUT_OF_MEMORY;
-    }
-    *headers = list;
+    index++;
   }
   return CURLE_OK;
 }
 
 static CURLcode value_plain_string(const cJSON *value,
-                                   struct custom_impersonation *custom,
+                                   struct curl_slist **owned_strings,
                                    bool empty_is_null,
                                    const char **stored)
 {
   if(!cJSON_IsString(value))
     return CURLE_BAD_FUNCTION_ARGUMENT;
-  return custom_store_string(custom, value->valuestring, empty_is_null,
-                             stored);
+  return owned_store_string(owned_strings, value->valuestring, empty_is_null,
+                            stored);
 }
 
 static CURLcode value_nullable_string(const cJSON *value,
-                                      struct custom_impersonation *custom,
+                                      struct curl_slist **owned_strings,
                                       const char **stored)
 {
   if(cJSON_IsNull(value)) {
     *stored = NULL;
     return CURLE_OK;
   }
-  return value_plain_string(value, custom, FALSE, stored);
+  return value_plain_string(value, owned_strings, FALSE, stored);
 }
 
 static CURLcode value_bool(const cJSON *value, bool *stored)
@@ -299,7 +297,7 @@ static CURLcode value_integer(const cJSON *value, int *stored,
 }
 
 static CURLcode value_extension_order(const cJSON *value,
-                                      struct custom_impersonation *custom,
+                                      struct curl_slist **owned_strings,
                                       const char **stored)
 {
   char *copy;
@@ -344,7 +342,7 @@ static CURLcode value_extension_order(const cJSON *value,
     *stored = NULL;
     goto out_no_copy;
   }
-  result = custom_take_string(custom, copy, stored);
+  result = owned_take_string(owned_strings, copy, stored);
 out_no_copy:
   curlx_dyn_free(&filtered);
   return result;
@@ -354,7 +352,7 @@ out:
 }
 
 static CURLcode value_pseudo_order(const cJSON *value,
-                                   struct custom_impersonation *custom,
+                                   struct curl_slist **owned_strings,
                                    const char **stored)
 {
   char *copy;
@@ -378,7 +376,7 @@ static CURLcode value_pseudo_order(const cJSON *value,
     *stored = NULL;
     return CURLE_OK;
   }
-  return custom_take_string(custom, copy, stored);
+  return owned_take_string(owned_strings, copy, stored);
 }
 
 static void normalize_tls_version(char *version)
@@ -396,10 +394,22 @@ static void normalize_tls_version(char *version)
 }
 
 static CURLcode parse_field(const cJSON *value, const char *name,
-                            struct custom_impersonation *custom)
+                            struct impersonate_opts *opts,
+                            struct curl_slist **owned_strings)
 {
-  struct impersonate_opts *opts = &custom->opts;
-
+  if(!strcmp(name, "http_version")) {
+    if(!cJSON_IsString(value))
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    if(!strcmp(value->valuestring, "v1"))
+      opts->httpversion = CURL_HTTP_VERSION_1_1;
+    else if(!strcmp(value->valuestring, "v2"))
+      opts->httpversion = CURL_HTTP_VERSION_2_0;
+    else if(!strcmp(value->valuestring, "v3"))
+      opts->httpversion = CURL_HTTP_VERSION_3;
+    else
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    return CURLE_OK;
+  }
   if(!strcmp(name, "tls_version")) {
     char *version;
     CURLcode result = CURLE_OK;
@@ -434,7 +444,7 @@ static CURLcode parse_field(const cJSON *value, const char *name,
     return result;
   }
   if(!strcmp(name, "tls_ciphers"))
-    return value_string_array(value, custom, ':', FALSE, TRUE,
+    return value_string_array(value, owned_strings, ':', FALSE, TRUE,
                               &opts->ciphers);
   if(!strcmp(name, "tls_alpn"))
     return value_bool(value, &opts->alpn);
@@ -451,38 +461,41 @@ static CURLcode parse_field(const cJSON *value, const char *name,
   if(!strcmp(name, "tls_signed_cert_timestamps"))
     return value_bool(value, &opts->tls_signed_cert_timestamps);
   if(!strcmp(name, "tls_cert_compression"))
-    return value_string_array(value, custom, ',', FALSE, FALSE,
+    return value_string_array(value, owned_strings, ',', FALSE, FALSE,
                               &opts->cert_compression);
   if(!strcmp(name, "tls_signature_hashes"))
-    return value_string_array(value, custom, ',', FALSE, TRUE,
+    return value_string_array(value, owned_strings, ',', FALSE, TRUE,
                               &opts->sig_hash_algs);
   if(!strcmp(name, "tls_supported_groups"))
-    return value_string_array(value, custom, ':', TRUE, TRUE,
+    return value_string_array(value, owned_strings, ':', TRUE, TRUE,
                               &opts->curves);
   if(!strcmp(name, "tls_delegated_credentials"))
-    return value_string_array(value, custom, ':', FALSE, TRUE,
+    return value_string_array(value, owned_strings, ':', FALSE, TRUE,
                               &opts->tls_delegated_credentials);
   if(!strcmp(name, "tls_extension_order"))
-    return value_extension_order(value, custom, &opts->tls_extension_order);
+    return value_extension_order(value, owned_strings,
+                                 &opts->tls_extension_order);
   if(!strcmp(name, "tls_ech"))
-    return value_nullable_string(value, custom, &opts->ech);
+    return value_nullable_string(value, owned_strings, &opts->ech);
   if(!strcmp(name, "tls_key_shares_limit"))
     return value_integer(value, &opts->tls_key_shares_limit, FALSE);
   if(!strcmp(name, "tls_record_size_limit"))
     return value_integer(value, &opts->tls_record_size_limit, TRUE);
   if(!strcmp(name, "headers"))
-    return value_headers(value, &custom->http_headers, TRUE);
+    return value_headers(value, owned_strings, opts->http_headers, TRUE);
   if(!strcmp(name, "header_order"))
-    return value_plain_string(value, custom, TRUE,
+    return value_plain_string(value, owned_strings, TRUE,
                               &opts->http_header_order);
   if(!strcmp(name, "split_cookies"))
     return value_bool(value, &opts->split_cookies);
   if(!strcmp(name, "form_boundary"))
-    return value_plain_string(value, custom, TRUE, &opts->form_boundary);
+    return value_plain_string(value, owned_strings, TRUE,
+                              &opts->form_boundary);
   if(!strcmp(name, "http2_settings"))
-    return value_plain_string(value, custom, TRUE, &opts->http2_settings);
+    return value_plain_string(value, owned_strings, TRUE,
+                              &opts->http2_settings);
   if(!strcmp(name, "http2_pseudo_headers_order"))
-    return value_pseudo_order(value, custom,
+    return value_pseudo_order(value, owned_strings,
                               &opts->http2_pseudo_headers_order);
   if(!strcmp(name, "http2_window_update"))
     return value_integer(value, &opts->http2_window_update, FALSE);
@@ -493,98 +506,95 @@ static CURLcode parse_field(const cJSON *value, const char *name,
   if(!strcmp(name, "http2_no_priority"))
     return value_bool(value, &opts->http2_no_priority);
   if(!strcmp(name, "http3_settings"))
-    return value_plain_string(value, custom, TRUE, &opts->http3_settings);
+    return value_plain_string(value, owned_strings, TRUE,
+                              &opts->http3_settings);
   if(!strcmp(name, "http3_pseudo_headers_order"))
-    return value_pseudo_order(value, custom,
+    return value_pseudo_order(value, owned_strings,
                               &opts->http3_pseudo_headers_order);
   if(!strcmp(name, "http3_tls_extension_order"))
-    return value_plain_string(value, custom, TRUE,
+    return value_plain_string(value, owned_strings, TRUE,
                               &opts->http3_tls_extension_order);
   if(!strcmp(name, "http3_headers"))
-    return value_headers(value, &custom->http3_headers, FALSE);
+    return value_headers(value, owned_strings, opts->http3_headers, FALSE);
   if(!strcmp(name, "http3_header_order"))
-    return value_plain_string(value, custom, TRUE,
+    return value_plain_string(value, owned_strings, TRUE,
                               &opts->http3_http_header_order);
   if(!strcmp(name, "http3_tls_supported_groups"))
-    return value_string_array(value, custom, ':', TRUE, TRUE,
+    return value_string_array(value, owned_strings, ':', TRUE, TRUE,
                               &opts->http3_curves);
   if(!strcmp(name, "quic_transport_parameters"))
-    return value_plain_string(value, custom, TRUE,
+    return value_plain_string(value, owned_strings, TRUE,
                               &opts->quic_transport_parameters);
   if(!strcmp(name, "ws_headers"))
-    return value_headers(value, &custom->ws_headers, FALSE);
+    return value_headers(value, owned_strings, opts->ws_headers, FALSE);
   if(!strcmp(name, "ws_header_order"))
-    return value_plain_string(value, custom, TRUE,
+    return value_plain_string(value, owned_strings, TRUE,
                               &opts->ws_http_header_order);
   if(!strcmp(name, "ws_disable_session_ticket"))
     return value_bool(value, &opts->ws_disable_session_ticket);
   if(!strcmp(name, "ws_tls_cert_compression")) {
     if(cJSON_IsNull(value))
       return CURLE_OK;
-    return value_string_array(value, custom, ',', FALSE, FALSE,
+    return value_string_array(value, owned_strings, ',', FALSE, FALSE,
                               &opts->ws_cert_compression);
   }
-  if(!strcmp(name, "client") || !strcmp(name, "client_version") ||
-     !strcmp(name, "os") || !strcmp(name, "os_version") ||
-     !strcmp(name, "http_version") || !strcmp(name, "header_lang"))
-    return CURLE_OK;
-
-  return CURLE_OK;
+  return CURLE_BAD_FUNCTION_ARGUMENT;
 }
 
 static CURLcode parse_target(struct Curl_easy *data, const char *target,
                              const cJSON *target_value,
-                             struct custom_impersonation *custom)
+                             struct impersonate_opts *opts,
+                             struct curl_slist **owned_strings)
 {
   const cJSON *field;
   CURLcode result;
 
-  memset(custom, 0, sizeof(*custom));
-  custom->opts.target = target;
-  custom->opts.alias = target;
-  custom->opts.httpversion = CURL_HTTP_VERSION_NONE;
-  custom->opts.ssl_version = CURL_SSLVERSION_TLSv1_2 |
+  memset(opts, 0, sizeof(*opts));
+  *owned_strings = NULL;
+  opts->target = target;
+  opts->alias = target;
+  opts->httpversion = CURL_HTTP_VERSION_NONE;
+  opts->ssl_version = CURL_SSLVERSION_TLSv1_2 |
     CURL_SSLVERSION_MAX_DEFAULT;
-  custom->opts.tls_key_shares_limit = 2;
-  result = custom_take_string(custom, curlx_strdup(""),
-                              &custom->opts.cert_compression);
+  opts->tls_key_shares_limit = 2;
+  result = owned_take_string(owned_strings, curlx_strdup(""),
+                             &opts->cert_compression);
   if(result) {
-    Curl_impersonate_free_custom(custom);
+    Curl_impersonate_free_json(owned_strings);
     return result;
   }
   if(!cJSON_IsObject(target_value)) {
     failf(data, "Fingerprint target '%s' must be a JSON object", target);
-    Curl_impersonate_free_custom(custom);
+    Curl_impersonate_free_json(owned_strings);
     return CURLE_BAD_FUNCTION_ARGUMENT;
   }
 
   cJSON_ArrayForEach(field, target_value) {
-    result = parse_field(field, field->string, custom);
+    result = parse_field(field, field->string, opts, owned_strings);
     if(result) {
       failf(data, "Invalid fingerprint target '%s' field '%s'",
             target, field->string);
-      Curl_impersonate_free_custom(custom);
+      Curl_impersonate_free_json(owned_strings);
       return result;
     }
   }
-  if(custom->opts.tls_permute_extensions)
-    custom->opts.tls_extension_order = NULL;
-  custom->opts.dynamic_http_headers = custom->http_headers;
-  custom->opts.dynamic_http3_headers = custom->http3_headers;
-  custom->opts.dynamic_ws_headers = custom->ws_headers;
+  if(opts->tls_permute_extensions)
+    opts->tls_extension_order = NULL;
   return CURLE_OK;
 }
 
-CURLcode Curl_impersonate_load_custom(struct Curl_easy *data,
-                                      const char *target,
-                                      struct custom_impersonation *custom,
-                                      bool *found)
+CURLcode Curl_impersonate_load_json(struct Curl_easy *data,
+                                    const char *target,
+                                    struct impersonate_opts *opts,
+                                    struct curl_slist **owned_strings,
+                                    bool *found)
 {
   CURLcode result = cache_load();
   const cJSON *match;
 
   *found = FALSE;
-  memset(custom, 0, sizeof(*custom));
+  *owned_strings = NULL;
+  memset(opts, 0, sizeof(*opts));
   if(result) {
     failf(data, "Failed loading fingerprints from '%s'",
           fp_cache.path ? fp_cache.path : "(unknown)");
@@ -596,18 +606,15 @@ CURLcode Curl_impersonate_load_custom(struct Curl_easy *data,
   if(!match)
     return CURLE_OK;
   *found = TRUE;
-  return parse_target(data, target, match, custom);
+  return parse_target(data, target, match, opts, owned_strings);
 }
 
-void Curl_impersonate_free_custom(struct custom_impersonation *custom)
+void Curl_impersonate_free_json(struct curl_slist **owned_strings)
 {
-  if(!custom)
+  if(!owned_strings)
     return;
-  curl_slist_free_all(custom->owned_strings);
-  curl_slist_free_all(custom->http_headers);
-  curl_slist_free_all(custom->http3_headers);
-  curl_slist_free_all(custom->ws_headers);
-  memset(custom, 0, sizeof(*custom));
+  curl_slist_free_all(*owned_strings);
+  *owned_strings = NULL;
 }
 
 void Curl_impersonate_cleanup(void)
