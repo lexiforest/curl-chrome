@@ -293,6 +293,7 @@ static const struct LongShort aliases[]= {
   {"proxy1.0",                   ARG_STRG, ' ', C_PROXY1_0},
   {"proxytunnel",                ARG_BOOL, 'p', C_PROXYTUNNEL},
   {"pubkey",                     ARG_STRG, ' ', C_PUBKEY},
+  {"quic-cid-length",            ARG_STRG|ARG_TLS, ' ', C_QUIC_CID_LENGTH},  // curl-impersonate
   {"quic-transport-params",      ARG_STRG|ARG_TLS, ' ', C_QUIC_TRANSPORT_PARAMETERS},  // curl-impersonate
   {"quote",                      ARG_STRG, 'Q', C_QUOTE},
   {"random-file",                ARG_FILE|ARG_DEPR, ' ', C_RANDOM_FILE},
@@ -2840,6 +2841,11 @@ static ParameterError opt_string(struct OperationConfig *config,
     break;
   case C_WS_HTTPHEADER_ORDER:  /* --ws-httpheader-order curl-impersonate */
     err = getstr(&config->ws_http_header_order, nextarg, ALLOW_BLANK);
+    break;
+  case C_QUIC_CID_LENGTH:  /* --quic-cid-length curl-impersonate */
+    if(!feature_http3)
+      return PARAM_LIBCURL_DOESNT_SUPPORT;
+    err = getstr(&config->quic_cid_length, nextarg, DENY_BLANK);
     break;
   case C_QUIC_TRANSPORT_PARAMETERS:  /* --quic-transport-params curl-impersonate */
     if(!feature_http3)

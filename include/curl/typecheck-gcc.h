@@ -441,6 +441,7 @@ CURLWARNING(Wcurl_easy_getinfo_err_curl_off_t,
    (option) == CURLOPT_HTTP3_SIG_HASH_ALGS ||                           \
    (option) == CURLOPT_HTTP3_SSL_EC_CURVES ||                           \
    (option) == CURLOPT_HTTP3_TLS_EXTENSION_ORDER ||                     \
+   (option) == CURLOPT_QUIC_CID_LENGTH ||                               \
    (option) == CURLOPT_QUIC_TRANSPORT_PARAMETERS ||                     \
    (option) == CURLOPT_WS_HTTPHEADER_ORDER ||                           \
    (option) == CURLOPT_WS_SSL_CERT_COMPRESSION ||                       \

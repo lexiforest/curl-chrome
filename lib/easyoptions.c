@@ -273,6 +273,7 @@ const struct curl_easyoption Curl_easyopts[] = {
   { "PROXY_TRANSFER_MODE", CURLOPT_PROXY_TRANSFER_MODE, CURLOT_LONG, 0 },
   { "PUT", CURLOPT_PUT, CURLOT_LONG, 0 },
   { "QUICK_EXIT", CURLOPT_QUICK_EXIT, CURLOT_LONG, 0 },
+  { "QUIC_CID_LENGTH", CURLOPT_QUIC_CID_LENGTH, CURLOT_STRING, 0 },
   { "QUIC_TRANSPORT_PARAMETERS", CURLOPT_QUIC_TRANSPORT_PARAMETERS,
     CURLOT_STRING, 0 },
   { "QUOTE", CURLOPT_QUOTE, CURLOT_SLIST, 0 },
@@ -435,6 +436,6 @@ const struct curl_easyoption Curl_easyopts[] = {
  */
 int Curl_easyopts_check(void)
 {
-  return (CURLOPT_LASTENTRY % 10000) != (1037 + 1);
+  return (CURLOPT_LASTENTRY % 10000) != (1038 + 1);
 }
 #endif

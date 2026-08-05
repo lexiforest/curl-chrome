@@ -120,6 +120,7 @@ static void free_config_fields(struct OperationConfig *config)
   curlx_safefree(config->http3_ssl_ec_curves);
   curlx_safefree(config->http3_sig_hash_algs);
   curlx_safefree(config->http3_tls_extension_order);
+  curlx_safefree(config->quic_cid_length);
   curlx_safefree(config->quic_transport_parameters);
   curlx_safefree(config->ws_http_header_order);
   curlx_safefree(config->tls_extension_order);

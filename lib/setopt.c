@@ -2742,6 +2742,10 @@ static CURLcode setopt_cptr_impersonate(struct Curl_easy *data,
     return Curl_setstropt(&s->str[STRING_HTTP3_PSEUDO_HEADERS_ORDER], ptr);
   case CURLOPT_HTTP3_SETTINGS:
     return Curl_setstropt(&s->str[STRING_HTTP3_SETTINGS], ptr);
+  case CURLOPT_QUIC_CID_LENGTH:
+    if(ptr && strcmp(ptr, "webkit") && strcmp(ptr, "firefox"))
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    return Curl_setstropt(&s->str[STRING_QUIC_CID_LENGTH], ptr);
   case CURLOPT_QUIC_TRANSPORT_PARAMETERS:
     return Curl_setstropt(&s->str[STRING_QUIC_TRANSPORT_PARAMETERS], ptr);
   case CURLOPT_HTTP3_SIG_HASH_ALGS:
