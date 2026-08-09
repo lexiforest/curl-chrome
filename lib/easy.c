@@ -524,6 +524,13 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
       return ret;
   }
 
+  if(opts->quic_cid_length) {
+    ret = curl_easy_setopt(data, CURLOPT_QUIC_CID_LENGTH,
+                           opts->quic_cid_length);
+    if(ret)
+      return ret;
+  }
+
   if(opts->quic_transport_parameters) {
     ret = curl_easy_setopt(data, CURLOPT_QUIC_TRANSPORT_PARAMETERS,
                            opts->quic_transport_parameters);

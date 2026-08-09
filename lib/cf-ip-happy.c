@@ -479,13 +479,13 @@ evaluate:
       CURL_TRC_CF(data, cf, "check for next A address: %s",
                   ai ? "found" : "none");
     }
-    /* We are (re-)starting attempts. We are not interested in
-     * keeping old failure information. The new attempt will either
-     * succeed or persist new failure. */
-    Curl_reset_fail(data);
-
     if(ai) {  /* try another address */
       struct Curl_sockaddr_ex addr;
+
+      /* We are (re-)starting attempts. We are not interested in
+       * keeping old failure information. The new attempt will either
+       * succeed or persist new failure. */
+      Curl_reset_fail(data);
 
       /* Discard oldest to make room for new attempt */
       if(bs->max_concurrent)

@@ -2413,6 +2413,9 @@ typedef enum {
   /* curl-impersonate: WebSocket-specific TLS certificate compression. */
   CURLOPT(CURLOPT_WS_SSL_CERT_COMPRESSION, CURLOPTTYPE_STRINGPOINT, 1037),
 
+  /* curl-impersonate: QUIC initial connection ID length profile. */
+  CURLOPT(CURLOPT_QUIC_CID_LENGTH, CURLOPTTYPE_STRINGPOINT, 1038),
+
   CURLOPT_LASTENTRY /* the last unused */
 } CURLoption;
 

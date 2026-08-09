@@ -1621,21 +1621,42 @@ static CURLcode cf_connect_start(struct Curl_cfilter *cf,
   int rc;
   int rv;
   CURLcode result;
+  const char *cid_profile = data->set.str[STRING_QUIC_CID_LENGTH];
+  size_t dcidlen = NGTCP2_MAX_CIDLEN;
+  size_t scidlen = NGTCP2_MAX_CIDLEN;
   const struct Curl_sockaddr_ex *sockaddr = NULL;
   int qfd;
   static const struct alpn_spec ALPN_SPEC_H3 = { { "h3" }, 1 };
 
   DEBUGASSERT(ctx->initialized);
-  ctx->dcid.datalen = NGTCP2_MAX_CIDLEN;
-  result = Curl_rand(data, ctx->dcid.data, NGTCP2_MAX_CIDLEN);
+  if(cid_profile) {
+    if(!strcmp(cid_profile, "webkit")) {
+      dcidlen = 8;
+      scidlen = 0;
+    }
+    else if(!strcmp(cid_profile, "firefox")) {
+      unsigned char v;
+
+      result = Curl_rand(data, &v, sizeof(v));
+      if(result)
+        return result;
+      dcidlen = 5 + (v & (v >> 4));
+      if(dcidlen < 8)
+        dcidlen = 8;
+      scidlen = 3;
+    }
+  }
+
+  ctx->dcid.datalen = dcidlen;
+  result = Curl_rand(data, ctx->dcid.data, ctx->dcid.datalen);
   if(result)
     return result;
 
-  ctx->scid.datalen = NGTCP2_MAX_CIDLEN;
-  if(quic_has_empty_initial_scid(
+  ctx->scid.datalen = scidlen;
+  if(!cid_profile && quic_has_empty_initial_scid(
        data->set.str[STRING_QUIC_TRANSPORT_PARAMETERS]))
     ctx->scid.datalen = 0;
-  else {
+  if(ctx->scid.datalen) {
     result = Curl_rand(data, ctx->scid.data, ctx->scid.datalen);
     if(result)
       return result;
