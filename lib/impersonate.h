@@ -53,6 +53,7 @@ struct impersonate_opts {
   const char *quic_cid_length;
   const char *quic_transport_parameters;
   bool tls_permute_extensions;
+  bool http3_tls_permute_extensions;
   bool tls_use_new_alps_codepoint;
   bool tls_signed_cert_timestamps;
   const char *ech;

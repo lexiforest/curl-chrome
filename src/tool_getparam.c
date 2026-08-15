@@ -366,6 +366,7 @@ static const struct LongShort aliases[]= {
   {"tls-key-shares-limit",       ARG_STRG, ' ', C_TLS_KEY_SHARES_LIMIT},  // curl-impersonate
   {"tls-max",                    ARG_STRG|ARG_TLS, ' ', C_TLS_MAX},
   {"tls-permute-extensions",     ARG_BOOL, ' ', C_TLS_PERMUTE_EXTENSIONS},  // curl-impersonate
+  {"http3-permute-extensions",     ARG_BOOL, ' ', C_HTTP3_TLS_PERMUTE_EXTENSIONS},  // curl-impersonate
   {"tls-record-size-limit",      ARG_STRG, ' ', C_TLS_RECORD_SIZE_LIMIT},  // curl-impersonate
   {"tls-session-ticket",         ARG_BOOL, ' ', C_TLS_SESSION_TICKET},  // curl-impersonate
   {"tls-signed-cert-timestamps", ARG_BOOL, ' ', C_TLS_SIGNED_CERT_TIMESTAMPS}, // curl-impersonate
@@ -2069,6 +2070,9 @@ static ParameterError opt_bool(struct OperationConfig *config,
     break;
   case C_TLS_PERMUTE_EXTENSIONS:  /* --tls-permute-extensions curl-impersonate */
     config->ssl_permute_extensions = toggle;
+    break;
+  case C_HTTP3_TLS_PERMUTE_EXTENSIONS:  /* --http3-permute-extensions curl-impersonate */
+    config->http3_tls_permute_extensions = toggle;
     break;
   case C_TLS_GREASE:  /* --tls-grease curl-impersonate */
     config->tls_grease = toggle;

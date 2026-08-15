@@ -890,6 +890,9 @@ static CURLcode setopt_long_bool(struct Curl_easy *data, CURLoption option,
   case CURLOPT_SSL_PERMUTE_EXTENSIONS:
     s->ssl_permute_extensions = enabled;
     break;
+  case CURLOPT_HTTP3_TLS_PERMUTE_EXTENSIONS:
+    s->http3_tls_permute_extensions = enabled;
+    break;
   case CURLOPT_TLS_GREASE:
     s->tls_grease = enabled;
     break;

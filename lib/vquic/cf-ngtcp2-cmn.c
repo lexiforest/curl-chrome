@@ -680,7 +680,7 @@ static CURLcode quic_transport_params_from_string(ngtcp2_transport_params *t,
                                                   struct Curl_easy *data)
 {
   const char *params = data->set.str[STRING_QUIC_TRANSPORT_PARAMETERS];
-  bool permute = data->set.ssl_permute_extensions;
+  bool permute = data->set.http3_tls_permute_extensions;
   char *tmp;
   char *p;
   char **tokens = NULL;

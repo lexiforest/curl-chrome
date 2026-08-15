@@ -156,6 +156,7 @@ struct OperationConfig {
   char *quic_transport_parameters;
   char *ws_http_header_order;
   bool ws_disable_session_ticket;
+  bool http3_tls_permute_extensions;
   char *impersonate;
   bool http2_no_priority;
   bool tls_grease;
