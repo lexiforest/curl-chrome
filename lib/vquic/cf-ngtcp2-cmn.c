@@ -264,6 +264,7 @@ static CURLcode quic_apply_transport_param(ngtcp2_transport_params *t,
   case 0x0d: /* preferred_address (server only) */
   case 0x10: /* retry_source_connection_id (server only) */
   case 0x11: /* version_information (server only) */
+  case 0xff73db: /* version_information_draft (server only) */
     failf(data, "QUIC transport param %" PRIu64 " is server-only",
           (uint64_t)id);
     return CURLE_BAD_FUNCTION_ARGUMENT;
