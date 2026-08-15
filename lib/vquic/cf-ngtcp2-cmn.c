@@ -350,6 +350,7 @@ static CURLcode quic_apply_transport_param(ngtcp2_transport_params *t,
 #define QUIC_VARINT_MAX UINT64_C(0x3fffffffffffffff)
 #define QUIC_TP_INITIAL_SOURCE_CONNECTION_ID UINT64_C(0x0f)
 #define QUIC_TP_VERSION_INFORMATION          UINT64_C(0x11)
+#define QUIC_TP_VERSION_INFORMATION_DRAFT    UINT64_C(0xff73db)
 #define QUIC_TP_INITIAL_RTT                  UINT64_C(0x3127)
 #define QUIC_TP_GOOGLE_VERSION               UINT64_C(0x4752)
 #define QUIC_TP_GREASE_ID_BASE              UINT64_C(27)
@@ -601,6 +602,7 @@ static CURLcode quic_parse_version_token(const char *tok,
 }
 
 static CURLcode quic_append_version_information(struct dynbuf *raw,
+                                                uint64_t id,
                                                 const char *value_str,
                                                 struct Curl_easy *data)
 {
@@ -664,7 +666,7 @@ static CURLcode quic_append_version_information(struct dynbuf *raw,
     goto out;
   }
 
-  result = quic_raw_append_param_bytes(raw, QUIC_TP_VERSION_INFORMATION,
+  result = quic_raw_append_param_bytes(raw, id,
                                        (const uint8_t *)curlx_dyn_ptr(&vb),
                                        curlx_dyn_len(&vb));
 
@@ -784,7 +786,7 @@ static CURLcode quic_transport_params_from_string(ngtcp2_transport_params *t,
               (curl_strequal(value_str, "AUTO") ||
                curl_strequal(value_str, "RANDOM")))
         value_is_initial_rtt_auto = TRUE;
-      else if(id == QUIC_TP_VERSION_INFORMATION) {
+      else if(id == QUIC_TP_VERSION_INFORMATION || id == QUIC_TP_VERSION_INFORMATION_DRAFT) {
         /* Parsed by dedicated handler below. */
       }
       else if(value_str[0] == '0' && (value_str[1] == 'x' ||
@@ -799,8 +801,8 @@ static CURLcode quic_transport_params_from_string(ngtcp2_transport_params *t,
       }
     }
 
-    if(has_value && id == QUIC_TP_VERSION_INFORMATION) {
-      result = quic_append_version_information(raw, value_str, data);
+    if(has_value && (id == QUIC_TP_VERSION_INFORMATION || id == QUIC_TP_VERSION_INFORMATION_DRAFT)) {
+      result = quic_append_version_information(raw, id, value_str, data);
       if(result)
         goto out;
       continue;
