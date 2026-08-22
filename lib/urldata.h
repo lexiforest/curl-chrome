@@ -948,12 +948,6 @@ enum dupblob {
   BLOB_LAST
 };
 
-enum http3_tls_permute_extensions {
-  CURL_HTTP3_TLS_PERMUTE_FALLBACK = -1,
-  CURL_HTTP3_TLS_PERMUTE_DISABLE = 0,
-  CURL_HTTP3_TLS_PERMUTE_ENABLE = 1
-};
-
 struct UserDefined {
   FILE *err;         /* the stderr user data goes here */
   void *debugdata;   /* the data that will be passed to fdebug */
@@ -1237,7 +1231,7 @@ struct UserDefined {
   BIT(ssl_enable_ticket); /* TLS session ticket extension */
   BIT(ws_disable_session_ticket); /* disable WebSocket TLS session ticket */
   BIT(ssl_permute_extensions); /* TLS Permute extensions */
-  enum http3_tls_permute_extensions http3_tls_permute_extensions;
+  CURLhttp3tlspermute http3_tls_permute_extensions;
   BIT(tls_grease);  /* TLS grease? */
   BIT(tls_key_usage_no_check);  /* TLS key_usage_check? */
   BIT(tls_signed_cert_timestamps);  /* TLS signed cert timestamps? */

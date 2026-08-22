@@ -2075,7 +2075,7 @@ static ParameterError opt_bool(struct OperationConfig *config,
   case C_HTTP3_TLS_PERMUTE_EXTENSIONS:
     /* --http3-tls-permute-extensions curl-impersonate */
     config->http3_tls_permute_extensions = toggle ?
-      TOOL_HTTP3_PERMUTE_ENABLE : TOOL_HTTP3_PERMUTE_DISABLE;
+      CURL_HTTP3_TLS_PERMUTE_ENABLE : CURL_HTTP3_TLS_PERMUTE_DISABLE;
     break;
   case C_TLS_GREASE:  /* --tls-grease curl-impersonate */
     config->tls_grease = toggle;

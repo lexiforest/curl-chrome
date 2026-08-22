@@ -1141,6 +1141,11 @@ typedef CURLSTScode (*curl_hstswrite_callback)(CURL *easy,
 /* 'long' argument with a set of values/bitmask */
 #define CURLOPTTYPE_VALUES      CURLOPTTYPE_LONG
 
+typedef long CURLhttp3tlspermute;
+#define CURL_HTTP3_TLS_PERMUTE_FALLBACK -1L
+#define CURL_HTTP3_TLS_PERMUTE_DISABLE   0L
+#define CURL_HTTP3_TLS_PERMUTE_ENABLE    1L
+
 /*
  * All CURLOPT_* values.
  */
