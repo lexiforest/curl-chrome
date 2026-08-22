@@ -50,6 +50,12 @@ struct State {
 #define FAIL_WITH_BODY 1
 #define FAIL_WO_BODY   2
 
+enum tool_http3_permute_state {
+  TOOL_HTTP3_PERMUTE_UNSET,
+  TOOL_HTTP3_PERMUTE_DISABLE,
+  TOOL_HTTP3_PERMUTE_ENABLE
+};
+
 struct OperationConfig {
   struct dynbuf postdata;
   char *useragent;
@@ -152,11 +158,11 @@ struct OperationConfig {
   char *http3_ssl_ec_curves;
   char *http3_sig_hash_algs;
   char *http3_tls_extension_order;
+  enum tool_http3_permute_state http3_tls_permute_extensions;
   char *quic_cid_length;
   char *quic_transport_parameters;
   char *ws_http_header_order;
   bool ws_disable_session_ticket;
-  bool http3_tls_permute_extensions;
   char *impersonate;
   bool http2_no_priority;
   bool tls_grease;

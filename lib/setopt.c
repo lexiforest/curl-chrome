@@ -891,8 +891,12 @@ static CURLcode setopt_long_bool(struct Curl_easy *data, CURLoption option,
     s->ssl_permute_extensions = enabled;
     break;
   case CURLOPT_HTTP3_TLS_PERMUTE_EXTENSIONS:
-    s->http3_tls_permute_extensions = enabled;
-    break;
+    if(arg < CURL_HTTP3_TLS_PERMUTE_FALLBACK ||
+       arg > CURL_HTTP3_TLS_PERMUTE_ENABLE)
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    s->http3_tls_permute_extensions =
+      (enum http3_tls_permute_extensions)arg;
+    return CURLE_OK;
   case CURLOPT_TLS_GREASE:
     s->tls_grease = enabled;
     break;

@@ -4344,10 +4344,12 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
   if(data->set.ssl_permute_extensions && peer->transport != TRNSPRT_QUIC)
     SSL_CTX_set_permute_extensions(octx->ssl_ctx, 1);
 
-  /* curl-impersonate: Enable HTTP3-specific TLS extension permutation */
-  if(data->set.http3_tls_permute_extensions && peer->transport == TRNSPRT_QUIC)
+  /* curl-impersonate: Enable HTTP/3-specific TLS extension
+   * permutation. */
+  if(conn_config->http3_tls_permute_extensions &&
+     peer->transport == TRNSPRT_QUIC)
     SSL_CTX_set_permute_extensions(octx->ssl_ctx, 1);
-  
+
   /* curl-impersonate: Set TLS extensions order. */
   {
     const char *extension_order = Curl_ssl_config_get_tls_extension_order(

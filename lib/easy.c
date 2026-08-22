@@ -440,12 +440,6 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
       return ret;
   }
 
-  if(opts->http3_tls_permute_extensions) {
-    ret = curl_easy_setopt(data, CURLOPT_HTTP3_TLS_PERMUTE_EXTENSIONS, 1);
-    if(ret)
-      return ret;
-  }
-
   if(opts->cert_compression) {
     ret = curl_easy_setopt(data,
                            CURLOPT_SSL_CERT_COMPRESSION,

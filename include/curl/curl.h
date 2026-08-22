@@ -2416,7 +2416,8 @@ typedef enum {
   /* curl-impersonate: QUIC initial connection ID length profile. */
   CURLOPT(CURLOPT_QUIC_CID_LENGTH, CURLOPTTYPE_STRINGPOINT, 1038),
 
-  /* curl-impersonate: Enables HTTP/3-specific Boringssl permute extensions */
+  /* curl-impersonate: HTTP/3-specific BoringSSL extension permutation.
+   * -1 inherits CURLOPT_SSL_PERMUTE_EXTENSIONS, 0 disables, 1 enables. */
   CURLOPT(CURLOPT_HTTP3_TLS_PERMUTE_EXTENSIONS, CURLOPTTYPE_LONG, 1039),
 
   CURLOPT_LASTENTRY /* the last unused */
