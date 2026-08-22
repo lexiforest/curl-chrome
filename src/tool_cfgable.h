@@ -152,7 +152,7 @@ struct OperationConfig {
   char *http3_ssl_ec_curves;
   char *http3_sig_hash_algs;
   char *http3_tls_extension_order;
-  CURLhttp3tlspermute http3_tls_permute_extensions;
+  CURLhttp3sslpermute http3_ssl_permute_extensions;
   char *quic_cid_length;
   char *quic_transport_parameters;
   char *ws_http_header_order;

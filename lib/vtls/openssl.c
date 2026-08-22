@@ -4346,7 +4346,7 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
 
   /* curl-impersonate: Enable HTTP/3-specific TLS extension
    * permutation. */
-  if(conn_config->http3_tls_permute_extensions &&
+  if(conn_config->http3_ssl_permute_extensions &&
      peer->transport == TRNSPRT_QUIC)
     SSL_CTX_set_permute_extensions(octx->ssl_ctx, 1);
 

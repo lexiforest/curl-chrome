@@ -272,7 +272,7 @@ static CURLcode ssl_peer_key_build(struct ssl_primary_config *ssl,
       goto out;
   }
   if((peer->transport == TRNSPRT_QUIC) &&
-     ssl->http3_tls_permute_extensions) {
+     ssl->http3_ssl_permute_extensions) {
     result = curlx_dyn_add(&buf, ":H3PERMUTE");
     if(result)
       goto out;

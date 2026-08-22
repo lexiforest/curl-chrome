@@ -65,7 +65,7 @@ struct ssl_primary_config {
   BIT(verifystatus);     /* set TRUE if certificate status must be checked */
   BIT(cache_session);    /* cache session or not */
   BIT(enable_ticket);    /* enable the TLS session ticket extension */
-  BIT(http3_tls_permute_extensions); /* HTTP/3 TLS extension permutation */
+  BIT(http3_ssl_permute_extensions); /* HTTP/3 TLS extension permutation */
   BIT(deep_copy);        /* members are deep copies, eg. owned here */
 };
 

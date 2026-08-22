@@ -421,8 +421,8 @@ void Curl_init_userdefined(struct Curl_easy *data)
   set->tcp_nodelay = TRUE;
   set->ssl_enable_alpn = TRUE;
   set->ssl_enable_ticket = TRUE;
-  set->http3_tls_permute_extensions =
-    CURL_HTTP3_TLS_PERMUTE_FALLBACK;
+  set->http3_ssl_permute_extensions =
+    CURL_HTTP3_SSL_PERMUTE_FALLBACK;
   set->tls_grease = FALSE;
   set->tls_use_new_alps_codepoint = FALSE;
   set->expect_100_timeout = 1000L; /* Wait for a second by default. */
