@@ -2039,6 +2039,13 @@ CURLcode Curl_http_merge_headers(struct Curl_easy *data)
 
     prefix_len = sep - head->data;
 
+    /* curl-impersonate: RFC 9218 "priority" has no HTTP/1.x form; browsers
+       only send it over HTTP/2 and HTTP/3, so drop it on HTTP/1.x. */
+    if(data->conn &&
+       Curl_conn_http_version(data, data->conn) < 20 &&
+       prefix_len == 8 && curl_strnequal(head->data, "priority", 8))
+      continue;
+
     /* Check if this header was added by the application. */
     for(head2 = dup; head2; head2 = head2->next) {
       if(head2->data &&
