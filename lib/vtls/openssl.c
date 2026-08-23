@@ -4341,7 +4341,13 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
    * curl-impersonate: Enable TLS extension permutation, enabled by default
    * since Chrome 110.
    */
-  if(data->set.ssl_permute_extensions)
+  if(data->set.ssl_permute_extensions && peer->transport != TRNSPRT_QUIC)
+    SSL_CTX_set_permute_extensions(octx->ssl_ctx, 1);
+
+  /* curl-impersonate: Enable HTTP/3-specific TLS extension
+   * permutation. */
+  if(conn_config->http3_ssl_permute_extensions &&
+     peer->transport == TRNSPRT_QUIC)
     SSL_CTX_set_permute_extensions(octx->ssl_ctx, 1);
 
   /* curl-impersonate: Set TLS extensions order. */

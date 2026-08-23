@@ -494,6 +494,12 @@ static CURLcode ssl_setopts(struct OperationConfig *config, CURL *curl)
   if(config->ssl_permute_extensions)
     my_setopt_long(curl, CURLOPT_SSL_PERMUTE_EXTENSIONS, 1L);
 
+  if(config->http3_ssl_permute_extensions !=
+     CURL_HTTP3_SSL_PERMUTE_FALLBACK)
+    my_setopt_long(curl, CURLOPT_HTTP3_SSL_PERMUTE_EXTENSIONS,
+                   config->http3_ssl_permute_extensions ==
+                   CURL_HTTP3_SSL_PERMUTE_ENABLE ? 1L : 0L);
+
   if(config->tls_grease)
     my_setopt_long(curl, CURLOPT_TLS_GREASE, 1L);
 

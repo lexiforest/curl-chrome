@@ -65,6 +65,7 @@ struct ssl_primary_config {
   BIT(verifystatus);     /* set TRUE if certificate status must be checked */
   BIT(cache_session);    /* cache session or not */
   BIT(enable_ticket);    /* enable the TLS session ticket extension */
+  BIT(http3_ssl_permute_extensions); /* HTTP/3 TLS extension permutation */
   BIT(deep_copy);        /* members are deep copies, eg. owned here */
 };
 
@@ -101,6 +102,7 @@ const char *Curl_ssl_config_get_signature_algorithms(
   const struct ssl_primary_config *sslc, uint8_t transport);
 const char *Curl_ssl_config_get_tls_extension_order(
   const struct ssl_primary_config *sslc, uint8_t transport);
+bool Curl_ssl_http3_permute_extensions(const struct Curl_easy *data);
 
 /**
  * Init the `data->set.ssl` and `data->set.proxy_ssl` for

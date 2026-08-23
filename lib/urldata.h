@@ -1231,6 +1231,7 @@ struct UserDefined {
   BIT(ssl_enable_ticket); /* TLS session ticket extension */
   BIT(ws_disable_session_ticket); /* disable WebSocket TLS session ticket */
   BIT(ssl_permute_extensions); /* TLS Permute extensions */
+  CURLhttp3sslpermute http3_ssl_permute_extensions;
   BIT(tls_grease);  /* TLS grease? */
   BIT(tls_key_usage_no_check);  /* TLS key_usage_check? */
   BIT(tls_signed_cert_timestamps);  /* TLS signed cert timestamps? */
