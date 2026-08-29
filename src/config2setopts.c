@@ -534,6 +534,10 @@ static CURLcode ssl_setopts(struct OperationConfig *config, CURL *curl)
     my_setopt_long(curl, CURLOPT_TLS_SIGNED_CERT_TIMESTAMPS, 1L);
   }
 
+  if(config->tls_trust_anchors)
+    my_setopt_str(curl, CURLOPT_TLS_TRUST_ANCHORS,
+                  config->tls_trust_anchors);
+
   my_setopt_long(curl, CURLOPT_TLS_STATUS_REQUEST, 1L);
   /* end of curl-impersonate */
 

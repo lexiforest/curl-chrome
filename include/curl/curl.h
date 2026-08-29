@@ -2425,6 +2425,9 @@ typedef enum {
    * -1 inherits CURLOPT_SSL_PERMUTE_EXTENSIONS, 0 disables, 1 enables. */
   CURLOPT(CURLOPT_HTTP3_SSL_PERMUTE_EXTENSIONS, CURLOPTTYPE_LONG, 1039),
 
+  /* curl-impersonate: Comma-separated TLS trust anchor relative OIDs. */
+  CURLOPT(CURLOPT_TLS_TRUST_ANCHORS, CURLOPTTYPE_STRINGPOINT, 1040),
+
   CURLOPT_LASTENTRY /* the last unused */
 } CURLoption;
 

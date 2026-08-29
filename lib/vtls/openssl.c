@@ -39,6 +39,7 @@
 #include "connect.h"
 #include "cf-dns.h"
 #include "progress.h"
+#include "rand.h"
 #include "vtls/vtls.h"
 #include "vtls/vtls_int.h"
 #include "vtls/vtls_scache.h"
@@ -69,6 +70,7 @@
 #include <openssl/bio.h>
 #include <openssl/pkcs12.h>
 #ifdef OPENSSL_IS_BORINGSSL
+#include <openssl/bytestring.h>
 #include <openssl/pool.h>
 #endif
 #include <openssl/tls1.h>
@@ -4015,6 +4017,120 @@ static CURLcode ossl_init_method(struct Curl_cfilter *cf,
   return *pmethod ? CURLE_OK : CURLE_SSL_CONNECT_ERROR;
 }
 
+#ifdef OPENSSL_IS_BORINGSSL
+static CURLcode set_trust_anchors(struct Curl_easy *data, SSL_CTX *ctx,
+                                  const char *anchors)
+{
+  CBB ids;
+  CURLcode result = CURLE_OK;
+  const char *start = anchors;
+  size_t id_count = 0;
+  size_t *offsets = NULL;
+  unsigned char *shuffled = NULL;
+
+  if(!anchors[0]) {
+    if(SSL_CTX_set1_requested_trust_anchors(ctx, NULL, 0))
+      return CURLE_OK;
+    failf(data, "failed setting empty TLS trust anchor list");
+    return CURLE_SSL_CONNECT_ERROR;
+  }
+
+  if(!CBB_init(&ids, 128))
+    return CURLE_OUT_OF_MEMORY;
+
+  for(;;) {
+    CBB id;
+    const char *end = start;
+    const char *next;
+
+    while(*end && (*end != ','))
+      end++;
+    next = end;
+    while((start < end) && ((*start == ' ') || (*start == '\t')))
+      start++;
+    while((end > start) && ((end[-1] == ' ') || (end[-1] == '\t')))
+      end--;
+    if((start == end) ||
+       !CBB_add_u8_length_prefixed(&ids, &id) ||
+       !CBB_add_asn1_relative_oid_from_text(&id, start,
+                                            (size_t)(end - start)) ||
+       !CBB_flush(&ids)) {
+      CBB_cleanup(&ids);
+      failf(data, "invalid TLS trust anchor list: '%s'", anchors);
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    }
+    id_count++;
+    if(!*next)
+      break;
+    start = next + 1;
+    if(!*start) {
+      CBB_cleanup(&ids);
+      failf(data, "invalid TLS trust anchor list: '%s'", anchors);
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    }
+  }
+
+  offsets = calloc(id_count, sizeof(*offsets));
+  shuffled = malloc(CBB_len(&ids));
+  if(!offsets || !shuffled) {
+    result = CURLE_OUT_OF_MEMORY;
+    goto out;
+  }
+
+  {
+    const unsigned char *encoded = CBB_data(&ids);
+    size_t i;
+    size_t offset = 0;
+
+    for(i = 0; i < id_count; i++) {
+      offsets[i] = offset;
+      offset += encoded[offset] + 1;
+    }
+
+    /* The IDs form a set. Randomize only the temporary wire order, leaving
+     * the configured value stable for connection and session cache keys. */
+    for(i = id_count; i > 1; i--) {
+      size_t random;
+      size_t threshold = (size_t)(-i) % i;
+      size_t selected;
+      size_t swap;
+
+      do {
+        result = Curl_rand(data, (unsigned char *)&random, sizeof(random));
+        if(result) {
+          failf(data, "failed randomizing TLS trust anchor list");
+          goto out;
+        }
+      } while(random < threshold);
+
+      selected = random % i;
+      swap = offsets[i - 1];
+      offsets[i - 1] = offsets[selected];
+      offsets[selected] = swap;
+    }
+
+    offset = 0;
+    for(i = 0; i < id_count; i++) {
+      size_t encoded_len = encoded[offsets[i]] + 1;
+      memcpy(&shuffled[offset], &encoded[offsets[i]], encoded_len);
+      offset += encoded_len;
+    }
+  }
+
+  if(!SSL_CTX_set1_requested_trust_anchors(ctx, shuffled, CBB_len(&ids))) {
+    result = CURLE_SSL_CONNECT_ERROR;
+    failf(data, "failed setting TLS trust anchor list");
+    goto out;
+  }
+
+out:
+  CBB_cleanup(&ids);
+  free(offsets);
+  free(shuffled);
+  return result;
+}
+#endif
+
 CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
                             struct Curl_cfilter *cf,
                             struct Curl_easy *data,
@@ -4336,6 +4452,13 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
     SSL_CTX_set_grease_enabled(octx->ssl_ctx, 0);
   else if(data->set.tls_grease)
     SSL_CTX_set_grease_enabled(octx->ssl_ctx, 1);
+
+  if(conn_config->trust_anchors) {
+    CURLcode result = set_trust_anchors(data, octx->ssl_ctx,
+                                        conn_config->trust_anchors);
+    if(result)
+      return result;
+  }
 
   /*
    * curl-impersonate: Enable TLS extension permutation, enabled by default

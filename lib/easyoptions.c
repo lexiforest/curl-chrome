@@ -397,6 +397,7 @@ const struct curl_easyoption Curl_easyopts[] = {
   { "TLS_SIGNED_CERT_TIMESTAMPS", CURLOPT_TLS_SIGNED_CERT_TIMESTAMPS,
     CURLOT_LONG, 0 },
   { "TLS_STATUS_REQUEST", CURLOPT_TLS_STATUS_REQUEST, CURLOT_LONG, 0 },
+  { "TLS_TRUST_ANCHORS", CURLOPT_TLS_TRUST_ANCHORS, CURLOT_STRING, 0 },
   { "TLS_USE_NEW_ALPS_CODEPOINT", CURLOPT_TLS_USE_NEW_ALPS_CODEPOINT,
     CURLOT_LONG, 0 },
   { "TRAILERDATA", CURLOPT_TRAILERDATA, CURLOT_CBPTR, 0 },
@@ -438,6 +439,6 @@ const struct curl_easyoption Curl_easyopts[] = {
  */
 int Curl_easyopts_check(void)
 {
-  return (CURLOPT_LASTENTRY % 10000) != (1039 + 1);
+  return (CURLOPT_LASTENTRY % 10000) != (1040 + 1);
 }
 #endif

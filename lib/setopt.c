@@ -2773,6 +2773,8 @@ static CURLcode setopt_cptr_impersonate(struct Curl_easy *data,
     return Curl_setstropt(&s->str[STRING_WS_SSL_CERT_COMPRESSION], ptr);
   case CURLOPT_TLS_DELEGATED_CREDENTIALS:
     return Curl_setstropt(&s->str[STRING_TLS_DELEGATED_CREDENTIALS], ptr);
+  case CURLOPT_TLS_TRUST_ANCHORS:
+    return Curl_setstropt(&s->str[STRING_TLS_TRUST_ANCHORS], ptr);
   default:
     return CURLE_UNKNOWN_OPTION;
   }

@@ -126,6 +126,7 @@ static void free_config_fields(struct OperationConfig *config)
   curlx_safefree(config->quic_transport_parameters);
   curlx_safefree(config->ws_http_header_order);
   curlx_safefree(config->tls_extension_order);
+  curlx_safefree(config->tls_trust_anchors);
   curlx_safefree(config->impersonate);
 
   urlnode = config->url_list;

@@ -371,6 +371,7 @@ static const struct LongShort aliases[]= {
   {"tls-record-size-limit",      ARG_STRG, ' ', C_TLS_RECORD_SIZE_LIMIT},  // curl-impersonate
   {"tls-session-ticket",         ARG_BOOL, ' ', C_TLS_SESSION_TICKET},  // curl-impersonate
   {"tls-signed-cert-timestamps", ARG_BOOL, ' ', C_TLS_SIGNED_CERT_TIMESTAMPS}, // curl-impersonate
+  {"tls-trust-anchors",          ARG_STRG, ' ', C_TLS_TRUST_ANCHORS}, // curl-impersonate
   {"tls-use-new-alps-codepoint", ARG_BOOL, ' ', C_TLS_USE_NEW_ALPS_CODEPOINT},  // curl-impersonate
   {"tls13-ciphers",              ARG_STRG|ARG_TLS, ' ', C_TLS13_CIPHERS},
   {"tlsauthtype",                ARG_STRG|ARG_TLS, ' ', C_TLSAUTHTYPE},
@@ -2779,6 +2780,9 @@ static ParameterError opt_string(struct OperationConfig *config,
     break;
   case C_TLS_DELEGATED_CREDENTIALS:
     err = getstr(&config->tls_delegated_credentials, nextarg, ALLOW_BLANK);
+    break;
+  case C_TLS_TRUST_ANCHORS:
+    err = getstr(&config->tls_trust_anchors, nextarg, ALLOW_BLANK);
     break;
   case C_HTTP2_PSEUDO_HEADERS_ORDER: /* --http2-pseudo-headers-order curl-impersonate */
     if(!feature_http2)

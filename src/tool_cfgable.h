@@ -160,6 +160,7 @@ struct OperationConfig {
   char *impersonate;
   bool http2_no_priority;
   bool tls_grease;
+  char *tls_trust_anchors;
   char *tls_extension_order;
   char *tls_delegated_credentials;
   long tls_record_size_limit;

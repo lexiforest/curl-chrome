@@ -271,6 +271,11 @@ static CURLcode ssl_peer_key_build(struct ssl_primary_config *ssl,
     if(result)
       goto out;
   }
+  if(ssl->trust_anchors) {
+    result = curlx_dyn_addf(&buf, ":TRUSTANCHORS-%s", ssl->trust_anchors);
+    if(result)
+      goto out;
+  }
   if((peer->transport == TRNSPRT_QUIC) &&
      ssl->http3_ssl_permute_extensions) {
     result = curlx_dyn_add(&buf, ":H3PERMUTE");
