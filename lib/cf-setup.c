@@ -98,7 +98,7 @@ static CURLcode cf_setup_add_socks(struct Curl_cfilter *cf,
       return CURLE_FAILED_INIT;
 
     result = Curl_cf_socks_proxy_insert_after(
-      cf, data, second_peer, cf->conn->ip_version,
+      cf, data, second_peer, ctx->transport, cf->conn->ip_version,
       cf->conn->socks_proxy.proxytype,
       cf->conn->socks_proxy.creds);
     if(result) {
