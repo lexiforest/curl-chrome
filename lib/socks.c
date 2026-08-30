@@ -1835,6 +1835,7 @@ bool Curl_cf_socks_proxy_is_udp_associate(struct Curl_cfilter *cf)
 CURLcode Curl_cf_socks_proxy_insert_after(struct Curl_cfilter *cf_at,
                                           struct Curl_easy *data,
                                           struct Curl_peer *dest,
+                                          uint8_t transport,
                                           uint8_t ip_version,
                                           uint8_t proxy_type,
                                           struct Curl_creds *creds)
@@ -1856,7 +1857,7 @@ CURLcode Curl_cf_socks_proxy_insert_after(struct Curl_cfilter *cf_at,
     failf(data, "unknown proxytype %d option given", proxy_type);
     return CURLE_COULDNT_CONNECT;
   }
-  if((cf_at->conn->transport_wanted == TRNSPRT_QUIC) &&
+  if((transport == TRNSPRT_QUIC) &&
      !cf_at->conn->http_proxy.peer &&
      (proxy_type != CURLPROXY_SOCKS5) &&
      (proxy_type != CURLPROXY_SOCKS5_HOSTNAME)) {
@@ -1876,7 +1877,7 @@ CURLcode Curl_cf_socks_proxy_insert_after(struct Curl_cfilter *cf_at,
   /* curl-impersonate: QUIC through a direct SOCKS proxy uses UDP ASSOCIATE.
    * A nested HTTP proxy continues through its TCP CONNECT path. */
   ctx->udp_associate =
-    (cf_at->conn->transport_wanted == TRNSPRT_QUIC) &&
+    (transport == TRNSPRT_QUIC) &&
     !cf_at->conn->http_proxy.peer;
   Curl_creds_link(&ctx->creds, creds);
   Curl_bufq_init2(&ctx->iobuf, SOCKS_CHUNK_SIZE, SOCKS_CHUNKS,
