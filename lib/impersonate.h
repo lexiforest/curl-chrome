@@ -3,6 +3,9 @@
 
 #define IMPERSONATE_MAX_HEADERS 32
 
+struct Curl_easy;
+struct curl_slist;
+
 /*
  * curl-impersonate: Options to be set for each supported target browser.
  */
@@ -80,5 +83,13 @@ struct impersonate_opts {
  */
 extern const struct impersonate_opts impersonations[];
 extern const size_t num_impersonations;
+
+CURLcode Curl_impersonate_load_json(struct Curl_easy *data,
+                                    const char *target,
+                                    struct impersonate_opts *opts,
+                                    struct curl_slist **owned_strings,
+                                    bool *found);
+void Curl_impersonate_free_json(struct curl_slist **owned_strings);
+void Curl_impersonate_cleanup(void);
 
 #endif /* HEADER_CURL_IMPERSONATE_H */
