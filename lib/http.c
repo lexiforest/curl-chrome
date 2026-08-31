@@ -1739,6 +1739,17 @@ static const char *get_http_string(int httpversion)
   }
 }
 
+/*
+ * curl-impersonate:
+ * Determine whether the merged User-Agent is Firefox.
+ */
+static bool http_merged_user_agent_is_firefox(struct Curl_easy *data)
+{
+  const char *uagent = Curl_checkheaders(data, STRCONST("User-Agent"));
+
+  return uagent && strstr(&uagent[10], "Firefox/") != NULL;
+}
+
 CURLcode Curl_add_custom_headers(struct Curl_easy *data,
                                  bool is_connect, int httpversion,
                                  struct dynbuf *req)
@@ -1848,6 +1859,12 @@ CURLcode Curl_add_custom_headers(struct Curl_easy *data,
         ;
       else if(curlx_str_casecompare(&name, "Connection"))
         /* Connection headers are handled specially */
+        ;
+      /* curl-impersonate: Firefox sends Priority on HTTP/1.x; omit it for
+         other User-Agents. */
+      else if((httpversion < 20) &&
+              curlx_str_casecompare(&name, "Priority") &&
+              !http_merged_user_agent_is_firefox(data))
         ;
       else if((httpversion >= 20) &&
               curlx_str_casecompare(&name, "Transfer-Encoding"))

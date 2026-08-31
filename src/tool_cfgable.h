@@ -152,6 +152,7 @@ struct OperationConfig {
   char *http3_ssl_ec_curves;
   char *http3_sig_hash_algs;
   char *http3_tls_extension_order;
+  CURLhttp3sslpermute http3_ssl_permute_extensions;
   char *quic_cid_length;
   char *quic_transport_parameters;
   char *ws_http_header_order;
@@ -159,6 +160,7 @@ struct OperationConfig {
   char *impersonate;
   bool http2_no_priority;
   bool tls_grease;
+  char *tls_trust_anchors;
   char *tls_extension_order;
   char *tls_delegated_credentials;
   long tls_record_size_limit;

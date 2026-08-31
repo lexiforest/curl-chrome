@@ -55,6 +55,7 @@ struct impersonate_opts {
   bool tls_permute_extensions;
   bool tls_use_new_alps_codepoint;
   bool tls_signed_cert_timestamps;
+  const char *tls_trust_anchors;
   const char *ech;
   const char *tls_extension_order;
   const char *http3_tls_extension_order;

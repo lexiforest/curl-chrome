@@ -49,6 +49,8 @@ struct OperationConfig *config_alloc(void)
   config->proto_redir_present = FALSE;
   config->proto_default = NULL;
   config->tcp_nodelay = TRUE; /* enabled by default */
+  config->http3_ssl_permute_extensions =
+    CURL_HTTP3_SSL_PERMUTE_FALLBACK;
   config->happy_eyeballs_timeout_ms = CURL_HET_DEFAULT;
   config->http09_allowed = FALSE;
   config->ftp_skip_ip = TRUE;
@@ -124,6 +126,7 @@ static void free_config_fields(struct OperationConfig *config)
   curlx_safefree(config->quic_transport_parameters);
   curlx_safefree(config->ws_http_header_order);
   curlx_safefree(config->tls_extension_order);
+  curlx_safefree(config->tls_trust_anchors);
   curlx_safefree(config->impersonate);
 
   urlnode = config->url_list;

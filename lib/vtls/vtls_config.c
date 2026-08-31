@@ -144,6 +144,19 @@ const char *Curl_ssl_config_get_tls_extension_order(
                                         transport);
 }
 
+bool Curl_ssl_http3_permute_extensions(const struct Curl_easy *data)
+{
+  switch(data->set.http3_ssl_permute_extensions) {
+  case CURL_HTTP3_SSL_PERMUTE_DISABLE:
+    return FALSE;
+  case CURL_HTTP3_SSL_PERMUTE_ENABLE:
+    return TRUE;
+  case CURL_HTTP3_SSL_PERMUTE_FALLBACK:
+  default:
+    return data->set.ssl_permute_extensions;
+  }
+}
+
 void Curl_ssl_config_cleanup(struct ssl_primary_config *sslc)
 {
   if(sslc->deep_copy) {
@@ -165,6 +178,7 @@ void Curl_ssl_config_cleanup(struct ssl_primary_config *sslc)
     curlx_safefree(sslc->http3_curves);
     curlx_safefree(sslc->http3_signature_algorithms);
     curlx_safefree(sslc->http3_tls_extension_order);
+    curlx_safefree(sslc->trust_anchors);
     curlx_safefree(sslc->CRLfile);
     curlx_safefree(sslc->cert_type);
     curlx_safefree(sslc->key);
@@ -190,6 +204,8 @@ static bool match_ssl_primary_config(struct Curl_easy *data,
      (c1->verifyhost == c2->verifyhost) &&
      (c1->verifystatus == c2->verifystatus) &&
      (c1->enable_ticket == c2->enable_ticket) &&
+     (c1->http3_ssl_permute_extensions ==
+      c2->http3_ssl_permute_extensions) &&
      blobcmp(c1->cert_blob, c2->cert_blob) &&
      blobcmp(c1->ca_info_blob, c2->ca_info_blob) &&
      blobcmp(c1->issuercert_blob, c2->issuercert_blob) &&
@@ -213,6 +229,7 @@ static bool match_ssl_primary_config(struct Curl_easy *data,
                    c2->http3_signature_algorithms) &&
      curl_strequal(c1->http3_tls_extension_order,
                    c2->http3_tls_extension_order) &&
+     curl_strequal(c1->trust_anchors, c2->trust_anchors) &&
      Curl_safecmp(c1->CRLfile, c2->CRLfile) &&
      Curl_safecmp(c1->pinned_key, c2->pinned_key) &&
      curl_strequal(c1->cert_type, c2->cert_type) &&
@@ -251,6 +268,8 @@ static bool clone_ssl_primary_config(struct ssl_primary_config *source,
   dest->verifystatus = source->verifystatus;
   dest->cache_session = source->cache_session;
   dest->enable_ticket = source->enable_ticket;
+  dest->http3_ssl_permute_extensions =
+    source->http3_ssl_permute_extensions;
   dest->ssl_options = source->ssl_options;
 
   CLONE_BLOB(cert_blob);
@@ -269,6 +288,7 @@ static bool clone_ssl_primary_config(struct ssl_primary_config *source,
   CLONE_STRING(http3_curves);
   CLONE_STRING(http3_signature_algorithms);
   CLONE_STRING(http3_tls_extension_order);
+  CLONE_STRING(trust_anchors);
   CLONE_STRING(CRLfile);
   /* SSL credentials: client certificate, SRP auth */
   CLONE_STRING(clientcert);
@@ -357,6 +377,9 @@ static CURLcode ssl_easy_config_complete(struct Curl_easy *data,
   sslc->primary.http3_tls_extension_order =
     data->set.str[STRING_HTTP3_TLS_EXTENSION_ORDER];
   sslc->primary.enable_ticket = data->set.ssl_enable_ticket;
+  sslc->primary.trust_anchors = data->set.str[STRING_TLS_TRUST_ANCHORS];
+  sslc->primary.http3_ssl_permute_extensions =
+    Curl_ssl_http3_permute_extensions(data);
 
   if(is_wss) {
     if(data->set.ws_disable_session_ticket)

@@ -11,6 +11,13 @@
 - `scripts/`: maintenance and lint helpers.
 - `CMake/` and top-level `CMakeLists.txt`: CMake build support.
 
+## Related repos
+
+- Boringssl, ../boringssl
+- ngtcp2, ../ngtcp2
+- nghttp3, ../nghttp3
+- curl-impersonate, ../curl-impersonate
+
 ## Fork Delta (vs `curl-8_21_0`)
 Baseline check: `git diff --stat curl-8_21_0`.
 Current delta: **72 files changed, +7788/-462**.

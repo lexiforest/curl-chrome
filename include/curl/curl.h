@@ -1141,6 +1141,11 @@ typedef CURLSTScode (*curl_hstswrite_callback)(CURL *easy,
 /* 'long' argument with a set of values/bitmask */
 #define CURLOPTTYPE_VALUES      CURLOPTTYPE_LONG
 
+typedef long CURLhttp3sslpermute;
+#define CURL_HTTP3_SSL_PERMUTE_FALLBACK -1L
+#define CURL_HTTP3_SSL_PERMUTE_DISABLE   0L
+#define CURL_HTTP3_SSL_PERMUTE_ENABLE    1L
+
 /*
  * All CURLOPT_* values.
  */
@@ -2415,6 +2420,13 @@ typedef enum {
 
   /* curl-impersonate: QUIC initial connection ID length profile. */
   CURLOPT(CURLOPT_QUIC_CID_LENGTH, CURLOPTTYPE_STRINGPOINT, 1038),
+
+  /* curl-impersonate: HTTP/3-specific BoringSSL extension permutation.
+   * -1 inherits CURLOPT_SSL_PERMUTE_EXTENSIONS, 0 disables, 1 enables. */
+  CURLOPT(CURLOPT_HTTP3_SSL_PERMUTE_EXTENSIONS, CURLOPTTYPE_LONG, 1039),
+
+  /* curl-impersonate: Comma-separated TLS trust anchor relative OIDs. */
+  CURLOPT(CURLOPT_TLS_TRUST_ANCHORS, CURLOPTTYPE_STRINGPOINT, 1040),
 
   CURLOPT_LASTENTRY /* the last unused */
 } CURLoption;

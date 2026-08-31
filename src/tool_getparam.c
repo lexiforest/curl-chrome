@@ -188,6 +188,8 @@ static const struct LongShort aliases[]= {
   {"http3-settings",             ARG_STRG, ' ', C_HTTP3_SETTINGS},  // curl-impersonate
   {"http3-sig-hash-algs",        ARG_STRG, ' ', C_HTTP3_SIG_HASH_ALGS},  // curl-impersonate
   {"http3-tls-extension-order",  ARG_STRG, ' ', C_HTTP3_TLS_EXTENSION_ORDER},  // curl-impersonate
+  {"http3-tls-permute-extensions", ARG_BOOL, ' ',
+   C_HTTP3_TLS_PERMUTE_EXTENSIONS},  /* curl-impersonate */
   {"ignore-content-length",      ARG_BOOL, ' ', C_IGNORE_CONTENT_LENGTH},
   {"impersonate",                ARG_STRG, ' ', C_IMPERSONATE},
   {"include",                    ARG_BOOL, ' ', C_INCLUDE},
@@ -369,6 +371,7 @@ static const struct LongShort aliases[]= {
   {"tls-record-size-limit",      ARG_STRG, ' ', C_TLS_RECORD_SIZE_LIMIT},  // curl-impersonate
   {"tls-session-ticket",         ARG_BOOL, ' ', C_TLS_SESSION_TICKET},  // curl-impersonate
   {"tls-signed-cert-timestamps", ARG_BOOL, ' ', C_TLS_SIGNED_CERT_TIMESTAMPS}, // curl-impersonate
+  {"tls-trust-anchors",          ARG_STRG, ' ', C_TLS_TRUST_ANCHORS}, // curl-impersonate
   {"tls-use-new-alps-codepoint", ARG_BOOL, ' ', C_TLS_USE_NEW_ALPS_CODEPOINT},  // curl-impersonate
   {"tls13-ciphers",              ARG_STRG|ARG_TLS, ' ', C_TLS13_CIPHERS},
   {"tlsauthtype",                ARG_STRG|ARG_TLS, ' ', C_TLSAUTHTYPE},
@@ -2070,6 +2073,11 @@ static ParameterError opt_bool(struct OperationConfig *config,
   case C_TLS_PERMUTE_EXTENSIONS:  /* --tls-permute-extensions curl-impersonate */
     config->ssl_permute_extensions = toggle;
     break;
+  case C_HTTP3_TLS_PERMUTE_EXTENSIONS:
+    /* --http3-tls-permute-extensions curl-impersonate */
+    config->http3_ssl_permute_extensions = toggle ?
+      CURL_HTTP3_SSL_PERMUTE_ENABLE : CURL_HTTP3_SSL_PERMUTE_DISABLE;
+    break;
   case C_TLS_GREASE:  /* --tls-grease curl-impersonate */
     config->tls_grease = toggle;
     break;
@@ -2772,6 +2780,9 @@ static ParameterError opt_string(struct OperationConfig *config,
     break;
   case C_TLS_DELEGATED_CREDENTIALS:
     err = getstr(&config->tls_delegated_credentials, nextarg, ALLOW_BLANK);
+    break;
+  case C_TLS_TRUST_ANCHORS:
+    err = getstr(&config->tls_trust_anchors, nextarg, ALLOW_BLANK);
     break;
   case C_HTTP2_PSEUDO_HEADERS_ORDER: /* --http2-pseudo-headers-order curl-impersonate */
     if(!feature_http2)

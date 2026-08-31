@@ -890,6 +890,12 @@ static CURLcode setopt_long_bool(struct Curl_easy *data, CURLoption option,
   case CURLOPT_SSL_PERMUTE_EXTENSIONS:
     s->ssl_permute_extensions = enabled;
     break;
+  case CURLOPT_HTTP3_SSL_PERMUTE_EXTENSIONS:
+    if(arg < CURL_HTTP3_SSL_PERMUTE_FALLBACK ||
+       arg > CURL_HTTP3_SSL_PERMUTE_ENABLE)
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    s->http3_ssl_permute_extensions = arg;
+    return CURLE_OK;
   case CURLOPT_TLS_GREASE:
     s->tls_grease = enabled;
     break;
@@ -2767,6 +2773,8 @@ static CURLcode setopt_cptr_impersonate(struct Curl_easy *data,
     return Curl_setstropt(&s->str[STRING_WS_SSL_CERT_COMPRESSION], ptr);
   case CURLOPT_TLS_DELEGATED_CREDENTIALS:
     return Curl_setstropt(&s->str[STRING_TLS_DELEGATED_CREDENTIALS], ptr);
+  case CURLOPT_TLS_TRUST_ANCHORS:
+    return Curl_setstropt(&s->str[STRING_TLS_TRUST_ANCHORS], ptr);
   default:
     return CURLE_UNKNOWN_OPTION;
   }

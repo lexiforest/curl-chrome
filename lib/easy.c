@@ -434,6 +434,13 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
   if(ret)
     return ret;
 
+  if(opts->tls_trust_anchors) {
+    ret = curl_easy_setopt(data, CURLOPT_TLS_TRUST_ANCHORS,
+                           opts->tls_trust_anchors);
+    if(ret)
+      return ret;
+  }
+
   if(opts->tls_permute_extensions) {
     ret = curl_easy_setopt(data, CURLOPT_SSL_PERMUTE_EXTENSIONS, 1);
     if(ret)
