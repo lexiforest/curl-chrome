@@ -129,7 +129,8 @@
 #define WS_TARGET_AVX2 __attribute__((target("avx2")))
 #if defined(__clang__) && \
     ((defined(__apple_build_version__) && __clang_major__ >= 16) || \
-     (!defined(__apple_build_version__) && __clang_major__ >= 18))
+     (!defined(__apple_build_version__) && __clang_major__ >= 18 && \
+      __clang_major__ <= 21))
 #define WS_TARGET_AVX512 \
   __attribute__((target("avx512f,evex512")))
 #else
