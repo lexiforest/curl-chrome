@@ -4313,7 +4313,11 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
   ciphers = conn_config->cipher_list;
   if(!ciphers && (peer->transport != TRNSPRT_QUIC))
     ciphers = NULL;
+#ifdef OPENSSL_IS_BORINGSSL
+  if(ciphers) {
+#else
   if(ciphers && (ssl_version_min < CURL_SSLVERSION_TLSv1_3)) {
+#endif
     if(!SSL_CTX_set_cipher_list(octx->ssl_ctx, ciphers)) {
       failf(data, "failed setting cipher list: %s", ciphers);
       return CURLE_SSL_CIPHER;

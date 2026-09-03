@@ -312,6 +312,11 @@ static bool is_debug(void)
 void tool_version_info(void)
 {
   const char * const *builtin;
+#ifdef CURL_IMPERSONATE_BUILD_DATE
+  const char *release_date = CURL_IMPERSONATE_BUILD_DATE;
+#else
+  const char *release_date = LIBCURL_TIMESTAMP;
+#endif
   if(is_debug())
     curl_mfprintf(tool_stderr, "WARNING: this libcurl is Debug-enabled, "
                   "do not use in production\n\n");
@@ -319,9 +324,9 @@ void tool_version_info(void)
   curl_mprintf(CURL_ID "%s\n", curl_version());
 #ifdef CURL_PATCHSTAMP
   curl_mprintf("Release-Date: %s, security patched: %s\n",
-               LIBCURL_TIMESTAMP, CURL_PATCHSTAMP);
+               release_date, CURL_PATCHSTAMP);
 #else
-  curl_mprintf("Release-Date: %s\n", LIBCURL_TIMESTAMP);
+  curl_mprintf("Release-Date: %s\n", release_date);
 #endif
   if(built_in_protos[0]) {
 #ifndef CURL_DISABLE_IPFS

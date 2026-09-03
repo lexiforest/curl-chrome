@@ -65,6 +65,13 @@ project(CURL
   VERSION "${_curl_version_sem}"
   LANGUAGES C)
 
+set(CURL_IMPERSONATE_VERSION "local" CACHE STRING
+  "curl-impersonate version reported by curl_version()")
+string(TIMESTAMP CURL_IMPERSONATE_BUILD_DATE "%Y-%m-%d" UTC)
+add_compile_definitions(
+  "CURL_IMPERSONATE_VERSION=\"${CURL_IMPERSONATE_VERSION}\""
+  "CURL_IMPERSONATE_BUILD_DATE=\"${CURL_IMPERSONATE_BUILD_DATE}\"")
+
 # CMake does not recognize some targets accurately. Touch up configuration manually as a workaround.
 if(WINDOWS_STORE AND MINGW)  # MinGW UWP build
   # CMake (as of v3.31.2) gets confused and applies the MSVC rc.exe command-line

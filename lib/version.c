@@ -135,7 +135,11 @@ static void idn_version(char *buf, size_t bufsz)
  * zeros in the data.
  */
 
-#define VERSION_PARTS 16 /* number of substrings we can concatenate */
+#define VERSION_PARTS 17 /* number of substrings we can concatenate */
+
+#ifndef CURL_IMPERSONATE_VERSION
+#define CURL_IMPERSONATE_VERSION "local"
+#endif
 
 char *curl_version(void)
 {
@@ -255,6 +259,7 @@ char *curl_version(void)
   Curl_ldap_version(ldap_buf, sizeof(ldap_buf));
   src[i++] = ldap_buf;
 #endif
+  src[i++] = "curl-impersonate/" CURL_IMPERSONATE_VERSION;
 
   DEBUGASSERT(i <= VERSION_PARTS);
 
