@@ -38,11 +38,11 @@
 #include "curl_trc.h"
 #include "select.h"
 #include "cfilters.h"
-#include "cf-dns.h"
 #include "connect.h"
 #include "cf-socket.h"
 #include "sockaddr.h"
 #include "socks.h"
+#include "vdns/cf-dns.h"
 #include "curlx/inet_pton.h"
 #include "curlx/inet_ntop.h"
 
@@ -129,7 +129,6 @@ struct socks_ctx {
   uint8_t proxy_type;
   unsigned char version;
   BIT(resolve_local);
-  BIT(start_resolving);
   BIT(socks4a);
   BIT(udp_associate); /* use UDP ASSOCIATE instead of CONNECT */
   BIT(udp_dest_set); /* destination cached for UDP headers */
@@ -345,32 +344,19 @@ static CURLproxycode socks4_resolving(struct socks_ctx *sx,
   const struct Curl_addrinfo *ai = NULL;
   CURLcode result;
   size_t nwritten;
-  bool dns_done;
 
   *done = FALSE;
-  if(sx->start_resolving) {
-    /* need to resolve hostname to add destination address */
-    sx->start_resolving = FALSE;
-    result = Curl_cf_dns_insert_after(
-      cf, data, Curl_resolv_dns_queries(data, sx->ip_version),
-      sx->dest, TRNSPRT_TCP, TRUE);
-    if(result) {
-      failf(data, "unable to create DNS filter for socks");
-      return CURLPX_UNKNOWN_FAIL;
-    }
-  }
-
-  /* resolve the hostname by connecting the DNS filter */
-  result = Curl_conn_cf_connect(cf->next, data, &dns_done);
+  result = Curl_conn_dns_addr_result(cf->conn, cf->sockindex, sx->dest);
   if(result) {
-    failf(data, "Failed to resolve \"%s\" for SOCKS4 connect.",
-          sx->dest->hostname);
-    return CURLPX_RESOLVE_HOST;
-  }
-  else if(!dns_done)
+    if(result != CURLE_AGAIN) {
+      failf(data, "error %d resolving SOCKS destination %s:%u",
+            (int)result, sx->dest->hostname, sx->dest->port);
+      return CURLPX_RESOLVE_HOST;
+    }
     return CURLPX_OK;
+  }
 
-  ai = Curl_cf_dns_get_ai(cf->next, data, sx->dest, AF_INET, 0);
+  ai = Curl_conn_dns_get_ai(data, sx->dest, cf->sockindex, AF_INET, 0);
   if(ai) {
     struct sockaddr_in *saddr_in;
     char ipbuf[64];
@@ -388,7 +374,7 @@ static CURLproxycode socks4_resolving(struct socks_ctx *sx,
       return CURLPX_SEND_REQUEST;
   }
   else {
-    /* No ipv4 address resolved */
+    /* No IPv4 address resolved */
     failf(data, "SOCKS4 connection to %s not supported", sx->dest->hostname);
     return CURLPX_RESOLVE_HOST;
   }
@@ -503,9 +489,7 @@ process_state:
 
   case SOCKS4_ST_START:
     Curl_bufq_reset(&sx->iobuf);
-    sx->start_resolving = FALSE;
     sx->socks4a = (sx->proxy_type == CURLPROXY_SOCKS4A);
-    sx->resolve_local = !sx->socks4a;
     sx->presult = CURLPX_OK;
 
     /* SOCKS4 can only do IPv4, insist! */
@@ -553,7 +537,6 @@ process_state:
       sxstate(sx, cf, data, SOCKS4_ST_SEND);
       goto process_state;
     }
-    sx->start_resolving = TRUE;
     sxstate(sx, cf, data, SOCKS4_ST_RESOLVING);
     FALLTHROUGH();
 
@@ -971,37 +954,24 @@ static CURLproxycode socks5_resolving(struct socks_ctx *sx,
   CURLcode result;
   CURLproxycode presult = CURLPX_OK;
   size_t nwritten;
-  bool dns_done;
 
   *done = FALSE;
-  if(sx->start_resolving) {
-    /* need to resolve hostname to add destination address */
-    sx->start_resolving = FALSE;
-    result = Curl_cf_dns_insert_after(
-      cf, data, Curl_resolv_dns_queries(data, sx->ip_version),
-      sx->dest, TRNSPRT_TCP, TRUE);
-    if(result) {
-      failf(data, "unable to create DNS filter for socks");
-      return CURLPX_UNKNOWN_FAIL;
-    }
-  }
-
-  /* resolve the hostname by connecting the DNS filter */
-  result = Curl_conn_cf_connect(cf->next, data, &dns_done);
+  result = Curl_conn_dns_addr_result(cf->conn, cf->sockindex, sx->dest);
   if(result) {
-    failf(data, "Failed to resolve \"%s\" for SOCKS5 connect.",
-          sx->dest->hostname);
-    return CURLPX_RESOLVE_HOST;
-  }
-  else if(!dns_done)
+    if(result != CURLE_AGAIN) {
+      failf(data, "error %d resolving SOCKS destination %s:%u",
+            (int)result, sx->dest->hostname, sx->dest->port);
+      return CURLPX_RESOLVE_HOST;
+    }
     return CURLPX_OK;
+  }
 
 #ifdef USE_IPV6
   if(data->set.ipver != CURL_IPRESOLVE_V4)
-    ai = Curl_cf_dns_get_ai(cf->next, data, sx->dest, AF_INET6, 0);
+    ai = Curl_conn_dns_get_ai(data, sx->dest, cf->sockindex, AF_INET6, 0);
 #endif
   if(!ai)
-    ai = Curl_cf_dns_get_ai(cf->next, data, sx->dest, AF_INET, 0);
+    ai = Curl_conn_dns_get_ai(data, sx->dest, cf->sockindex, AF_INET, 0);
 
   if(!ai) {
     failf(data, "Failed to resolve \"%s\" for SOCKS5 connect.",
@@ -1107,7 +1077,7 @@ static CURLproxycode socks5_recv_resp1(struct socks_ctx *sx,
      o IPv4 address: 0x01, BND.ADDR = 4-byte
      o domain name:  0x03, BND.ADDR = [ 1-byte length, string ]
      o IPv6 address: 0x04, BND.ADDR = 16-byte
-  */
+   */
   if(resp[0] != 5) { /* version */
     failf(data, "SOCKS5 reply has wrong version, version should be 5.");
     return CURLPX_BAD_VERSION;
@@ -1230,7 +1200,6 @@ process_state:
   switch(sx->state) {
   case SOCKS_ST_INIT:
     sx->version = 5;
-    sx->resolve_local = (sx->proxy_type == CURLPROXY_SOCKS5);
     sxstate(sx, cf, data, SOCKS5_ST_START);
     FALLTHROUGH();
 
@@ -1319,9 +1288,6 @@ process_state:
       sxstate(sx, cf, data, SOCKS5_ST_REQ1_SEND);
       goto process_state;
     }
-    /* curl-impersonate: locally resolve the QUIC target before caching it
-     * for the SOCKS5 UDP header. */
-    sx->start_resolving = TRUE;
     sxstate(sx, cf, data, SOCKS5_ST_RESOLVING);
     FALLTHROUGH();
 
@@ -1482,9 +1448,7 @@ static void socks_proxy_ctx_free(struct socks_ctx *ctx,
    the next magic steps. If 'done' is not set TRUE, it is not done yet and
    must be called again.
 
-   Note: this function's sub-functions call failf()
-
-*/
+   Note: this function's sub-functions call failf() */
 static CURLcode socks_proxy_cf_connect(struct Curl_cfilter *cf,
                                        struct Curl_easy *data,
                                        bool *done)
@@ -1521,7 +1485,7 @@ static CURLcode socks_proxy_cf_connect(struct Curl_cfilter *cf,
 
   if(pxresult) {
     result = CURLE_PROXY;
-    data->info.pxcode = pxresult;
+    data->info.pxcode = (uint8_t)pxresult;
     goto out;
   }
   else if(ctx->state != SOCKS_ST_SUCCESS)
@@ -1842,6 +1806,8 @@ CURLcode Curl_cf_socks_proxy_insert_after(struct Curl_cfilter *cf_at,
 {
   struct Curl_cfilter *cf;
   struct socks_ctx *ctx;
+  bool resolve_local = FALSE;
+  uint8_t dns_queries = Curl_resolv_dns_queries(data, ip_version);
   CURLcode result;
 
   if(!dest)
@@ -1849,10 +1815,16 @@ CURLcode Curl_cf_socks_proxy_insert_after(struct Curl_cfilter *cf_at,
 
   switch(proxy_type) {
   case CURLPROXY_SOCKS5:
+    resolve_local = TRUE;
+    break;
   case CURLPROXY_SOCKS5_HOSTNAME:
+    break;
   case CURLPROXY_SOCKS4:
+    resolve_local = TRUE;
+    dns_queries = (uint8_t)(dns_queries & ~CURL_DNSQ_AAAA);
+    break;
   case CURLPROXY_SOCKS4A:
-    break; /* all supported */
+    break;
   default:
     failf(data, "unknown proxytype %d option given", proxy_type);
     return CURLE_COULDNT_CONNECT;
@@ -1879,13 +1851,21 @@ CURLcode Curl_cf_socks_proxy_insert_after(struct Curl_cfilter *cf_at,
   ctx->udp_associate =
     (transport == TRNSPRT_QUIC) &&
     !cf_at->conn->http_proxy.peer;
+  ctx->resolve_local = resolve_local;
   Curl_creds_link(&ctx->creds, creds);
   Curl_bufq_init2(&ctx->iobuf, SOCKS_CHUNK_SIZE, SOCKS_CHUNKS,
                   BUFQ_OPT_SOFT_LIMIT);
 
   result = Curl_cf_create(&cf, &Curl_cft_socks_proxy, ctx);
-  if(!result)
+  if(!result) {
     Curl_conn_cf_insert_after(cf_at, cf);
+    if(ctx->resolve_local) {
+      result = Curl_conn_dns_add_addr_resolve(data, cf_at->conn,
+                                              cf_at->sockindex,
+                                              ctx->dest, dns_queries,
+                                              TRNSPRT_TCP);
+    }
+  }
   else
     socks_proxy_ctx_free(ctx, data);
   return result;

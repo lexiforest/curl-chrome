@@ -168,7 +168,7 @@ my %api = (
 
 sub doublecheck {
     my ($f, $used) = @_;
-    open(F, '-|', 'git', 'grep', '-Fwle', $f, '--', 'lib', @unittests, 'projects');
+    open(F, '-|', 'git', 'grep', '-Fwl', '--end-of-options', $f, '--', 'lib', @unittests, 'projects');
     my @also;
     while(<F>) {
         my $e = $_;

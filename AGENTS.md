@@ -18,11 +18,11 @@
 - nghttp3, ../nghttp3
 - curl-impersonate, ../curl-impersonate
 
-## Fork Delta (vs `curl-8_21_0`)
-Baseline check: `git diff --stat curl-8_21_0`.
-Current delta: **72 files changed, +7788/-462**.
+## Fork Delta (vs `curl-8_22_0`)
+Baseline check: `git diff --stat curl-8_22_0`.
+Current delta: **85 files changed, +8640/-487**.
 
-- Impersonation core: `lib/impersonate.c` + `lib/impersonate.h` with 38 preset targets (Chrome/Edge/Firefox/Safari/Tor/OkHttp variants).
+- Impersonation core: `lib/impersonate.c` + `lib/impersonate.h` with 39 preset targets (Chrome/Edge/Firefox/Safari/Tor/OkHttp variants).
 - Public API additions: `curl_easy_impersonate()` and new `CURLOPT_*` for TLS/HTTP2 fingerprints (`CURLOPT_IMPERSONATE`, `CURLOPT_HTTPBASEHEADER`, `CURLOPT_HTTP2_SETTINGS`, `CURLOPT_TLS_EXTENSION_ORDER`, etc.).
 - Tooling additions: `curl-impersonate` and tuning flags such as `--impersonate`, `--http2-pseudo-headers-order`, `--tls-permute-extensions`, and `--proxy-credential-no-reuse`.
 - Network behavior changes: HTTP/2 priority/pseudo-header ordering, browser-style header merge, WebSocket impersonation, HTTP/3 fingerprint switching, and QUIC-over-SOCKS5 UDP ASSOCIATE (`socks5h` included).
