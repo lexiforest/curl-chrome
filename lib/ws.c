@@ -1297,15 +1297,16 @@ static CURLcode ws_enc_write_payload(struct ws_encoder *enc,
     /* SIMD ladder: 128, 64 or 32 bytes per iteration. */
 #ifdef WS_HAVE_X86_SIMD
 #if defined(WS_SUPPORT_AVX_RUNTIME) || defined(__AVX512F__)
-    if(features & WS_CPU_FEAT_AVX512)
+    if((features & WS_CPU_FEAT_AVX512) && chunk >= 128)
       j = ws_xor_avx512(buf + i, enc->xbuf, chunk, mask32);
 #endif
 #if defined(WS_SUPPORT_AVX_RUNTIME) || defined(__AVX2__)
-    if(!j && (features & WS_CPU_FEAT_AVX2))
+    if(!j && (features & WS_CPU_FEAT_AVX2) && chunk >= 64)
       j = ws_xor_avx2(buf + i, enc->xbuf, chunk, mask32);
 #endif
 #elif defined(WS_HAVE_ARM_SIMD)
-    j = ws_xor_neon(buf + i, enc->xbuf, chunk, mask32);
+    if(chunk >= 32)
+      j = ws_xor_neon(buf + i, enc->xbuf, chunk, mask32);
 #endif
 
     /* Scalar ladder: eight or four bytes per iteration. */
