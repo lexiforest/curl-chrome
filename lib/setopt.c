@@ -1210,6 +1210,11 @@ static CURLcode setopt_long_http(struct Curl_easy *data, CURLoption option,
 #else
     return CURLE_NOT_BUILT_IN;
 #endif
+  case CURLOPT_QUIC_INITIAL_PACKET_NUMBER:
+    if((arg < -1) || (arg > INT32_MAX))
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    s->quic_initial_packet_number = arg;
+    break;
   case CURLOPT_EXPECT_100_TIMEOUT_MS:
     result = value_range(&arg, 0, 0, 0xffff);
     if(!result)

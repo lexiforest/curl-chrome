@@ -51,6 +51,7 @@ struct OperationConfig *config_alloc(void)
   config->tcp_nodelay = TRUE; /* enabled by default */
   config->http3_ssl_permute_extensions =
     CURL_HTTP3_SSL_PERMUTE_FALLBACK;
+  config->quic_initial_packet_number = 0L;
   config->happy_eyeballs_timeout_ms = CURL_HET_DEFAULT;
   config->http09_allowed = FALSE;
   config->ftp_skip_ip = TRUE;

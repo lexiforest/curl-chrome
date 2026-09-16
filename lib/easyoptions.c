@@ -280,6 +280,8 @@ const struct curl_easyoption Curl_easyopts[] = {
   { "PUT", CURLOPT_PUT, CURLOT_LONG, 0 },
   { "QUICK_EXIT", CURLOPT_QUICK_EXIT, CURLOT_LONG, 0 },
   { "QUIC_CID_LENGTH", CURLOPT_QUIC_CID_LENGTH, CURLOT_STRING, 0 },
+  { "QUIC_INITIAL_PACKET_NUMBER", CURLOPT_QUIC_INITIAL_PACKET_NUMBER,
+    CURLOT_LONG, 0 },
   { "QUIC_TRANSPORT_PARAMETERS", CURLOPT_QUIC_TRANSPORT_PARAMETERS,
     CURLOT_STRING, 0 },
   { "QUOTE", CURLOPT_QUOTE, CURLOT_SLIST, 0 },
@@ -443,6 +445,6 @@ const struct curl_easyoption Curl_easyopts[] = {
  */
 int Curl_easyopts_check(void)
 {
-  return (CURLOPT_LASTENTRY % 10000) != (1040 + 1);
+  return (CURLOPT_LASTENTRY % 10000) != (1041 + 1);
 }
 #endif

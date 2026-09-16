@@ -304,6 +304,8 @@ static const struct LongShort aliases[] = {
   {"proxytunnel",                ARG_BOOL, 'p', C_PROXYTUNNEL},
   {"pubkey",                     ARG_STRG, ' ', C_PUBKEY},
   {"quic-cid-length",            ARG_STRG|ARG_TLS, ' ', C_QUIC_CID_LENGTH},  // curl-impersonate
+  {"quic-initial-packet-number", ARG_STRG|ARG_TLS, ' ',
+   C_QUIC_INITIAL_PACKET_NUMBER},  /* curl-impersonate */
   {"quic-transport-params",      ARG_STRG|ARG_TLS, ' ', C_QUIC_TRANSPORT_PARAMETERS},  // curl-impersonate
   {"quote",                      ARG_STRG, 'Q', C_QUOTE},
   {"random-file",                ARG_FILE|ARG_DEPR, ' ', C_RANDOM_FILE},
@@ -2890,6 +2892,14 @@ static ParameterError opt_string(struct OperationConfig *config,
     if(!feature_http3)
       return PARAM_LIBCURL_DOESNT_SUPPORT;
     err = getstr(&config->quic_cid_length, nextarg, DENY_BLANK);
+    break;
+  case C_QUIC_INITIAL_PACKET_NUMBER:
+    if(!feature_http3)
+      return PARAM_LIBCURL_DOESNT_SUPPORT;
+    err = str2num(&config->quic_initial_packet_number, nextarg);
+    if(!err && ((config->quic_initial_packet_number < -1) ||
+                (config->quic_initial_packet_number > INT32_MAX)))
+      err = PARAM_BAD_NUMERIC;
     break;
   case C_QUIC_TRANSPORT_PARAMETERS:  /* --quic-transport-params curl-impersonate */
     if(!feature_http3)

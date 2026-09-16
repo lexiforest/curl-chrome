@@ -545,6 +545,11 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
       return ret;
   }
 
+  ret = curl_easy_setopt(data, CURLOPT_QUIC_INITIAL_PACKET_NUMBER,
+                         opts->quic_initial_packet_number);
+  if(ret)
+    return ret;
+
   if(opts->quic_transport_parameters) {
     ret = curl_easy_setopt(data, CURLOPT_QUIC_TRANSPORT_PARAMETERS,
                            opts->quic_transport_parameters);

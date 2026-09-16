@@ -837,6 +837,9 @@ static CURLcode http_setopts(struct OperationConfig *config, CURL *curl,
                   CURLOPT_QUIC_CID_LENGTH,
                   config->quic_cid_length);
 
+  my_setopt_long(curl, CURLOPT_QUIC_INITIAL_PACKET_NUMBER,
+                 config->quic_initial_packet_number);
+
   if(config->quic_transport_parameters)
     my_setopt_str(curl,
                   CURLOPT_QUIC_TRANSPORT_PARAMETERS,

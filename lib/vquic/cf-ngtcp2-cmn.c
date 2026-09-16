@@ -931,6 +931,18 @@ static CURLcode quic_settings(struct cf_ngtcp2_ctx *ctx,
   s->max_window = H3_CONN_WINDOW_SIZE_MAX;
   s->max_stream_window = 0; /* disable ngtcp2 auto-tuning of window */
   s->no_pmtud = FALSE;
+  if(data->set.quic_initial_packet_number < 0) {
+    unsigned char r[2];
+
+    result = Curl_rand(data, r, sizeof(r));
+    if(result)
+      return result;
+    /* Match Neqo's biased random distribution in the range 1..1024. */
+    s->initial_pkt_num = (uint32_t)(r[0] & 0x1f) +
+      ((uint32_t)(r[1] > 224 ? r[1] - 224 : 0) << 5) + 1;
+  }
+  else
+    s->initial_pkt_num = (uint32_t)data->set.quic_initial_packet_number;
 #ifdef NGTCP2_SETTINGS_V3
   /* try ten times the ngtcp2 defaults here for problems with Caddy */
   s->glitch_ratelim_burst = 1000 * 10;

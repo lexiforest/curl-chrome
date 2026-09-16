@@ -148,6 +148,7 @@ struct OperationConfig {
   char *http3_tls_extension_order;
   CURLhttp3sslpermute http3_ssl_permute_extensions;
   char *quic_cid_length;
+  long quic_initial_packet_number;
   char *quic_transport_parameters;
   char *ws_http_header_order;
   bool ws_disable_session_ticket;

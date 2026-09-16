@@ -2454,6 +2454,10 @@ typedef enum {
   /* curl-impersonate: Comma-separated TLS trust anchor relative OIDs. */
   CURLOPT(CURLOPT_TLS_TRUST_ANCHORS, CURLOPTTYPE_STRINGPOINT, 1040),
 
+  /* curl-impersonate: QUIC initial packet number. -1 selects the Firefox
+   * randomized distribution; non-negative values select a fixed number. */
+  CURLOPT(CURLOPT_QUIC_INITIAL_PACKET_NUMBER, CURLOPTTYPE_LONG, 1041),
+
   CURLOPT_LASTENTRY /* the last unused */
 } CURLoption;
 

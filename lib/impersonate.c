@@ -803,6 +803,7 @@ const struct impersonate_opts impersonations[] = {
   {
     .target = "chrome145",
     .alias = "chrome145",
+    .quic_initial_packet_number = 1,
     .httpversion = CURL_HTTP_VERSION_2_0,
     .ssl_version = CURL_SSLVERSION_TLSv1_2 | CURL_SSLVERSION_MAX_DEFAULT,
     .ciphers =
@@ -882,6 +883,7 @@ const struct impersonate_opts impersonations[] = {
   {
     .target = "chrome146",
     .alias = "chrome146",
+    .quic_initial_packet_number = 1,
     .httpversion = CURL_HTTP_VERSION_2_0,
     .ssl_version = CURL_SSLVERSION_TLSv1_2 | CURL_SSLVERSION_MAX_DEFAULT,
     .ciphers =
@@ -961,6 +963,7 @@ const struct impersonate_opts impersonations[] = {
   {
     .target = "chrome150",
     .alias = "chrome150",
+    .quic_initial_packet_number = 1,
     .httpversion = CURL_HTTP_VERSION_2_0,
     .ssl_version = CURL_SSLVERSION_TLSv1_2 | CURL_SSLVERSION_MAX_DEFAULT,
     .ciphers =
@@ -1451,6 +1454,7 @@ const struct impersonate_opts impersonations[] = {
   {
     .target = "firefox147",
     .alias = "firefox147",
+    .quic_initial_packet_number = -1,
     .httpversion = CURL_HTTP_VERSION_2_0,
     .ssl_version = CURL_SSLVERSION_TLSv1_2 | CURL_SSLVERSION_MAX_DEFAULT,
     .ciphers =

@@ -1193,6 +1193,7 @@ struct UserDefined {
   int http2_window_update;
   int tls_record_size_limit;
   int tls_key_shares_limit;
+  long quic_initial_packet_number;
   BIT(http2_no_priority);
   BIT(stream_exclusive); /* HTTP/2 dependency is exclusive */
   BIT(post301); /* keep POSTs as POSTs after a 301 request */
