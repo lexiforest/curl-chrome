@@ -64,7 +64,7 @@ string(REGEX REPLACE "([0-9]+\.[0-9]+\.[0-9]+).+" "\\1" _curl_version_sem "${_cu
 # Initializes PROJECT_BINARY_DIR, PROJECT_SOURCE_DIR
 project(CURL
   VERSION "${_curl_version_sem}"
-  LANGUAGES C)
+  LANGUAGES C CXX)
 
 set(CURL_IMPERSONATE_VERSION "local" CACHE STRING
   "curl-impersonate version reported by curl_version()")

@@ -102,6 +102,7 @@ add_executable(${EXE_NAME} ${CURL_CFILES} ${CURL_HFILES} ${_curl_cfiles_gen} ${_
 target_compile_definitions(${EXE_NAME} PRIVATE ${_curl_definitions})
 target_link_libraries(${EXE_NAME} ${LIB_SELECTED_FOR_EXE} ${CURL_LIBS})
 set_property(TARGET ${EXE_NAME} APPEND PROPERTY COMPILE_OPTIONS "${CURL_CFLAGS}")
+set_property(TARGET ${EXE_NAME} APPEND PROPERTY LINKER_LANGUAGE CXX)
 if(WIN32)
   set_property(TARGET ${EXE_NAME} APPEND PROPERTY SOURCES ${CURL_RCFILES})
 endif()
