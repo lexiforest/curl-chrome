@@ -143,9 +143,9 @@ if test "x$OPT_OPENSSL" != "xno"; then
   LDFLAGS="$LDFLAGS $SSL_LDFLAGS"
   LDFLAGSPC="$LDFLAGSPC $SSL_LDFLAGS"
 
-  AC_CHECK_LIB(crypto, HMAC_Update,[
+  AC_CHECK_LIB(boringssl_crypto, HMAC_Update,[
     HAVECRYPTO="yes"
-    LIBS="-lcrypto $LIBS"
+    LIBS="-lboringssl_crypto $LIBS"
     ],[
     if test -n "$LIB_OPENSSL"; then
       LDFLAGS="$CLEANLDFLAGS -L$LIB_OPENSSL"
@@ -158,13 +158,13 @@ if test "x$OPT_OPENSSL" != "xno"; then
     dnl Linking previously failed, try extra paths from --with-openssl or
     dnl pkg-config.  Use a different function name to avoid reusing the earlier
     dnl cached result.
-    AC_CHECK_LIB(crypto, HMAC_Init_ex,[
+    AC_CHECK_LIB(boringssl_crypto, HMAC_Init_ex,[
       HAVECRYPTO="yes"
-      LIBS="-lcrypto $LIBS"], [
+      LIBS="-lboringssl_crypto $LIBS"], [
 
       dnl still no, but what about with -ldl?
       AC_MSG_CHECKING([OpenSSL linking with -ldl])
-      LIBS="-lcrypto $CLEANLIBS -ldl"
+      LIBS="-lboringssl_crypto $CLEANLIBS -ldl"
       AC_LINK_IFELSE([ AC_LANG_PROGRAM([[
         #include <openssl/err.h>
       ]], [[
@@ -180,7 +180,7 @@ if test "x$OPT_OPENSSL" != "xno"; then
         dnl This may be necessary for static libraries.
 
         AC_MSG_CHECKING([OpenSSL linking with -ldl and -lpthread])
-        LIBS="-lcrypto $CLEANLIBS -ldl -lpthread"
+        LIBS="-lboringssl_crypto $CLEANLIBS -ldl -lpthread"
         AC_LINK_IFELSE([
           AC_LANG_PROGRAM([[
           #include <openssl/err.h>
@@ -206,9 +206,9 @@ if test "x$OPT_OPENSSL" != "xno"; then
     dnl This is only reasonable to do if crypto actually is there: check for
     dnl SSL libs NOTE: it is important to do this AFTER the crypto lib
 
-    AC_CHECK_LIB(ssl, SSL_connect)
+    AC_CHECK_LIB(boringssl_ssl, SSL_connect)
 
-    if test "$ac_cv_lib_ssl_SSL_connect" = "yes"; then
+    if test "$ac_cv_lib_boringssl_ssl_SSL_connect" = "yes"; then
       dnl Have the libraries--check for OpenSSL headers
       AC_CHECK_HEADERS(openssl/rsa.h openssl/crypto.h openssl/pem.h openssl/ssl.h openssl/err.h,
         ssl_msg="OpenSSL"
