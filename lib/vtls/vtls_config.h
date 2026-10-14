@@ -29,7 +29,7 @@ struct Curl_easy;
 struct connectdata;
 struct Curl_peer;
 
-struct ssl_primary_config {
+struct ssl_filter_config {
   char *CApath;          /* certificate directory (does not work on Windows) */
   char *CAfile;          /* certificate to verify peer against */
   char *issuercert;      /* optional issuer certificate filename */
@@ -43,6 +43,10 @@ struct ssl_primary_config {
   char *key;             /* private key filename */
   char *key_type;        /* format for private key (default: PEM) */
   char *key_passwd;      /* plain text private key password */
+#ifdef USE_ECH
+  char *ech_config;      /* TLS ECH configuration, base64 string */
+  char *ech_public;      /* TLS ECH public DNS (SNI in outer ClientHello) */
+#endif
   struct curl_blob *cert_blob;
   struct curl_blob *ca_info_blob;
   struct curl_blob *issuercert_blob;
@@ -57,68 +61,73 @@ struct ssl_primary_config {
   uint32_t version_max; /* max supported version the client wants to use */
   uint8_t ssl_options;  /* the CURLOPT_SSL_OPTIONS bitmask */
   uint8_t version;    /* what version the client wants to use */
+#ifdef USE_ECH
+  uint8_t ech;           /* TLS ECH CURLECH_((DIS|EN)ABLE|GREASE) */
+#endif
   BIT(verifypeer);       /* set TRUE if this is desired */
   BIT(verifyhost);       /* set TRUE if CN/SAN must match hostname */
   BIT(verifystatus);     /* set TRUE if certificate status must be checked */
-  BIT(native_ca_store); /* use the native CA store of operating system */
+  BIT(native_ca_store);  /* use the native CA store of operating system */
   BIT(cache_session);    /* cache session or not */
   BIT(enable_ticket);    /* enable the TLS session ticket extension */
   BIT(http3_ssl_permute_extensions); /* HTTP/3 TLS extension permutation */
   BIT(deep_copy);        /* members are deep copies, eg. owned here */
-};
-
-struct ssl_config_data {
-  struct ssl_primary_config primary;
-  long certverifyresult; /* result from the certificate verification */
-  curl_ssl_ctx_callback fsslctx; /* function to initialize SSL ctx */
-  void *fsslctxp;        /* parameter for call back */
-  BIT(certinfo);     /* gather lots of certificate info */
-  BIT(earlydata);    /* use TLS 1.3 early data */
-  BIT(enable_beast); /* allow this flaw for interoperability's sake */
-  BIT(no_revoke);    /* disable SSL certificate revocation checks */
-  BIT(no_partialchain); /* do not accept partial certificate chains */
-  BIT(revoke_best_effort); /* ignore SSL revocation offline/missing revocation
-                              list errors */
+  BIT(earlydata);        /* use TLS 1.3 early data */
   BIT(auto_client_cert);   /* automatically locate and use a client
                               certificate for authentication (Schannel) */
+  BIT(enable_beast); /* allow this flaw for interoperability's sake */
+  BIT(no_partialchain); /* do not accept partial certificate chains */
+  BIT(no_revoke);    /* disable SSL certificate revocation checks */
+  BIT(revoke_best_effort); /* ignore SSL revocation offline/missing revocation
+                              list errors */
+};
+
+struct ssl_easy_config {
+  long certverifyresult; /* result from the certificate verification */
+  uint32_t version_max; /* max supported version the client wants to use */
+  uint8_t version;    /* what version the client wants to use */
+  uint8_t ssl_options;  /* the CURLOPT_SSL_OPTIONS bitmask */
+#ifdef USE_ECH
+  uint8_t ech;           /* TLS ECH CURLECH_((DIS|EN)ABLE|GREASE) */
+#endif
+  BIT(verifypeer);       /* set TRUE if this is desired */
+  BIT(verifyhost);       /* set TRUE if CN/SAN must match hostname */
+  BIT(verifystatus);     /* set TRUE if certificate status must be checked */
+  BIT(cache_session);    /* cache session or not */
+  BIT(certinfo);     /* gather lots of certificate info */
   BIT(custom_cafile); /* application has set custom CA file */
   BIT(custom_capath); /* application has set custom CA path */
   BIT(custom_cablob); /* application has set custom CA blob */
 };
 
-struct ssl_general_config {
-  int ca_cache_timeout;  /* Certificate store cache timeout (seconds) */
-};
+void Curl_ssl_config_init(struct ssl_easy_config *sslc);
+void Curl_ssl_config_cleanup(struct ssl_filter_config *sslc);
 
-void Curl_ssl_config_init(struct ssl_primary_config *sslc);
-void Curl_ssl_config_cleanup(struct ssl_primary_config *sslc);
+/* Init the SSL filter configs *shallow* for connection matching
+ * with origin and data's configuration settings. */
+CURLcode Curl_ssl_filter_config_tmp_init(
+  struct Curl_easy *data, struct Curl_peer *origin,
+  struct ssl_filter_config *ssl_origin,
+  struct ssl_filter_config *ssl_proxy);
+
+/* Use the effective connection scheme for WebSocket TLS overrides. */
+CURLcode Curl_ssl_filter_config_tmp_init_conn(
+  struct Curl_easy *data, struct connectdata *conn,
+  struct ssl_filter_config *ssl_origin,
+  struct ssl_filter_config *ssl_proxy);
 
 const char *Curl_ssl_config_get_curves(
-  const struct ssl_primary_config *sslc, uint8_t transport);
+  const struct ssl_filter_config *sslc, uint8_t transport);
 const char *Curl_ssl_config_get_signature_algorithms(
-  const struct ssl_primary_config *sslc, uint8_t transport);
+  const struct ssl_filter_config *sslc, uint8_t transport);
 const char *Curl_ssl_config_get_tls_extension_order(
-  const struct ssl_primary_config *sslc, uint8_t transport);
+  const struct ssl_filter_config *sslc, uint8_t transport);
 bool Curl_ssl_http3_permute_extensions(const struct Curl_easy *data);
 
-/**
- * Init the `data->set.ssl` and `data->set.proxy_ssl` for
- * connection matching use.
- */
-CURLcode Curl_ssl_easy_config_complete(struct Curl_easy *data,
-                                       struct Curl_peer *origin);
-
-/**
- * Complete the easy handle SSL configuration for a new connection.
- */
-CURLcode Curl_ssl_easy_config_complete_conn(struct Curl_easy *data,
-                                            struct connectdata *conn);
-
-/**
- * Init SSL configs (main + proxy) for a new connection from the easy handle.
- */
-CURLcode Curl_ssl_conn_config_init(struct Curl_easy *data,
-                                   struct connectdata *conn);
+/* Clone the given filter configs into the connection. */
+CURLcode Curl_ssl_conn_config_clone(struct ssl_filter_config *ssl_config,
+                                    struct ssl_filter_config *proxy_ssl_config,
+                                    struct connectdata *conn);
 
 /**
  * Free allocated resources in SSL configs (main + proxy) for
@@ -127,11 +136,12 @@ CURLcode Curl_ssl_conn_config_init(struct Curl_easy *data,
 void Curl_ssl_conn_config_cleanup(struct connectdata *conn);
 
 /**
- * Return TRUE iff SSL configuration from `data` is functionally the
+ * Return TRUE if `conn_config` is functionally the
  * same as the one on `candidate`.
  * @param proxy   match the proxy SSL config or the main one
  */
 bool Curl_ssl_conn_config_match(struct Curl_easy *data,
+                                struct ssl_filter_config *conn_config,
                                 struct connectdata *candidate,
                                 bool proxy);
 

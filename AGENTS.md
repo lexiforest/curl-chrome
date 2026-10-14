@@ -13,14 +13,14 @@
 
 ## Related repos
 
-- Boringssl, ../boringssl
-- ngtcp2, ../ngtcp2
-- nghttp3, ../nghttp3
-- curl-impersonate, ../curl-impersonate
+- ../boringssl, the only TLS backend we support in this curl distribution
+- ../ngtcp2, the forked ngtcp2 we use
+- ../nghttp3, the forked nghttp3 we use
+- ../curl-impersonate, the super build to build them all.
 
-## Fork Delta (vs `curl-8_22_0`)
-Baseline check: `git diff --stat curl-8_22_0`.
-Current delta: **85 files changed, +8640/-487**.
+## Fork Delta (vs `curl-8_23_0`)
+Baseline check: `git diff --stat curl-8_23_0`.
+Current delta: **86 files changed, +8794/-501**.
 
 - Impersonation core: `lib/impersonate.c` + `lib/impersonate.h` with 39 preset targets (Chrome/Edge/Firefox/Safari/Tor/OkHttp variants).
 - Public API additions: `curl_easy_impersonate()` and new `CURLOPT_*` for TLS/HTTP2 fingerprints (`CURLOPT_IMPERSONATE`, `CURLOPT_HTTPBASEHEADER`, `CURLOPT_HTTP2_SETTINGS`, `CURLOPT_TLS_EXTENSION_ORDER`, etc.).
