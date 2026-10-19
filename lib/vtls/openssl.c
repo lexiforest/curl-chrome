@@ -5758,8 +5758,10 @@ out:
   if(result == CURLE_AGAIN) {
 #if defined(HAVE_SSL_SET1_ECH_CONFIG_LIST) && \
     defined(HAVE_BORINGSSL_LIKE)
-    /* Let the setup filter rebuild the transport for an ECH retry. */
-    if(cf->conn->ech_retry_pending[cf->sockindex]) {
+    /* Only the origin TLS filter may request an ECH restart. The pending
+     * flag survives rebuilding the chain, including proxy TLS handshakes. */
+    if(!Curl_ssl_cf_is_proxy(cf) &&
+       cf->conn->ech_retry_pending[cf->sockindex]) {
       *done = FALSE;
       return result;
     }
