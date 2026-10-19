@@ -310,7 +310,7 @@ struct connectdata {
   struct Curl_cfilter *cfilter[2]; /* connection filters */
   Curl_recv *recv[2];
   Curl_send *send[2];
-#if defined(USE_ECH) && defined(HAVE_BORINGSSL_LIKE)
+#if defined(USE_OPENSSL) && defined(HAVE_SSL_SET1_ECH_CONFIG_LIST)
   /* Preserved while the setup filter recreates the connection chain. */
   unsigned char *ech_retry_configs[2];
   size_t ech_retry_configs_len[2];

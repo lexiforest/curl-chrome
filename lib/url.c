@@ -517,7 +517,7 @@ void Curl_conn_free(struct Curl_easy *data, struct connectdata *conn)
 
   for(i = 0; i < (int8_t)CURL_ARRAYSIZE(conn->cfilter); ++i) {
     Curl_conn_cf_discard_all(data, conn, i);
-#if defined(USE_ECH) && defined(HAVE_BORINGSSL_LIKE)
+#if defined(USE_OPENSSL) && defined(HAVE_SSL_SET1_ECH_CONFIG_LIST)
     curlx_safefree(conn->ech_retry_configs[i]);
 #endif
   }
