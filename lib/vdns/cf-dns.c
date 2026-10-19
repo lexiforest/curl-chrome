@@ -640,6 +640,19 @@ CURLcode Curl_conn_dns_add_https_resolve(struct Curl_easy *data,
                                          int8_t sockindex,
                                          struct Curl_peer *peer)
 {
+#ifndef CURL_DISABLE_PROXY
+  /* curl-impersonate: do not leak names through HTTPS-RR queries when
+   * resolving them is delegated to a proxy. Keep this here so both HTTPS
+   * connection setup and TLS/ECH setup obey the same policy. */
+  if(conn->socks_proxy.peer && (peer != conn->socks_proxy.peer) &&
+     ((conn->socks_proxy.proxytype == CURLPROXY_SOCKS4A) ||
+      (conn->socks_proxy.proxytype == CURLPROXY_SOCKS5_HOSTNAME)))
+    return CURLE_OK;
+
+  if(conn->http_proxy.peer && (peer != conn->http_proxy.peer))
+    return CURLE_OK;
+#endif
+
   return cf_dns_add_resolve(data, conn, sockindex, peer,
                             CURL_DNSQ_HTTPS, conn->transport_wanted);
 }
