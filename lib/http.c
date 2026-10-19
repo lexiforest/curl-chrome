@@ -4008,6 +4008,14 @@ static CURLcode http_header_s(struct Curl_easy *data,
   (void)hdlen;
 #endif
 
+#ifndef CURL_DISABLE_WEBSOCKETS
+  if(data->req.upgr101 == UPGR101_WS && data->req.httpcode == 101) {
+    const char *extensions = HD_VAL(hd, hdlen, "Sec-WebSocket-Extensions:");
+    if(extensions)
+      return Curl_ws_header(data, extensions);
+  }
+#endif
+
 #ifndef CURL_DISABLE_COOKIES
   v = (data->cookies && data->state.cookie_engine) ?
     HD_VAL(hd, hdlen, "Set-Cookie:") : NULL;

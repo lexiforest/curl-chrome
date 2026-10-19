@@ -32,7 +32,7 @@ struct curl_ws_frame {
   int age;              /* zero */
   int flags;            /* See the CURLWS_* defines */
   curl_off_t offset;    /* the offset of this data into the frame */
-  curl_off_t bytesleft; /* number of pending bytes left of the payload */
+  curl_off_t bytesleft; /* pending payload bytes, -1 if decoded size unknown */
   size_t len;           /* size of the current data chunk */
 };
 
@@ -88,6 +88,7 @@ CURL_EXTERN CURLcode curl_ws_start_frame(CURL *curl,
 /* bits for the CURLOPT_WS_OPTIONS bitmask: */
 #define CURLWS_RAW_MODE   (1L << 0)
 #define CURLWS_NOAUTOPONG (1L << 1)
+#define CURLWS_PERMESSAGE_DEFLATE (1L << 2)
 
 CURL_EXTERN const struct curl_ws_frame *curl_ws_meta(CURL *curl);
 

@@ -1201,6 +1201,7 @@ struct UserDefined {
 #ifndef CURL_DISABLE_WEBSOCKETS
   BIT(ws_raw_mode);
   BIT(ws_no_auto_pong);
+  BIT(ws_permessage_deflate);
 #endif
   int http2_window_update;
   int tls_record_size_limit;

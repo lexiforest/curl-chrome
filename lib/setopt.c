@@ -1336,8 +1336,16 @@ static CURLcode setopt_long_proto(struct Curl_easy *data, CURLoption option,
     break;
 #ifndef CURL_DISABLE_WEBSOCKETS
   case CURLOPT_WS_OPTIONS:
+    if(arg & CURLWS_PERMESSAGE_DEFLATE) {
+      if(arg & CURLWS_RAW_MODE)
+        return CURLE_BAD_FUNCTION_ARGUMENT;
+#ifndef HAVE_LIBZ
+      return CURLE_NOT_BUILT_IN;
+#endif
+    }
     s->ws_raw_mode = (bool)(arg & CURLWS_RAW_MODE);
     s->ws_no_auto_pong = (bool)(arg & CURLWS_NOAUTOPONG);
+    s->ws_permessage_deflate = (bool)(arg & CURLWS_PERMESSAGE_DEFLATE);
     break;
 #endif
   default:
