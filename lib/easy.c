@@ -518,6 +518,23 @@ static CURLcode _do_impersonate(struct Curl_easy *data,
       if(ret)
         return ret;
     }
+
+    /* Keep HTTP/3 defaults owned by the handle, like the base headers. */
+    headers = NULL;
+    for(i = 0; i < IMPERSONATE_MAX_HEADERS; i++) {
+      if(opts->http3_headers[i]) {
+        struct curl_slist *next =
+          curl_slist_append(headers, opts->http3_headers[i]);
+        if(!next) {
+          curl_slist_free_all(headers);
+          return CURLE_OUT_OF_MEMORY;
+        }
+        headers = next;
+      }
+    }
+    /* Also clear the old list when the new profile has no HTTP/3 defaults. */
+    curl_slist_free_all(data->state.http3_base_headers);
+    data->state.http3_base_headers = headers;
   }
 
   if(opts->http2_pseudo_headers_order) {
@@ -1514,6 +1531,12 @@ CURL *curl_easy_duphandle(CURL *curl)
       outcurl->state.base_headers =
         Curl_slist_duplicate(data->state.base_headers);
       if(!outcurl->state.base_headers)
+        goto fail;
+    }
+    if(data->state.http3_base_headers) {
+      outcurl->state.http3_base_headers =
+        Curl_slist_duplicate(data->state.http3_base_headers);
+      if(!outcurl->state.http3_base_headers)
         goto fail;
     }
 

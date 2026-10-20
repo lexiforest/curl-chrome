@@ -2119,9 +2119,15 @@ CURLcode Curl_http_merge_headers(struct Curl_easy *data)
   struct curl_slist *head;
   struct curl_slist *dup = NULL;
   struct curl_slist *new_list = NULL;
+  struct curl_slist *base_headers = data->state.base_headers;
   char *uagent;
 
-  if (!data->state.base_headers)
+  /* Select defaults for the negotiated protocol, including HTTP/2 fallback. */
+  if(data->conn && Curl_conn_http_version(data, data->conn) == 30 &&
+     data->state.http3_base_headers)
+    base_headers = data->state.http3_base_headers;
+
+  if(!base_headers)
     return CURLE_OK;
 
   /* Duplicate the list for temporary use. */
@@ -2131,7 +2137,7 @@ CURLcode Curl_http_merge_headers(struct Curl_easy *data)
       return CURLE_OUT_OF_MEMORY;
   }
 
-  for(head = data->state.base_headers; head; head = head->next) {
+  for(head = base_headers; head; head = head->next) {
     char *sep;
     size_t prefix_len;
     bool found = FALSE;

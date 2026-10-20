@@ -177,6 +177,8 @@ void Curl_freeset(struct Curl_easy *data)
 #endif
   curl_slist_free_all(data->state.base_headers);
   data->state.base_headers = NULL;
+  curl_slist_free_all(data->state.http3_base_headers);
+  data->state.http3_base_headers = NULL;
   curl_slist_free_all(data->state.merged_headers);
   data->state.merged_headers = NULL;
 }

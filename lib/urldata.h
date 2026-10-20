@@ -625,6 +625,8 @@ struct UrlState {
    * List of "base" headers set by CURLOPT_HTTPBASEHEADER.
    */
   struct curl_slist *base_headers;
+  /* Owned HTTP/3 defaults from the impersonation profile. */
+  struct curl_slist *http3_base_headers;
   /*
    * curl-impersonate:
    * Dynamically-constructed list of HTTP headers.
