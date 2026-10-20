@@ -62,6 +62,7 @@
 #include "http1.h"
 #include "select.h"
 #include "sockaddr.h"
+#include "socks.h"
 #include "strcase.h"
 #include "transfer.h"
 #include "bufref.h"
@@ -241,6 +242,9 @@ static CURLcode cf_ngtcp2_peek_socket(struct Curl_cfilter *cf,
   bool got_addr = FALSE;
   bool got_ip = FALSE;
   int dummy = 0;
+
+  if(!Curl_cf_socks_proxy_is_udp_associate(cf))
+    return Curl_cf_socket_peek(cf, data, psock, paddr, pip);
 
   for(; cf; cf = cf->next) {
     if(!got_sock && (psock || pip) &&
