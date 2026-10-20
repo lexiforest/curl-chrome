@@ -45,6 +45,9 @@
 #include "vdns/cf-dns.h"
 #include "curlx/inet_pton.h"
 #include "curlx/inet_ntop.h"
+#ifdef HAVE_NETINET_UDP_H
+#include <netinet/udp.h>
+#endif
 
 /* for the (SOCKS) connect state machine */
 enum socks_state_t {
@@ -1524,6 +1527,15 @@ static CURLcode socks_proxy_cf_connect(struct Curl_cfilter *cf,
     result = Curl_conn_cf_connect(cf->next, data, done);
     if(result || !*done)
       goto out;
+#ifdef UDP_GRO
+    {
+      /* curl-impersonate: one datagram per read here; GRO would hand QUIC
+       * a coalesced train behind a single SOCKS5 header. */
+      int off = 0;
+      (void)setsockopt(Curl_conn_cf_get_socket(ctx->udp_cf, data),
+                       IPPROTO_UDP, UDP_GRO, &off, (socklen_t)sizeof(off));
+    }
+#endif
   }
 
 #ifdef CURLVERBOSE
