@@ -203,6 +203,12 @@
 #  ifndef _POSIX_PTHREAD_SEMANTICS
 #  define _POSIX_PTHREAD_SEMANTICS 1
 #  endif
+#  ifndef _XOPEN_SOURCE
+#  define _XOPEN_SOURCE 600
+#  endif
+#  ifndef __EXTENSIONS__
+#  define __EXTENSIONS__ 1
+#  endif
 #endif
 
 /* ================================================================ */
