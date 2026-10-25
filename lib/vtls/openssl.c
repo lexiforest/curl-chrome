@@ -53,6 +53,10 @@
 #include "vdns/cf-dns.h"
 #include "vdns/httpsrr.h"
 #include "vtls/apple.h"
+#if defined(USE_WIN32_CRYPTO) && defined(OPENSSL_IS_BORINGSSL)
+#include <wininet.h>
+#define USE_WIN32_NATIVE_VERIFY
+#endif
 #ifdef USE_ECH
 #include "curlx/base64.h"
 #endif
@@ -3294,6 +3298,192 @@ static CURLcode ossl_windows_load_anchors(struct Curl_cfilter *cf,
   return result;
 }
 
+#ifdef USE_WIN32_NATIVE_VERIFY
+
+static bool ossl_win_add_cert(HCERTSTORE store, X509 *cert,
+                              PCCERT_CONTEXT *context)
+{
+  unsigned char *der = NULL;
+  int len = i2d_X509(cert, &der);
+  BOOL added = FALSE;
+
+  if(len > 0)
+    added = CertAddEncodedCertificateToStore(store, X509_ASN_ENCODING,
+                                              der, (DWORD)len,
+                                              CERT_STORE_ADD_USE_EXISTING,
+                                              context);
+  else
+    SetLastError(ERROR_INVALID_DATA);
+  OPENSSL_free(der);
+  return added != FALSE;
+}
+
+/* Keep BoringSSL for the handshake, but use Windows chain policy, including
+ * the Disallowed CTL. An explicit CA may extend trust, never override a
+ * Windows distrust or other certificate policy failure. */
+static int ossl_win_verify(X509_STORE_CTX *store_ctx, void *arg)
+{
+  struct Curl_cfilter *cf = arg;
+  struct Curl_easy *data = CF_DATA_CURRENT(cf);
+  struct ssl_filter_config *config = Curl_ssl_cf_get_filter_config(cf);
+  SSL *ssl = X509_STORE_CTX_get_ex_data(store_ctx,
+                                       SSL_get_ex_data_X509_STORE_CTX_idx());
+  X509 *leaf = X509_STORE_CTX_get0_cert(store_ctx);
+  STACK_OF(X509) *certs = X509_STORE_CTX_get0_untrusted(store_ctx);
+  HCERTSTORE store = NULL;
+  PCCERT_CONTEXT server = NULL;
+  PCCERT_CONTEXT anchor = NULL;
+  PCCERT_CHAIN_CONTEXT chain = NULL;
+  CERT_CHAIN_PARA chain_para;
+  CERT_CHAIN_POLICY_PARA policy_para;
+  CERT_CHAIN_POLICY_STATUS policy_status;
+  SSL_EXTRA_CERT_CHAIN_POLICY_PARA ssl_para;
+  LPSTR usage = CURL_UNCONST(szOID_PKIX_KP_SERVER_AUTH);
+  DWORD error = 0;
+  int verify_error = X509_V_ERR_APPLICATION_VERIFICATION;
+  int explicit_trust;
+  bool have_anchor = FALSE;
+  size_t i;
+  const char *ech_name = NULL;
+  size_t ech_name_len = 0;
+
+  if(!data || !leaf || !ssl)
+    goto out;
+
+  /* BoringSSL normally checks the ECH public name through X509_verify_cert.
+   * Preserve that check even when only Windows can establish trust. The
+   * ordinary hostname check remains in Curl_ossl_check_peer_cert(). */
+  SSL_get0_ech_name_override(ssl, &ech_name, &ech_name_len);
+  if(ech_name_len &&
+     X509_check_host(leaf, ech_name, ech_name_len, 0, NULL) != 1) {
+    verify_error = X509_V_ERR_HOSTNAME_MISMATCH;
+    goto out;
+  }
+
+  /* This store contains only caller-supplied CA sources, not imported
+   * Windows anchors. A failed check here does not preclude native trust. */
+  explicit_trust = X509_verify_cert(store_ctx);
+  ERR_clear_error();
+  if(explicit_trust < 0 || (config->CRLfile && explicit_trust != 1)) {
+    /* An explicitly requested CRL check must succeed even when Windows
+     * could independently establish trust. */
+    verify_error = X509_STORE_CTX_get_error(store_ctx);
+    if(verify_error == X509_V_OK)
+      verify_error = X509_V_ERR_APPLICATION_VERIFICATION;
+    goto out;
+  }
+  store = CertOpenStore(CERT_STORE_PROV_MEMORY, 0, 0,
+                        CERT_STORE_CREATE_NEW_FLAG, NULL);
+  if(!store || !ossl_win_add_cert(store, leaf, &server))
+    goto win_error;
+
+  for(i = 0; certs && i < sk_X509_num(certs); ++i) {
+    if(!ossl_win_add_cert(store, sk_X509_value(certs, i), NULL))
+      goto win_error;
+  }
+  if(explicit_trust == 1) {
+    /* Include issuers found in CA files/paths as untrusted candidates for
+     * Windows, so its policy also checks the explicitly trusted chain. */
+    certs = X509_STORE_CTX_get0_chain(store_ctx);
+    for(i = 0; certs && i < sk_X509_num(certs); ++i) {
+      PCCERT_CONTEXT *context =
+        (i + 1 == sk_X509_num(certs)) ? &anchor : NULL;
+      if(!ossl_win_add_cert(store, sk_X509_value(certs, i), context))
+        goto win_error;
+    }
+  }
+
+  memset(&chain_para, 0, sizeof(chain_para));
+  chain_para.cbSize = sizeof(chain_para);
+  chain_para.RequestedUsage.dwType = USAGE_MATCH_TYPE_AND;
+  chain_para.RequestedUsage.Usage.cUsageIdentifier = 1;
+  chain_para.RequestedUsage.Usage.rgpszUsageIdentifier = &usage;
+  /* Windows checks explicit distrust without online CRL/OCSP checking. */
+  if(!CertGetCertificateChain(NULL, server, NULL, store, &chain_para,
+                              0, NULL, &chain))
+    goto win_error;
+
+  /* Never let supplemental anchors bypass explicit distrust. */
+  if(chain->TrustStatus.dwErrorStatus & CERT_TRUST_IS_EXPLICIT_DISTRUST) {
+    error = (DWORD)TRUST_E_EXPLICIT_DISTRUST;
+    verify_error = X509_V_ERR_CERT_REJECTED;
+    goto out;
+  }
+
+  /* Windows may choose a different path. Only extend native trust if that
+   * path actually contains the anchor accepted by BoringSSL; otherwise an
+   * unrelated, untrusted alternate chain could bypass anchor restrictions. */
+  if(anchor && chain->cChain) {
+    PCERT_SIMPLE_CHAIN simple = chain->rgpChain[0];
+    for(i = 0; i < simple->cElement; ++i) {
+      PCCERT_CONTEXT cert = simple->rgpElement[i]->pCertContext;
+      if(cert->cbCertEncoded == anchor->cbCertEncoded &&
+         !memcmp(cert->pbCertEncoded, anchor->pbCertEncoded,
+                 anchor->cbCertEncoded)) {
+        have_anchor = TRUE;
+        break;
+      }
+    }
+  }
+
+  memset(&ssl_para, 0, sizeof(ssl_para));
+  ssl_para.cbSize = sizeof(ssl_para);
+  ssl_para.dwAuthType = AUTHTYPE_SERVER;
+  ssl_para.fdwChecks = SECURITY_FLAG_IGNORE_CERT_CN_INVALID;
+  memset(&policy_para, 0, sizeof(policy_para));
+  policy_para.cbSize = sizeof(policy_para);
+  policy_para.pvExtraPolicyPara = &ssl_para;
+  if(have_anchor)
+    policy_para.dwFlags |= CERT_CHAIN_POLICY_ALLOW_UNKNOWN_CA_FLAG;
+  memset(&policy_status, 0, sizeof(policy_status));
+  policy_status.cbSize = sizeof(policy_status);
+  if(!CertVerifyCertificateChainPolicy(CERT_CHAIN_POLICY_SSL, chain,
+                                       &policy_para, &policy_status))
+    goto win_error;
+
+  error = policy_status.dwError;
+  switch(error) {
+  case 0:
+    verify_error = X509_V_OK;
+    break;
+  case (DWORD)CERT_E_REVOKED:
+    verify_error = X509_V_ERR_CERT_REVOKED;
+    break;
+  case (DWORD)CERT_E_EXPIRED:
+    verify_error = X509_V_ERR_CERT_HAS_EXPIRED;
+    break;
+  case (DWORD)CERT_E_UNTRUSTEDROOT:
+  case (DWORD)CERT_E_CHAINING:
+    verify_error = X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY;
+    break;
+  case (DWORD)CERT_E_WRONG_USAGE:
+    verify_error = X509_V_ERR_INVALID_PURPOSE;
+    break;
+  }
+  goto out;
+
+win_error:
+  error = GetLastError();
+out:
+  if(data) {
+    struct ssl_easy_config *ssl_config = Curl_ssl_cf_get_easy_config(cf, data);
+    ssl_config->certverifyresult = verify_error;
+  }
+  if(data && error)
+    failf(data, "SSL: Windows certificate verification failed: 0x%08lx",
+          (unsigned long)error);
+  if(chain)
+    CertFreeCertificateChain(chain);
+  if(server)
+    CertFreeCertificateContext(server);
+  if(anchor)
+    CertFreeCertificateContext(anchor);
+  if(store)
+    CertCloseStore(store, 0);
+  X509_STORE_CTX_set_error(store_ctx, verify_error);
+  return verify_error == X509_V_OK;
+}
+#endif /* USE_WIN32_NATIVE_VERIFY */
 #endif /* USE_WIN32_CRYPTO */
 
 static CURLcode ossl_load_trust_anchors(struct Curl_cfilter *cf,
@@ -3311,7 +3501,19 @@ static CURLcode ossl_load_trust_anchors(struct Curl_cfilter *cf,
 
   octx->store_is_empty = TRUE;
   if(conn_config->native_ca_store) {
-#ifdef USE_WIN32_CRYPTO
+#ifdef USE_WIN32_NATIVE_VERIFY
+    infof(data, "  Native: Windows certificate chain policy");
+    have_native_check = TRUE;
+    if(conn_config->CRLfile) {
+      bool added = FALSE;
+      /* Preserve the existing BoringSSL verification of explicit CRL files
+       * using the Windows anchors. Windows policy is still checked too. */
+      result = ossl_windows_load_anchors(cf, data, store, &added);
+      if(result)
+        return result;
+      octx->store_is_empty = !added;
+    }
+#elif defined(USE_WIN32_CRYPTO)
     bool added = FALSE;
     result = ossl_windows_load_anchors(cf, data, store, &added);
     if(result)
@@ -3392,7 +3594,11 @@ static CURLcode ossl_load_trust_anchors(struct Curl_cfilter *cf,
   }
 
 #ifdef CURL_CA_FALLBACK
-  if(octx->store_is_empty) {
+  if(octx->store_is_empty
+#ifdef USE_WIN32_NATIVE_VERIFY
+     && !conn_config->native_ca_store
+#endif
+    ) {
     /* verifying the peer without any CA certificates does not
        work so use OpenSSL's built-in default as fallback */
     X509_STORE_set_default_paths(store);
@@ -4566,6 +4772,18 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
    * We then explicitly check the result and may try alternatives like
    * Apple's SecTrust for verification. */
   SSL_CTX_set_verify(octx->ssl_ctx, SSL_VERIFY_NONE, NULL);
+#ifdef USE_WIN32_NATIVE_VERIFY
+  if(conn_config->native_ca_store && conn_config->verifypeer) {
+    /* Set up explicit CA sources before the verification callback can run,
+     * including for QUIC. Native trust itself stays in the Windows engine. */
+    result = Curl_ssl_setup_x509_store(cf, data, octx);
+    if(result)
+      return result;
+    octx->x509_store_setup = TRUE;
+    SSL_CTX_set_verify(octx->ssl_ctx, SSL_VERIFY_PEER, NULL);
+    SSL_CTX_set_cert_verify_callback(octx->ssl_ctx, ossl_win_verify, cf);
+  }
+#endif
 
   /* Enable logging of secrets to the file specified in env SSLKEYLOGFILE. */
 #if !defined(HAVE_KEYLOG_UPSTREAM) && defined(HAVE_KEYLOG_CALLBACK)
@@ -5522,8 +5740,14 @@ CURLcode Curl_ossl_check_peer_cert(struct Curl_cfilter *cf,
   infof(data, "OpenSSL verify result: %lx", (unsigned long)ossl_verify);
 
   verified = (ossl_verify == X509_V_OK);
-  if(verified)
-    infof(data, "SSL certificate verified via OpenSSL.");
+  if(verified) {
+#ifdef USE_WIN32_NATIVE_VERIFY
+    if(conn_config->native_ca_store && conn_config->verifypeer)
+      infof(data, "SSL certificate verified via Windows chain policy.");
+    else
+#endif
+      infof(data, "SSL certificate verified via OpenSSL.");
+  }
 
 #ifdef USE_APPLE_SECTRUST
   if(!verified && conn_config->verifypeer && conn_config->native_ca_store) {

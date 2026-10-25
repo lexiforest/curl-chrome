@@ -80,6 +80,13 @@ Works with wolfSSL on Windows, Linux (Debian, Fedora, Gentoo, RHEL, Ubuntu),
 macOS, Android and iOS (added in 8.3.0); with GnuTLS (added in 8.5.0) and with
 OpenSSL and its forks (BoringSSL, LibreSSL, etc) on Windows (Added in 7.71.0).
 
+In this fork, BoringSSL on Windows delegates chain verification to Windows,
+including its Disallowed certificate trust list and server-authentication
+policy. Additional CA sources can extend trust but cannot override Windows
+distrust or other certificate policy failures. This does not enable online CRL
+or OCSP checks. Explicit CURLOPT_CRLFILE(3) checks continue to be performed by
+BoringSSL alongside Windows native verification.
+
 This works with Rustls on Windows, macOS, Android and iOS. On Linux it is
 equivalent to using the Mozilla CA certificate bundle. When used with Rustls
 _only_ the native CA store is consulted, not other locations set at run time or

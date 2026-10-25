@@ -119,6 +119,26 @@ Any custom security rules for certificates are honored.
 
 Schannel runs CRL checks on certificates unless peer verification is disabled.
 
+### Windows + BoringSSL (this fork)
+
+With native CA verification enabled, this fork uses Windows' certificate chain
+engine and SSL policy while BoringSSL handles TLS. Windows' Disallowed
+certificate trust list is enforced. This applies to TCP TLS, HTTPS proxies and
+HTTP/3. The Windows packaging build enables native CA verification by default
+when no explicit CA source is supplied.
+
+To combine native verification with an explicit CA file:
+
+    curl --ca-native --cacert mycerts.pem https://example.com
+
+An explicit CA can extend trust but cannot override Windows distrust or other
+certificate policy failures. Windows must build a valid path through either a
+native trust anchor or the explicit anchor accepted by BoringSSL. Hostname,
+issuer and pinned-key checks still apply.
+
+This does not enable online CRL or OCSP checks. Explicit CRL files continue to
+be checked by BoringSSL, in addition to Windows native verification.
+
 ### Apple + OpenSSL/GnuTLS
 
 When curl is built with Apple SecTrust enabled and uses an OpenSSL compatible
@@ -145,7 +165,8 @@ the native CA on a range of operating systems. Some provide this only on specifi
 configurations.
 
 Specific support in curl exists for Windows and OpenSSL compatible TLS backends.
-It tries to load the certificates from the Windows "CA" and "ROOT" stores for
+Except for BoringSSL in this fork, it loads certificates from the Windows
+"CA" and "ROOT" stores for
 transfers requesting the native CA. Due to Window's delayed population of those
 stores, this might not always find all certificates.
 
