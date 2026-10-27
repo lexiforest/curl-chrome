@@ -76,14 +76,18 @@ CURLcode Curl_vquic_tls_peer_init(struct Curl_peer *origin,
 CURLcode Curl_vquic_tls_init(struct curl_tls_ctx *ctx,
                              struct Curl_cfilter *cf,
                              struct Curl_easy *data,
+                             struct cf_call_data *call_data,
                              struct ssl_peer *ssl_peer,
                              const struct alpn_spec *alpns,
                              Curl_vquic_tls_ctx_setup *cb_setup,
                              void *cb_user_data, void *ssl_user_data,
                              Curl_vquic_session_reuse_cb *session_reuse_cb)
 {
+#ifndef USE_OPENSSL
+  (void)call_data;
+#endif
 #ifdef USE_OPENSSL
-  return Curl_ossl_ctx_init(&ctx->ossl, cf, data, ssl_peer, alpns,
+  return Curl_ossl_ctx_init(&ctx->ossl, cf, data, call_data, ssl_peer, alpns,
                             cb_setup, cb_user_data, NULL, ssl_user_data,
                             session_reuse_cb);
 #elif defined(USE_GNUTLS)

@@ -78,6 +78,7 @@ CURLcode Curl_vquic_tls_peer_init(struct Curl_peer *origin,
  * @param ctx              the TLS context to initialize
  * @param cf               the connection filter involved
  * @param data             the transfer involved
+ * @param call_data        filter-owned state of the current transfer
  * @param ssl_peer         the SSL peer to be connected to
  * @param alpns            the ALPN specifications to negotiate, may be NULL
  * @param cb_setup         optional callback for early TLS config
@@ -88,6 +89,7 @@ CURLcode Curl_vquic_tls_peer_init(struct Curl_peer *origin,
 CURLcode Curl_vquic_tls_init(struct curl_tls_ctx *ctx,
                              struct Curl_cfilter *cf,
                              struct Curl_easy *data,
+                             struct cf_call_data *call_data,
                              struct ssl_peer *ssl_peer,
                              const struct alpn_spec *alpns,
                              Curl_vquic_tls_ctx_setup *cb_setup,

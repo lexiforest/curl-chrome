@@ -1865,7 +1865,7 @@ static CURLcode cf_connect_start(struct Curl_cfilter *cf,
     }
   }
 
-  result = Curl_vquic_tls_init(&ctx->tls, cf, data,
+  result = Curl_vquic_tls_init(&ctx->tls, cf, data, &ctx->call_data,
                                &ctx->ssl_peer, &ALPN_SPEC_H3,
                                cf_ngtcp2_tls_ctx_setup, &ctx->tls,
                                &ctx->conn_ref,

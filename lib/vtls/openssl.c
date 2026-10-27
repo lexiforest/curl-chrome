@@ -3323,8 +3323,10 @@ static bool ossl_win_add_cert(HCERTSTORE store, X509 *cert,
  * Windows distrust or other certificate policy failure. */
 static int ossl_win_verify(X509_STORE_CTX *store_ctx, void *arg)
 {
-  struct Curl_cfilter *cf = arg;
-  struct Curl_easy *data = CF_DATA_CURRENT(cf);
+  struct ossl_ctx *octx = arg;
+  struct Curl_cfilter *cf = octx->cf;
+  /* TCP TLS and QUIC have different filter context layouts. */
+  struct Curl_easy *data = octx->call_data->data;
   struct ssl_filter_config *config = Curl_ssl_cf_get_filter_config(cf);
   SSL *ssl = X509_STORE_CTX_get_ex_data(store_ctx,
                                        SSL_get_ex_data_X509_STORE_CTX_idx());
@@ -4409,6 +4411,7 @@ out:
 CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
                             struct Curl_cfilter *cf,
                             struct Curl_easy *data,
+                            struct cf_call_data *call_data,
                             struct ssl_peer *peer,
                             const struct alpn_spec *alpns_requested,
                             Curl_ossl_ctx_setup_cb *cb_setup,
@@ -4428,6 +4431,9 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
   const char * const ssl_cert_type = conn_config->cert_type;
   unsigned int ssl_version_min;
   char error_buffer[256];
+
+  octx->cf = cf;
+  octx->call_data = call_data;
 
   /* Make funny stuff to get random input */
   result = ossl_seed(data);
@@ -4781,7 +4787,7 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
       return result;
     octx->x509_store_setup = TRUE;
     SSL_CTX_set_verify(octx->ssl_ctx, SSL_VERIFY_PEER, NULL);
-    SSL_CTX_set_cert_verify_callback(octx->ssl_ctx, ossl_win_verify, cf);
+    SSL_CTX_set_cert_verify_callback(octx->ssl_ctx, ossl_win_verify, octx);
   }
 #endif
 
@@ -4885,7 +4891,8 @@ static CURLcode ossl_connect_step1(struct Curl_cfilter *cf,
   DEBUGASSERT(octx);
   DEBUGASSERT(connssl->peer.origin);
 
-  result = Curl_ossl_ctx_init(octx, cf, data, &connssl->peer,
+  result = Curl_ossl_ctx_init(octx, cf, data, &connssl->call_data,
+                              &connssl->peer,
                               connssl->alpn, NULL, NULL,
                               ossl_new_session_cb, cf,
                               ossl_on_session_reuse);

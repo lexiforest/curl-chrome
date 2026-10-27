@@ -109,6 +109,7 @@ typedef uint64_t ctx_option_t;
 #endif
 
 struct alpn_spec;
+struct cf_call_data;
 struct ssl_peer;
 struct Curl_ssl_session;
 
@@ -117,6 +118,9 @@ struct ossl_ctx {
   /* these ones requires specific SSL-types */
   SSL_CTX *ssl_ctx;
   SSL *ssl;
+  /* The filter owns call_data and updates it for each active transfer. */
+  struct Curl_cfilter *cf;
+  struct cf_call_data *call_data;
   BIO_METHOD *bio_method;
   CURLcode io_result;       /* result of last BIO cfilter operation */
   /* blocked writes need to retry with same length, remember it */
@@ -151,6 +155,7 @@ typedef CURLcode Curl_ossl_init_session_reuse_cb(struct Curl_cfilter *cf,
 CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
                             struct Curl_cfilter *cf,
                             struct Curl_easy *data,
+                            struct cf_call_data *call_data,
                             struct ssl_peer *peer,
                             const struct alpn_spec *alpns_requested,
                             Curl_ossl_ctx_setup_cb *cb_setup,

@@ -79,6 +79,7 @@ struct cf_quiche_ctx {
   struct cf_quic_ctx q;
   struct ssl_peer ssl_peer;
   struct curl_tls_ctx tls;
+  struct cf_call_data call_data;
   quiche_conn *qconn;
   quiche_config *cfg;
   quiche_h3_conn *h3c;
@@ -96,6 +97,9 @@ struct cf_quiche_ctx {
   BIT(shutdown_started);             /* queued shutdown packets */
   BIT(stats_reported);               /* connect statistics reported */
 };
+
+#undef CF_CTX_CALL_DATA
+#define CF_CTX_CALL_DATA(cf) ((struct cf_quiche_ctx *)(cf)->ctx)->call_data
 
 #ifdef DEBUG_QUICHE
 /* initialize debug log callback only once */
@@ -670,10 +674,13 @@ static CURLcode cf_quiche_recv_pkts(const unsigned char *buf, size_t buflen,
   recv_info.from_len = remote_addrlen;
 
   for(offset = 0; offset < buflen; offset += gso_size) {
+    struct cf_call_data save;
     pktlen = ((offset + gso_size) <= buflen) ? gso_size : (buflen - offset);
+    CF_DATA_SAVE(save, r->cf, r->data);
     rv = quiche_conn_recv(ctx->qconn,
                           (unsigned char *)CURL_UNCONST(buf + offset),
                           pktlen, &recv_info);
+    CF_DATA_RESTORE(r->cf, save);
     if(!curlx_sztouz(rv, &nread)) {
       if(QUICHE_ERR_DONE == rv) {
         if(quiche_conn_is_draining(ctx->qconn)) {
@@ -1311,8 +1318,9 @@ static CURLcode cf_quiche_ctx_open(struct Curl_cfilter *cf,
                       (uint8_t *)CURL_UNCONST(QUICHE_H3_APPLICATION_PROTOCOL),
                                  CURL_CSTRLEN(QUICHE_H3_APPLICATION_PROTOCOL));
 
-  result = Curl_vquic_tls_init(&ctx->tls, cf, data, &ctx->ssl_peer,
-                               &ALPN_SPEC_H3, NULL, NULL, cf, NULL);
+  result = Curl_vquic_tls_init(&ctx->tls, cf, data, &ctx->call_data,
+                               &ctx->ssl_peer, &ALPN_SPEC_H3,
+                               NULL, NULL, cf, NULL);
   if(result)
     return result;
 
