@@ -898,7 +898,14 @@ static CURLcode quic_transport_params_from_string(ngtcp2_transport_params *t,
       unsigned char *bytes;
       size_t j;
 
-      if((hex_len == 0) || (hex_len % 2 != 0)) {
+      /* An empty hex value is a zero-length transport parameter. */
+      if(!hex_len) {
+        result = quic_raw_append_param_bytes(raw, id, NULL, 0);
+        if(result)
+          goto out;
+        continue;
+      }
+      if(hex_len % 2 != 0) {
         failf(data, "QUIC transport param %" PRIu64
               " has invalid hex value", (uint64_t)id);
         result = CURLE_BAD_FUNCTION_ARGUMENT;
