@@ -59,7 +59,7 @@ GET /func_test/del_cookie HTTP/1.1
 Host: %HOSTIP:%HTTPPORT
 User-Agent: curl/%VERSION
 Accept: */*
-Cookie: mycookie2=5900; mycookie3=900; mycookie4=950; mycookie5=990; mycookie6=991; mycookie=1200; mycookie1=4900
+Cookie: mycookie6=991; mycookie5=990; mycookie4=950; mycookie3=900; mycookie2=5900; mycookie=1200; mycookie1=4900
 
 </protocol>
 <file name="%LOGDIR/save%TESTNUMBER" mode="text">

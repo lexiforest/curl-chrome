@@ -80,7 +80,7 @@ GET /want/%TESTNUMBER HTTP/1.1
 Host: domain..tld:%HTTPPORT
 User-Agent: curl/%VERSION
 Accept: */*
-Cookie: empty=; mooo2=indeed2; mooo=indeed
+Cookie: mooo2=indeed2; empty=; mooo=indeed
 
 </protocol>
 <file name="%LOGDIR/jar%TESTNUMBER" mode="text">

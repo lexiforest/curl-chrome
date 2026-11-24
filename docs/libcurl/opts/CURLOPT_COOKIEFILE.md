@@ -35,6 +35,10 @@ headers (Set-Cookie style) dumped to a file.
 It also enables the cookie engine, making libcurl parse and send cookies on
 subsequent requests with this handle.
 
+The cookie engine sends matching cookies with longer paths first.
+For equal-length paths, it sends older cookies first.
+For cookies loaded into an empty engine, file order supplies the creation order.
+
 By passing the empty string ("") to this option, you enable the cookie engine
 without reading any initial cookies. If you tell libcurl the filename is "-"
 (a single minus sign), libcurl instead reads from stdin.

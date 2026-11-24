@@ -51,7 +51,7 @@ Host: example.fake
 User-Agent: curl/%VERSION
 Accept: */*
 Proxy-Connection: Keep-Alive
-Cookie: __secure-x=yes; clean=good
+Cookie: clean=good; __secure-x=yes
 
 </protocol>
 </verify>

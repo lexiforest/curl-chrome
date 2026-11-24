@@ -67,7 +67,7 @@ GET /%TESTNUMBER0002 HTTP/1.1
 Host: %HOSTIP:%HTTPPORT
 User-Agent: curl/%VERSION
 Accept: */*
-Cookie: long3=%repeat[400 x abcdefgh]%; long2=%repeat[400 x abcdefgh]%
+Cookie: long1=%repeat[400 x abcdefgh]%; long2=%repeat[400 x abcdefgh]%
 
 </protocol>
 </verify>

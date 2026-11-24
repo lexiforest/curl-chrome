@@ -65,7 +65,7 @@ GET /we/want/%TESTNUMBER HTTP/1.1
 Host: host.foo.com
 User-Agent: curl/%VERSION
 Accept: */*
-Cookie: tester=yes; test=no
+Cookie: test=no; tester=yes
 
 GET /we/want/%TESTNUMBER0002 HTTP/1.1
 Host: host.foo.com

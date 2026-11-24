@@ -94,7 +94,7 @@ GET /we/want/%TESTNUMBER HTTP/1.1
 Host: %HOSTIP:%HTTPPORT
 User-Agent: curl/%VERSION
 Accept: */*
-Cookie: name with space=is weird but; trailingspace=removed; cookie=perhaps; cookie=yes; foobar=name; blexp=yesyes; cookie9=junk--
+Cookie: cookie=perhaps; name with space=is weird but; trailingspace=removed; cookie=yes; foobar=name; blexp=yesyes; cookie9=junk--
 
 </protocol>
 </verify>

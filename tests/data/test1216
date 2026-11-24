@@ -54,7 +54,7 @@ Host: example.fake
 User-Agent: curl/%VERSION
 Accept: */*
 Proxy-Connection: Keep-Alive
-Cookie: moo3=indeed; moo2=indeed
+Cookie: moo2=indeed; moo3=indeed
 
 GET http://bexample.fake/c/%TESTNUMBER HTTP/1.1
 Host: bexample.fake

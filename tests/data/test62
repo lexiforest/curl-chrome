@@ -58,13 +58,13 @@ GET /we/want/%TESTNUMBER HTTP/1.1
 Host: www.host.foo.com
 User-Agent: curl/%VERSION
 Accept: */*
-Cookie: test2=yes; test=yes
+Cookie: test=yes; test2=yes
 
 GET /we/want/%TESTNUMBER?hoge=fuga HTTP/1.1
 Host: www.host.foo.com
 User-Agent: curl/%VERSION
 Accept: */*
-Cookie: test2=yes; test=yes
+Cookie: test=yes; test2=yes
 
 </protocol>
 </verify>
