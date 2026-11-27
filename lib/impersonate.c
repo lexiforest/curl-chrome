@@ -601,7 +601,7 @@ const struct impersonate_opts impersonations[] = {
       "AES256-GCM-SHA384:"
       "AES128-SHA:"
       "AES256-SHA",
-    .curves = "X25519:P-256:P-384",
+    .curves = "X25519MLKEM768:X25519:P-256:P-384",
     .npn = false,
     .alpn = true,
     .alps = true,
@@ -610,7 +610,7 @@ const struct impersonate_opts impersonations[] = {
     .cert_compression = "brotli",
     .http_headers = {
       "sec-ch-ua: \"Google Chrome\";v=\"131\", \"Chromium\";v=\"131\", \"Not_A Brand\";v=\"24\"",
-      "sec-ch-ua-mobile: ?0",
+      "sec-ch-ua-mobile: ?1",
       "sec-ch-ua-platform: \"Android\"",
       "Upgrade-Insecure-Requests: 1",
       "User-Agent: Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
@@ -629,7 +629,7 @@ const struct impersonate_opts impersonations[] = {
     .http2_stream_exclusive = 1,
     .ech = "true",
     .tls_extension_order = NULL,
-    .tls_use_new_alps_codepoint = false,
+    .tls_use_new_alps_codepoint = true,
     .tls_signed_cert_timestamps = true,
     .tls_grease = true,
     .split_cookies = true,
